@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import os
 import sys
-from subprocess import call
+import re
+from subprocess import call,check_output
+from sentinelsat import SentinelAPI
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Read options
@@ -61,12 +63,53 @@ if opts.path is not None:
     command += ' --path {}'.format(opts.path)
 if opts.query is not None:
     command += ' --query {}'.format(opts.query)
-if opts.download:
-    command += ' --download'
+#if opts.download:
+#    command += ' --download'
 if opts.no_checksum:
     command += ' --no_checksum'
 if opts.footprints:
     command += ' --footprints'
 if opts.version:
     command += ' --version'
-print(command)
+sys.stderr.write(command+'\n')
+out = check_output(command+' 2>&1',shell=True).decode()
+sys.stderr.write(out+'\n')
+if opts.version:
+    sys.exit()
+
+uuids = []
+for line in out.splitlines():
+    # Product bb7a7783-f91b-4a35-907d-a6ddb807da73 - Date: 2019-07-09T02:55:59.024Z, Instrument: MSI, Mode: , Satellite: Sentinel-2, Size: 1.09 GB
+    m = re.search('Product\s+(\S+)',line)
+    if not m:
+        continue
+    uuids.append(m.group(1))
+
+names = []
+sizes = []
+api = SentinelAPI(None,None)
+for i,uuid in enumerate(uuids):
+    out = api.get_product_odata(uuid)
+    name = out['title']
+    size = out['size']
+    names.append(name)
+    sizes.append(size)
+    sys.stderr.write('{:4d} {:40s} {:70s} {:10d}\n'.format(i+1,uuid,name,size))
+
+if opts.download:
+    for i in range(len(uuids)):
+        command = 'sentinelsat'
+        command += ' --download'
+        command += ' --uuid {}'.format(uuids[i])
+        if opts.user is not None:
+            command += ' --user {}'.format(opts.user)
+        if opts.password is not None:
+            command += ' --password {}'.format(opts.password)
+        if opts.url is not None:
+            command += ' --url {}'.format(opts.url)
+        if opts.path is not None:
+            command += ' --path {}'.format(opts.path)
+        if opts.no_checksum:
+            command += ' --no_checksum'
+        call(command,shell=True)
+        break
