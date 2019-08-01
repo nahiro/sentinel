@@ -34,11 +34,11 @@ parser.add_option('-l','--limit',default=None,type='int',help='Maximum number of
 parser.add_option('-P','--path',default=None,help='Set the path where the files will be saved.')
 parser.add_option('-q','--query',default=None,help='Extra search keywords you want to use in the query. Separate keywords with comma. Example: \'producttype=GRD,polarisationmode=HH\'.')
 parser.add_option('-T','--timeout',default=TIMEOUT,type='float',help='Timeout to download data in sec')
-parser.add_option('-C','--check_time',default=CHECK_TIME,type='float',help='Wait time to check data in sec')
+parser.add_option('-w','--check_time',default=CHECK_TIME,type='float',help='Wait time to check data in sec')
 parser.add_option('-W','--wait_time',default=WAIT_TIME,type='float',help='Wait time to download data in sec')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
-parser.add_option('-n','--no_checksum',default=False,action='store_true',help='Do NOT verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
+parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
 (opts,args) = parser.parse_args()
@@ -78,7 +78,7 @@ if opts.query is not None:
     command += ' --query {}'.format(opts.query)
 #if opts.download:
 #    command += ' --download'
-if opts.no_checksum:
+if not opts.checksum:
     command += ' --no-checksum'
 if opts.footprints:
     command += ' --footprints'
@@ -123,7 +123,7 @@ if opts.download:
             command += ' --url {}'.format(opts.url)
         if opts.path is not None:
             command += ' --path {}'.format(opts.path)
-        if opts.no_checksum:
+        if not opts.checksum:
             command += ' --no-checksum'
         for ntry in range(opts.max_retry): # loop to download 1 file
             fnam = os.path.join(path,names[i]+'.zip')
