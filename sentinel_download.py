@@ -79,7 +79,7 @@ if opts.query is not None:
 #if opts.download:
 #    command += ' --download'
 if opts.no_checksum:
-    command += ' --no_checksum'
+    command += ' --no-checksum'
 if opts.footprints:
     command += ' --footprints'
 if opts.version:
@@ -124,7 +124,7 @@ if opts.download:
         if opts.path is not None:
             command += ' --path {}'.format(opts.path)
         if opts.no_checksum:
-            command += ' --no_checksum'
+            command += ' --no-checksum'
         for ntry in range(opts.max_retry): # loop to download 1 file
             fnam = os.path.join(path,names[i]+'.zip')
             gnam = os.path.join(fnam+'.incomplete')
