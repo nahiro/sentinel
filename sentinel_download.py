@@ -11,8 +11,9 @@ from sentinelsat import SentinelAPI
 from optparse import OptionParser,IndentedHelpFormatter
 
 TIMEOUT = 20
-WAIT_TIME = 10
-MAX_RETRY = 10
+CHECK_TIME = 10
+WAIT_TIME = 120
+MAX_RETRY = 100
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -33,6 +34,7 @@ parser.add_option('-l','--limit',default=None,type='int',help='Maximum number of
 parser.add_option('-P','--path',default=None,help='Set the path where the files will be saved.')
 parser.add_option('-q','--query',default=None,help='Extra search keywords you want to use in the query. Separate keywords with comma. Example: \'producttype=GRD,polarisationmode=HH\'.')
 parser.add_option('-T','--timeout',default=TIMEOUT,type='float',help='Timeout to download data in sec')
+parser.add_option('-C','--check_time',default=CHECK_TIME,type='float',help='Wait time to check data in sec')
 parser.add_option('-W','--wait_time',default=WAIT_TIME,type='float',help='Wait time to download data in sec')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
@@ -142,23 +144,27 @@ if opts.download:
                         break
                     else:
                         os.rename(fnam,gnam)
-            print(command)
             # Start a process
             start_time = time.time()
-            p = Popen(command,shell=True)
+            try:
+                p = Popen(command,shell=True)
+            except Exception:
+                sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
+                time.sleep(opts.wait_time)
+                continue
             while True: # loop to terminate the process
                 # Exit if fnam exists or gnam exists and its size does not change for opts.timeout seconds
                 if p.poll() is not None: # the process has terminated
-                    print('poll!')
                     break
                 elif os.path.exists(fnam):
-                    print('exist!')
                     break
                 elif os.path.exists(gnam):
                     diff = time.time()-max(start_time,os.path.getmtime(gnam))
                     if diff > opts.timeout:
-                        print('here!')
                         break
-                time.sleep(opts.wait_time)
+                time.sleep(opts.check_time)
             if p.poll() is None: # the process hasn’t terminated yet.
+                sys.stderr.write('Timeout\n')
                 p.terminate()
+            sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
+            time.sleep(opts.wait_time)
