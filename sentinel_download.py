@@ -2,7 +2,11 @@
 import os
 import sys
 import re
-from subprocess import call,check_output
+import time
+import numpy as np
+from datetime import datetime
+from glob import glob
+from subprocess import Popen,check_output
 from sentinelsat import SentinelAPI
 from optparse import OptionParser,IndentedHelpFormatter
 
@@ -96,6 +100,7 @@ for i,uuid in enumerate(uuids):
     sizes.append(size)
     sys.stderr.write('{:4d} {:40s} {:70s} {:10d}\n'.format(i+1,uuid,name,size))
 
+path = '.' if opts.path is None else opts.path
 if opts.download:
     for i in range(len(uuids)):
         command = 'sentinelsat'
@@ -111,5 +116,30 @@ if opts.download:
             command += ' --path {}'.format(opts.path)
         if opts.no_checksum:
             command += ' --no_checksum'
-        call(command,shell=True)
+        while True:
+            p = Popen(command,shell=True)
+            last_dtim = datetime.now()
+            last_size = 0
+            while True:
+                fnams = glob(os.path.join(path,names[i]+'*'))
+                n = len(fnams)
+                if n > 0:
+                    if n > 1:
+                        ts = []
+                        for fnam in fnams:
+                            ts.append(os.path.getmtime(fnam))
+                        fnam = fnams[np.argmin(ts)]
+                    else:
+                        fnam = fnams[0]
+                dtim = datetime.now()
+                size = os.path.getsize(fnam)
+                if size > last_size:
+                    last_dtim = dtim
+                    last_size = size
+                diff = (dtim-last_dtim).total_seconds()
+                if diff > 100:
+                    sys.stderr.write('Older than 100 sec >>> {}'.format(diff))
+                if p.poll() is None:
+                    print('waiting...')
+                    time.sleep(10)
         break
