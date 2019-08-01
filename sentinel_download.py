@@ -10,6 +10,10 @@ from subprocess import Popen,check_output
 from sentinelsat import SentinelAPI
 from optparse import OptionParser,IndentedHelpFormatter
 
+TIMEOUT = 20
+WAIT_TIME = 10
+MAX_RETRY = 10
+
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-u','--user',default=None,help='Username (or environment variable DHUS_USER is set)')
@@ -28,6 +32,9 @@ parser.add_option('-o','--order_by',default=None,help='Comma-separated list of k
 parser.add_option('-l','--limit',default=None,type='int',help='Maximum number of results to return.  Defaults to no limit.')
 parser.add_option('-P','--path',default=None,help='Set the path where the files will be saved.')
 parser.add_option('-q','--query',default=None,help='Extra search keywords you want to use in the query. Separate keywords with comma. Example: \'producttype=GRD,polarisationmode=HH\'.')
+parser.add_option('-T','--timeout',default=TIMEOUT,type='float',help='Timeout to download data in sec')
+parser.add_option('-W','--wait_time',default=WAIT_TIME,type='float',help='Wait time to download data in sec')
+parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
 parser.add_option('-n','--no_checksum',default=False,action='store_true',help='Do NOT verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
@@ -116,30 +123,42 @@ if opts.download:
             command += ' --path {}'.format(opts.path)
         if opts.no_checksum:
             command += ' --no_checksum'
-        while True:
-            p = Popen(command,shell=True)
-            last_dtim = datetime.now()
-            last_size = 0
-            while True:
-                fnams = glob(os.path.join(path,names[i]+'*'))
-                n = len(fnams)
-                if n > 0:
-                    if n > 1:
-                        ts = []
-                        for fnam in fnams:
-                            ts.append(os.path.getmtime(fnam))
-                        fnam = fnams[np.argmin(ts)]
+        for ntry in range(opts.max_retry): # loop to download 1 file
+            fnam = os.path.join(path,names[i]+'.zip')
+            gnam = os.path.join(fnam+'.incomplete')
+            # Exit if gnam does not exist and fnam with expected size exists
+            if os.path.exists(fnam):
+                fsiz = os.path.getsize(fnam)
+                if os.path.exists(gnam):
+                    gsiz = os.path.getsize(gnam)
+                    if gsiz > fsiz:
+                        os.remove(fnam)
                     else:
-                        fnam = fnams[0]
-                dtim = datetime.now()
-                size = os.path.getsize(fnam)
-                if size > last_size:
-                    last_dtim = dtim
-                    last_size = size
-                diff = (dtim-last_dtim).total_seconds()
-                if diff > 100:
-                    sys.stderr.write('Older than 100 sec >>> {}'.format(diff))
-                if p.poll() is None:
-                    print('waiting...')
-                    time.sleep(10)
-        break
+                        os.remove(gnam)
+                        os.rename(fnam,gnam)
+                else:
+                    if fsiz == sizes[i]:
+                        sys.stderr.write('Successfully downloaded >>> {}\n'.format(fnam))
+                        break
+                    else:
+                        os.rename(fnam,gnam)
+            print(command)
+            # Start a process
+            start_time = time.time()
+            p = Popen(command,shell=True)
+            while True: # loop to terminate the process
+                # Exit if fnam exists or gnam exists and its size does not change for opts.timeout seconds
+                if p.poll() is not None: # the process has terminated
+                    print('poll!')
+                    break
+                elif os.path.exists(fnam):
+                    print('exist!')
+                    break
+                elif os.path.exists(gnam):
+                    diff = time.time()-max(start_time,os.path.getmtime(gnam))
+                    if diff > opts.timeout:
+                        print('here!')
+                        break
+                time.sleep(opts.wait_time)
+            if p.poll() is None: # the process hasn’t terminated yet.
+                p.terminate()
