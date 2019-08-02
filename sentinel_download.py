@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import time
+import signal
 import numpy as np
 from datetime import datetime
 from glob import glob
@@ -12,7 +13,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 
 TIMEOUT = 20
 CHECK_TIME = 10
-WAIT_TIME = 120
+WAIT_TIME = 10
 MAX_RETRY = 100
 
 # Read options
@@ -33,10 +34,10 @@ parser.add_option('-o','--order_by',default=None,help='Comma-separated list of k
 parser.add_option('-l','--limit',default=None,type='int',help='Maximum number of results to return.  Defaults to no limit.')
 parser.add_option('-P','--path',default=None,help='Set the path where the files will be saved.')
 parser.add_option('-q','--query',default=None,help='Extra search keywords you want to use in the query. Separate keywords with comma. Example: \'producttype=GRD,polarisationmode=HH\'.')
-parser.add_option('-T','--timeout',default=TIMEOUT,type='float',help='Timeout to download data in sec')
-parser.add_option('-w','--check_time',default=CHECK_TIME,type='float',help='Wait time to check data in sec')
-parser.add_option('-W','--wait_time',default=WAIT_TIME,type='float',help='Wait time to download data in sec')
-parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data')
+parser.add_option('-T','--timeout',default=TIMEOUT,type='float',help='Timeout to download data in sec (%default)')
+parser.add_option('-w','--check_time',default=CHECK_TIME,type='int',help='Wait time to check data in sec (%default)')
+parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait time to download data in sec (%default)')
+parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
 parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
@@ -108,6 +109,7 @@ for i,uuid in enumerate(uuids):
     names.append(name)
     sizes.append(size)
     sys.stderr.write('{:4d} {:40s} {:70s} {:10d}\n'.format(i+1,uuid,name,size))
+api.session.close() # has any effect?
 
 path = '.' if opts.path is None else opts.path
 if opts.download:
@@ -147,9 +149,9 @@ if opts.download:
             # Start a process
             start_time = time.time()
             try:
-                p = Popen(command,shell=True)
+                p = Popen(command,shell=True,preexec_fn=os.setsid)
             except Exception:
-                sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
+                sys.stderr.write('Failed to run the command. Wait for {} sec\n'.format(opts.wait_time))
                 time.sleep(opts.wait_time)
                 continue
             while True: # loop to terminate the process
@@ -165,6 +167,6 @@ if opts.download:
                 time.sleep(opts.check_time)
             if p.poll() is None: # the process hasn’t terminated yet.
                 sys.stderr.write('Timeout\n')
-                p.terminate()
+                os.killpg(os.getpgid(p.pid),signal.SIGTERM)
             sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
             time.sleep(opts.wait_time)
