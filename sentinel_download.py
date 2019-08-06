@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import psutil
 import sys
 import re
 import time
@@ -49,7 +50,14 @@ process_id = None
 def kill_process():
     if process_id is not None:
         sys.stderr.write('KILL PROCESS\n')
-        os.killpg(os.getpgid(process_id),signal.SIGTERM)
+        if os.name.lower() != 'posix':
+            parent = psutil.Process(process_id)
+            children = parent.children(recursive=True)
+            for child in children:
+                child.kill()
+            parent.kill()
+        else:
+            os.killpg(os.getpgid(process_id),signal.SIGTERM)
 atexit.register(kill_process)
 
 command = 'sentinelsat'
@@ -109,7 +117,10 @@ for line in out.splitlines():
 
 names = []
 sizes = []
-api = SentinelAPI(opts.user,opts.password,opts.url)
+if opts.url is not None:
+    api = SentinelAPI(opts.user,opts.password,opts.url)
+else:
+    api = SentinelAPI(opts.user,opts.password)
 for i,uuid in enumerate(uuids):
     out = api.get_product_odata(uuid)
     name = out['title']
@@ -157,7 +168,10 @@ if opts.download:
             # Start a process
             start_time = time.time()
             try:
-                p = Popen(command,shell=True,preexec_fn=os.setsid)
+                if os.name.lower() != 'posix':
+                    p = Popen(command,shell=True)
+                else:
+                    p = Popen(command,shell=True,preexec_fn=os.setsid)
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Failed to run the command. Wait for {} sec\n'.format(opts.wait_time))
@@ -176,7 +190,14 @@ if opts.download:
                 time.sleep(opts.check_time)
             if p.poll() is None: # the process hasn't terminated yet.
                 sys.stderr.write('Timeout\n')
-                os.killpg(os.getpgid(p.pid),signal.SIGTERM)
+                if os.name.lower() != 'posix':
+                    parent = psutil.Process(process_id)
+                    children = parent.children(recursive=True)
+                    for child in children:
+                        child.kill()
+                    parent.kill()
+                else:
+                    os.killpg(os.getpgid(process_id),signal.SIGTERM)
             process_id = None
             sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
             time.sleep(opts.wait_time)
