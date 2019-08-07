@@ -13,7 +13,7 @@ from subprocess import Popen,check_output
 from sentinelsat import SentinelAPI
 from optparse import OptionParser,IndentedHelpFormatter
 
-TIMEOUT = 20
+TIMEOUT = 60
 CHECK_TIME = 10
 WAIT_TIME = 10
 MAX_RETRY = 100
@@ -49,6 +49,8 @@ parser.add_option('-v','--version',default=False,action='store_true',help='Show 
 process_id = None
 def kill_process():
     if process_id is not None:
+        if not psutil.pid_exists(process_id):
+            return
         sys.stderr.write('KILL PROCESS\n')
         if os.name.lower() != 'posix':
             parent = psutil.Process(process_id)
@@ -166,6 +168,8 @@ if opts.download:
                     else:
                         os.rename(fnam,gnam)
             # Start a process
+            p = None
+            process_id = None
             start_time = time.time()
             try:
                 if os.name.lower() != 'posix':
@@ -189,15 +193,8 @@ if opts.download:
                         break
                 time.sleep(opts.check_time)
             if p.poll() is None: # the process hasn't terminated yet.
-                sys.stderr.write('Timeout\n')
-                if os.name.lower() != 'posix':
-                    parent = psutil.Process(process_id)
-                    children = parent.children(recursive=True)
-                    for child in children:
-                        child.kill()
-                    parent.kill()
-                else:
-                    os.killpg(os.getpgid(process_id),signal.SIGTERM)
+                sys.stderr.write('\nTimeout\n')
+            kill_process()
             process_id = None
             sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
             time.sleep(opts.wait_time)
