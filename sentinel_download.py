@@ -14,7 +14,8 @@ from sentinelsat import SentinelAPI
 from optparse import OptionParser,IndentedHelpFormatter
 
 TIMEOUT = 60
-CHECK_TIME = 10
+DOWNLOAD_CHECK_TIME = 10
+ONLINE_CHECK_TIME = 300
 WAIT_TIME = 10
 MAX_RETRY = 100
 
@@ -37,8 +38,9 @@ parser.add_option('-l','--limit',default=None,type='int',help='Maximum number of
 parser.add_option('-P','--path',default=None,help='Set the path where the files will be saved.')
 parser.add_option('-q','--query',default=None,help='Extra search keywords you want to use in the query. Separate keywords with comma. Example: \'producttype=GRD,polarisationmode=HH\'.')
 parser.add_option('-T','--timeout',default=TIMEOUT,type='float',help='Timeout to download data in sec (%default)')
-parser.add_option('-w','--check_time',default=CHECK_TIME,type='int',help='Wait time to check data in sec (%default)')
+parser.add_option('-w','--download_check_time',default=DOWNLOAD_CHECK_TIME,type='int',help='Wait time to check downloaded data in sec (%default)')
 parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait time to download data in sec (%default)')
+parser.add_option('-O','--online_check_time',default=ONLINE_CHECK_TIME,type='int',help='Wait time to check online data in sec (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
 parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
@@ -138,6 +140,26 @@ api.session.close() # has any effect?
 if opts.download:
     path = '.' if opts.path is None else opts.path
     for i in range(len(uuids)):
+        # Check data availability
+        fnam = os.path.join(path,names[i]+'.zip')
+        gnam = os.path.join(fnam+'.request')
+        if opts.url is not None:
+            api = SentinelAPI(opts.user,opts.password,opts.url)
+        else:
+            api = SentinelAPI(opts.user,opts.password)
+        while True:
+            out = api.get_product_odata(uuids[i])
+            stat = out['Online']
+            if stat: # Online
+                if os.path.exists(gnam):
+                    os.remove(gnam)
+                break
+            sys.stderr.write('Requested product is not online. Wait for {} sec\n'.format(opts.online_check_time))
+            time.sleep(opts.online_check_time)
+            continue
+        api.session.close() # has any effect?
+        # Download data
+        gnam = os.path.join(fnam+'.incomplete')
         command = 'sentinelsat'
         command += ' --download'
         command += ' --uuid {}'.format(uuids[i])
@@ -152,8 +174,6 @@ if opts.download:
         if not opts.checksum:
             command += ' --no-checksum'
         for ntry in range(opts.max_retry): # loop to download 1 file
-            fnam = os.path.join(path,names[i]+'.zip')
-            gnam = os.path.join(fnam+'.incomplete')
             # Exit if gnam does not exist and fnam with expected size exists
             if os.path.exists(fnam):
                 fsiz = os.path.getsize(fnam)
@@ -194,7 +214,7 @@ if opts.download:
                     diff = time.time()-max(start_time,os.path.getmtime(gnam))
                     if diff > opts.timeout:
                         break
-                time.sleep(opts.check_time)
+                time.sleep(opts.download_check_time)
             if p.poll() is None: # the process hasn't terminated yet.
                 sys.stderr.write('\nTimeout\n')
             kill_process()
