@@ -119,6 +119,7 @@ for line in out.splitlines():
 
 names = []
 sizes = []
+stats = []
 if opts.url is not None:
     api = SentinelAPI(opts.user,opts.password,opts.url)
 else:
@@ -127,13 +128,15 @@ for i,uuid in enumerate(uuids):
     out = api.get_product_odata(uuid)
     name = out['title']
     size = out['size']
+    stat = out['Online']
     names.append(name)
     sizes.append(size)
-    sys.stderr.write('{:4d} {:40s} {:70s} {:10d}\n'.format(i+1,uuid,name,size))
+    stats.append(stat)
+    sys.stderr.write('{:4d} {:40s} {:70s} {:10d} {:7s}\n'.format(i+1,uuid,name,size,'Online' if stat else 'Offline'))
 api.session.close() # has any effect?
 
-path = '.' if opts.path is None else opts.path
 if opts.download:
+    path = '.' if opts.path is None else opts.path
     for i in range(len(uuids)):
         command = 'sentinelsat'
         command += ' --download'
