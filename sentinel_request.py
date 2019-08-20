@@ -185,13 +185,15 @@ for i in range(len(uuids)):
                 break
             time.sleep(opts.check_time)
         result = p.poll()
-        if result == 0:
+        if result is None: # the process hasn't terminated yet.
+            sys.stderr.write('\nTimeout\n')
+        elif result == 0:
             with open(gnam,'w') as fp:
                 fp.write('{}'.format(time.time()))
             sys.stderr.write('Successfully requested >>> {}\n'.format(fnam))
             break
-        elif result is None: # the process hasn't terminated yet.
-            sys.stderr.write('\nTimeout\n')
+        else:
+            sys.stderr.write('Not requested >>> {}\n'.format(fnam))
         kill_process()
         process_id = None
         sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
