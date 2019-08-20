@@ -17,6 +17,7 @@ TIMEOUT = 60
 CHECK_TIME = 10
 WAIT_TIME = 1800
 RETRY_TIME = 86400
+MAX_RETRY = 100
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -40,6 +41,7 @@ parser.add_option('-T','--timeout',default=TIMEOUT,type='float',help='Timeout to
 parser.add_option('-w','--check_time',default=CHECK_TIME,type='int',help='Wait time to check data in sec (%default)')
 parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait time to request next data in sec (%default)')
 parser.add_option('-R','--retry_time',default=RETRY_TIME,type='int',help='Wait time to request the same data again in sec (%default)')
+parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
@@ -161,36 +163,36 @@ for i in range(len(uuids)):
         command += ' --path {}'.format(opts.path)
     if not opts.checksum:
         command += ' --no-checksum'
-    # Start a process
-    p = None
-    process_id = None
-    start_time = time.time()
-    try:
-        if os.name.lower() != 'posix':
-            p = Popen(command,shell=True)
-        else:
-            p = Popen(command,shell=True,preexec_fn=os.setsid)
-        process_id = p.pid
-    except Exception:
-        sys.stderr.write('Error in request >>> {}\n'.format(fnam))
-        continue
-    while True: # loop to terminate the process
-        result = p.poll()
-        if result is not None: # the process has terminated
-            if result == 0:
-                with open(gnam,'w') as fp:
-                    fp.write('{}'.format(time.time()))
-                sys.stderr.write('Successfully requested >>> {}\n'.format(fnam))
+    for ntry in range(opts.max_retry): # loop to request 1 file
+        # Start a process
+        p = None
+        process_id = None
+        start_time = time.time()
+        try:
+            if os.name.lower() != 'posix':
+                p = Popen(command,shell=True)
             else:
-                sys.stderr.write('Requested >>> {}\n'.format(fnam))
+                p = Popen(command,shell=True,preexec_fn=os.setsid)
+            process_id = p.pid
+        except Exception:
+            sys.stderr.write('Error in request >>> {}\n'.format(fnam))
+            continue
+        while True: # loop to terminate the process
+            if p.poll() is not None: # the process has terminated
+                break
+            diff = time.time()-start_time
+            if diff > opts.timeout:
+                break
+            time.sleep(opts.check_time)
+        result = p.poll()
+        if result == 0:
+            with open(gnam,'w') as fp:
+                fp.write('{}'.format(time.time()))
+            sys.stderr.write('Successfully requested >>> {}\n'.format(fnam))
             break
-        diff = time.time()-start_time
-        if diff > opts.timeout:
-            break
-        time.sleep(opts.check_time)
-    if p.poll() is None: # the process hasn't terminated yet.
-        sys.stderr.write('\nTimeout\n')
-    kill_process()
-    process_id = None
-    sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
-    time.sleep(opts.wait_time)
+        elif result is None: # the process hasn't terminated yet.
+            sys.stderr.write('\nTimeout\n')
+        kill_process()
+        process_id = None
+        sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
+        time.sleep(opts.wait_time)
