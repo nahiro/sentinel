@@ -154,7 +154,7 @@ if opts.download:
                 if os.path.exists(gnam):
                     os.remove(gnam)
                 break
-            sys.stderr.write('Requested product is not online. Wait for {} sec\n'.format(opts.online_check_time))
+            sys.stderr.write('Offline. Wait for {} sec >>> {}\n'.format(opts.online_check_time,fnam))
             time.sleep(opts.online_check_time)
             continue
         api.session.close() # has any effect?
