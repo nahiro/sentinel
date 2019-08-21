@@ -9,7 +9,7 @@ import atexit
 import numpy as np
 from datetime import datetime
 from glob import glob
-from subprocess import Popen,check_output
+from subprocess import Popen,check_output,PIPE
 from sentinelsat import SentinelAPI
 from optparse import OptionParser,IndentedHelpFormatter
 
@@ -45,6 +45,7 @@ parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum 
 parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
+parser.add_option('-V','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 (opts,args) = parser.parse_args()
 
 process_id = None
@@ -139,14 +140,14 @@ for i in range(len(uuids)):
     fnam = os.path.join(path,names[i]+'.zip')
     gnam = os.path.join(fnam+'.request')
     if stats[i]: # Online
-        sys.stderr.write('Already online >>> {}\n'.format(fnam))
+        sys.stderr.write('###### Already online >>> {}\n'.format(fnam))
         if os.path.exists(gnam):
             os.remove(gnam)
         continue
     if os.path.exists(gnam):
         diff = time.time()-os.path.getmtime(gnam)
         if diff < opts.retry_time:
-            sys.stderr.write('Already requested >>> {}\n'.format(fnam))
+            sys.stderr.write('###### Already requested >>> {}\n'.format(fnam))
             continue
         else:
             os.remove(gnam)
@@ -168,33 +169,76 @@ for i in range(len(uuids)):
         p = None
         process_id = None
         start_time = time.time()
-        try:
-            if os.name.lower() != 'posix':
-                p = Popen(command,shell=True)
+        if opts.verbose:
+            try:
+                if os.name.lower() != 'posix':
+                    p = Popen(command,shell=True)
+                else:
+                    p = Popen(command,shell=True,preexec_fn=os.setsid)
+                process_id = p.pid
+            except Exception:
+                sys.stderr.write('Error in request >>> {}\n'.format(fnam))
+                continue
+            while True: # loop to terminate the process
+                if p.poll() is not None: # the process has terminated
+                    break
+                diff = time.time()-start_time
+                if diff > opts.timeout:
+                    break
+                time.sleep(opts.check_time)
+            result = p.poll()
+            sys.stderr.write('\n')
+            if result is None: # the process hasn't terminated yet.
+                sys.stderr.write('Timeout\n')
+            elif result != 0:
+                sys.stderr.write('###### Not requested >>> {}\n'.format(fnam))
             else:
-                p = Popen(command,shell=True,preexec_fn=os.setsid)
-            process_id = p.pid
-        except Exception:
-            sys.stderr.write('Error in request >>> {}\n'.format(fnam))
-            continue
-        while True: # loop to terminate the process
-            if p.poll() is not None: # the process has terminated
+                with open(gnam,'w') as fp:
+                    fp.write('{}'.format(time.time()))
+                sys.stderr.write('###### Successfully requested >>> {}\n'.format(fnam))
                 break
-            diff = time.time()-start_time
-            if diff > opts.timeout:
-                break
-            time.sleep(opts.check_time)
-        result = p.poll()
-        if result is None: # the process hasn't terminated yet.
-            sys.stderr.write('\nTimeout\n')
-        elif result == 0:
-            with open(gnam,'w') as fp:
-                fp.write('{}'.format(time.time()))
-            sys.stderr.write('Successfully requested >>> {}\n'.format(fnam))
-            break
+            kill_process()
         else:
-            sys.stderr.write('Not requested >>> {}\n'.format(fnam))
-        kill_process()
+            try:
+                if os.name.lower() != 'posix':
+                    p = Popen(command,stdout=PIPE,stderr=PIPE,shell=True)
+                else:
+                    p = Popen(command,stdout=PIPE,stderr=PIPE,shell=True,preexec_fn=os.setsid)
+                process_id = p.pid
+            except Exception:
+                sys.stderr.write('Error in request >>> {}\n'.format(fnam))
+                continue
+            try:
+                out,err = p.communicate(timeout=opts.timeout)
+                result = p.poll()
+            except TimeoutExpired:
+                kill_process()
+                out,err = p.communicate()
+                result = None
+            sys.stderr.write('\n')
+            for line in err.decode().splitlines():
+                line_lower = line.lower()
+                if re.search('raise ',line_lower):
+                    continue
+                elif re.search('sentinelapiltaerror',line_lower):
+                    continue
+                elif re.search('will ',line_lower):
+                    sys.stderr.write(line+'\n')
+                elif re.search('download ',line_lower):
+                    sys.stderr.write(line+'\n')
+                elif re.search('triggering ',line_lower):
+                    sys.stderr.write(line+'\n')
+                elif re.search('requests ',line_lower):
+                    sys.stderr.write(line+'\n')
+            if result is None:
+                sys.stderr.write('Timeout\n')
+            elif result != 0:
+                sys.stderr.write('###### Not requested >>> {}\n'.format(fnam))
+            else:
+                with open(gnam,'w') as fp:
+                    fp.write('{}'.format(time.time()))
+                sys.stderr.write('###### Successfully requested >>> {}\n'.format(fnam))
+                break
         process_id = None
         sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
         time.sleep(opts.wait_time)
