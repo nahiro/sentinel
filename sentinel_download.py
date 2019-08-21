@@ -9,7 +9,7 @@ import atexit
 import numpy as np
 from datetime import datetime
 from glob import glob
-from subprocess import Popen,check_output
+from subprocess import Popen,check_output,PIPE
 from sentinelsat import SentinelAPI
 from optparse import OptionParser,IndentedHelpFormatter
 
@@ -46,6 +46,7 @@ parser.add_option('-d','--download',default=False,action='store_true',help='Down
 parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
+parser.add_option('-V','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 (opts,args) = parser.parse_args()
 
 process_id = None
@@ -195,10 +196,16 @@ if opts.download:
             process_id = None
             start_time = time.time()
             try:
-                if os.name.lower() != 'posix':
-                    p = Popen(command,shell=True)
+                if opts.verbose:
+                    if os.name.lower() != 'posix':
+                        p = Popen(command,shell=True)
+                    else:
+                        p = Popen(command,shell=True,preexec_fn=os.setsid)
                 else:
-                    p = Popen(command,shell=True,preexec_fn=os.setsid)
+                    if os.name.lower() != 'posix':
+                        p = Popen(command,stdout=PIPE,stderr=PIPE,shell=True)
+                    else:
+                        p = Popen(command,stdout=PIPE,stderr=PIPE,shell=True,preexec_fn=os.setsid)
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Failed to run the command. Wait for {} sec\n'.format(opts.wait_time))
