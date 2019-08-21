@@ -187,7 +187,7 @@ if opts.download:
                         os.rename(fnam,gnam)
                 else:
                     if fsiz == sizes[i]:
-                        sys.stderr.write('Successfully downloaded >>> {}\n'.format(fnam))
+                        sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
                         break
                     else:
                         os.rename(fnam,gnam)
@@ -225,6 +225,24 @@ if opts.download:
             if p.poll() is None: # the process hasn't terminated yet.
                 sys.stderr.write('\nTimeout\n')
             kill_process()
+            if not opts.verbose:
+                sys.stderr.write('\n')
+                for line in err.decode().splitlines():
+                    line_lower = line.lower()
+                    if re.search('raise ',line_lower):
+                        continue
+                    elif re.search('sentinelapiltaerror',line_lower):
+                        continue
+                    elif re.search('will ',line_lower):
+                        sys.stderr.write(line+'\n')
+                    elif re.search('triggering ',line_lower):
+                        sys.stderr.write(line+'\n')
+                    elif re.search('requests ',line_lower):
+                        sys.stderr.write(line+'\n')
+                    elif re.search('accept',line_lower):
+                        sys.stderr.write(line+'\n')
+                    elif re.search('quota',line_lower):
+                        sys.stderr.write(line+'\n')
             process_id = None
             sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
             time.sleep(opts.wait_time)

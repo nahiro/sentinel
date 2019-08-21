@@ -230,6 +230,10 @@ for i in range(len(uuids)):
                     sys.stderr.write(line+'\n')
                 elif re.search('requests ',line_lower):
                     sys.stderr.write(line+'\n')
+                elif re.search('accept',line_lower):
+                    sys.stderr.write(line+'\n')
+                elif re.search('quota',line_lower):
+                    sys.stderr.write(line+'\n')
             if result is None:
                 sys.stderr.write('Timeout\n')
             elif result != 0:
