@@ -235,7 +235,7 @@ if opts.download:
                         elif re.search('downloading ',line_lower):
                             sys.stderr.write(line)
                         elif re.search('downloading:',line_lower):
-                            sys.stderr.write(line.rstrip()+'\r')
+                            sys.stderr.write(line.rstrip()+'\033[0K\r')
                         sys.stderr.flush()
                 # Exit if fnam exists or gnam exists and its size does not change for opts.timeout seconds
                 if p.poll() is not None: # the process has terminated
