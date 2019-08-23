@@ -198,14 +198,14 @@ if opts.download:
             try:
                 if opts.verbose:
                     if os.name.lower() != 'posix':
-                        p = Popen(command,universal_newlines=True,encoding='Windows-1252',shell=True)
+                        p = Popen(command,universal_newlines=True,encoding='windows-1252',shell=True)
                     else:
-                        p = Popen(command,universal_newlines=True,encoding='Windows-1252',shell=True,preexec_fn=os.setsid)
+                        p = Popen(command,universal_newlines=True,encoding='windows-1252',shell=True,preexec_fn=os.setsid)
                 else:
                     if os.name.lower() != 'posix':
-                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,encoding='Windows-1252',shell=True)
+                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,encoding='windows-1252',shell=True)
                     else:
-                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,encoding='Windows-1252',shell=True,preexec_fn=os.setsid)
+                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,encoding='windows-1252',shell=True,preexec_fn=os.setsid)
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Failed to run the command. Wait for {} sec\n'.format(opts.wait_time))
