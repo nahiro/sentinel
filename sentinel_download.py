@@ -198,14 +198,14 @@ if opts.download:
             try:
                 if opts.verbose:
                     if os.name.lower() != 'posix':
-                        p = Popen(command,universal_newlines=True,encoding='windows-1252',shell=True)
+                        p = Popen(command,universal_newlines=True,encoding='utf-8',shell=True)
                     else:
-                        p = Popen(command,universal_newlines=True,encoding='windows-1252',shell=True,preexec_fn=os.setsid)
+                        p = Popen(command,universal_newlines=True,encoding='utf-8',shell=True,preexec_fn=os.setsid)
                 else:
                     if os.name.lower() != 'posix':
-                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,encoding='windows-1252',shell=True)
+                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,encoding='utf-8',shell=True)
                     else:
-                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,encoding='windows-1252',shell=True,preexec_fn=os.setsid)
+                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,encoding='utf-8',shell=True,preexec_fn=os.setsid)
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Failed to run the command. Wait for {} sec\n'.format(opts.wait_time))
@@ -213,27 +213,30 @@ if opts.download:
                 continue
             while True: # loop to terminate the process
                 if not opts.verbose:
-                    for line in p.stderr.readline().splitlines():
+                    while True:
+                        line = p.stderr.readline()
+                        if line == '':
+                            break
                         line_lower = line.lower()
                         if re.search('raise ',line_lower):
                             continue
                         elif re.search('sentinelapiltaerror',line_lower):
                             continue
                         elif re.search('will ',line_lower):
-                            sys.stderr.write(line+'\n')
+                            sys.stderr.write(line)
                         elif re.search('triggering ',line_lower):
-                            sys.stderr.write(line+'\n')
+                            sys.stderr.write(line)
                         elif re.search('requests ',line_lower):
-                            sys.stderr.write(line+'\n')
+                            sys.stderr.write(line)
                         elif re.search('accept',line_lower):
-                            sys.stderr.write(line+'\n')
+                            sys.stderr.write(line)
                         elif re.search('quota',line_lower):
-                            sys.stderr.write(line+'\n')
+                            sys.stderr.write(line)
                         elif re.search('downloading ',line_lower):
-                            sys.stderr.write(line+'\n')
+                            sys.stderr.write(line)
                         elif re.search('downloading:',line_lower):
-                            sys.stderr.write(line+'\r')
-                    sys.stderr.flush()
+                            sys.stderr.write(line.rstrip()+'\r')
+                        sys.stderr.flush()
                 # Exit if fnam exists or gnam exists and its size does not change for opts.timeout seconds
                 if p.poll() is not None: # the process has terminated
                     break
