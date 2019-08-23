@@ -203,15 +203,37 @@ if opts.download:
                         p = Popen(command,shell=True,preexec_fn=os.setsid)
                 else:
                     if os.name.lower() != 'posix':
-                        p = Popen(command,stdout=PIPE,stderr=PIPE,shell=True)
+                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,shell=True)
                     else:
-                        p = Popen(command,stdout=PIPE,stderr=PIPE,shell=True,preexec_fn=os.setsid)
+                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,shell=True,preexec_fn=os.setsid)
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Failed to run the command. Wait for {} sec\n'.format(opts.wait_time))
                 time.sleep(opts.wait_time)
                 continue
             while True: # loop to terminate the process
+                if not opts.verbose:
+                    for line in p.stderr.readline().splitlines():
+                        line_lower = line.lower()
+                        if re.search('raise ',line_lower):
+                            continue
+                        elif re.search('sentinelapiltaerror',line_lower):
+                            continue
+                        elif re.search('will ',line_lower):
+                            sys.stderr.write(line+'\n')
+                        elif re.search('triggering ',line_lower):
+                            sys.stderr.write(line+'\n')
+                        elif re.search('requests ',line_lower):
+                            sys.stderr.write(line+'\n')
+                        elif re.search('accept',line_lower):
+                            sys.stderr.write(line+'\n')
+                        elif re.search('quota',line_lower):
+                            sys.stderr.write(line+'\n')
+                        elif re.search('downloading ',line_lower):
+                            sys.stderr.write(line+'\n')
+                        elif re.search('downloading:',line_lower):
+                            sys.stderr.write(line+'\r')
+                    sys.stderr.flush()
                 # Exit if fnam exists or gnam exists and its size does not change for opts.timeout seconds
                 if p.poll() is not None: # the process has terminated
                     break
@@ -226,6 +248,7 @@ if opts.download:
                 sys.stderr.write('\nTimeout\n')
             kill_process()
             if not opts.verbose:
+                out,err = p.communicate()
                 sys.stderr.write('\n')
                 for line in err.decode().splitlines():
                     line_lower = line.lower()
@@ -242,6 +265,8 @@ if opts.download:
                     elif re.search('accept',line_lower):
                         sys.stderr.write(line+'\n')
                     elif re.search('quota',line_lower):
+                        sys.stderr.write(line+'\n')
+                    elif re.search('downloading ',line_lower):
                         sys.stderr.write(line+'\n')
             process_id = None
             sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
