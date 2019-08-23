@@ -198,14 +198,14 @@ if opts.download:
             try:
                 if opts.verbose:
                     if os.name.lower() != 'posix':
-                        p = Popen(command,shell=True)
+                        p = Popen(command,universal_newlines=True,encoding='Windows-1252',shell=True)
                     else:
-                        p = Popen(command,shell=True,preexec_fn=os.setsid)
+                        p = Popen(command,universal_newlines=True,encoding='Windows-1252',shell=True,preexec_fn=os.setsid)
                 else:
                     if os.name.lower() != 'posix':
-                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,shell=True)
+                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,encoding='Windows-1252',shell=True)
                     else:
-                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,shell=True,preexec_fn=os.setsid)
+                        p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=1,universal_newlines=True,encoding='Windows-1252',shell=True,preexec_fn=os.setsid)
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Failed to run the command. Wait for {} sec\n'.format(opts.wait_time))
@@ -250,7 +250,7 @@ if opts.download:
             if not opts.verbose:
                 out,err = p.communicate()
                 sys.stderr.write('\n')
-                for line in err.decode().splitlines():
+                for line in err.splitlines():
                     line_lower = line.lower()
                     if re.search('raise ',line_lower):
                         continue
