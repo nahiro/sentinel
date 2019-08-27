@@ -143,6 +143,13 @@ if opts.download:
     for i in range(len(uuids)):
         # Check data availability
         fnam = os.path.join(path,names[i]+'.zip')
+        gnam = os.path.join(fnam+'.incomplete')
+        # Skip if gnam does not exist and fnam with expected size exists
+        if os.path.exists(fnam) and not os.path.exists(gnam):
+            fsiz = os.path.getsize(fnam)
+            if fsiz == sizes[i]:
+                sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
+                continue
         gnam = os.path.join(fnam+'.request')
         if opts.url is not None:
             api = SentinelAPI(opts.user,opts.password,opts.url)
