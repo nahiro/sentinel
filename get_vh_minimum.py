@@ -1,6 +1,9 @@
+#!/usr/bin/env python
 import os
-os.environ['_JAVA_OPTIONS'] = '-Xmx100240m'     # Save memory for JAVA
-os.system('export _JAVA_OPTIONS=-Xmx100240m')   # Save memory for JAVA
+import psutil
+mem_size = int(psutil.virtual_memory().available*0.8e-6)
+os.environ['_JAVA_OPTIONS'] = '-Xmx{}m'.format(mem_size)     # Save memory for JAVA
+os.system('export _JAVA_OPTIONS=-Xmx{}m'.format(mem_size))   # Save memory for JAVA
 import shutil
 import sys
 import re
@@ -16,6 +19,17 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 from matplotlib.path import Path
 from matplotlib.backends.backend_pdf import PdfPages
+from optparse import OptionParser,IndentedHelpFormatter
+
+# Read options
+parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
+parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
+(opts,args) = parser.parse_args()
+if len(args) < 1:
+    parser.print_help()
+    sys.exit(0)
+input_fnam = args[0]
 
 def transform_utm_to_wgs84(easting,northing,utm_zone):
     is_northern = (1 if northing.mean() > 0 else 0)
@@ -38,17 +52,14 @@ def transform_wgs84_to_utm(longitude,latitude):
     xyz = np.array(wgs84_to_utm_geo_transform.TransformPoints(np.dstack((longitude,latitude)).reshape((-1,2)))).reshape(longitude.shape[0],longitude.shape[1],3)
     return xyz[:,:,0],xyz[:,:,1],xyz[:,:,2] # returns easting, northing, altitude
 
-debug = True
-
-if debug:
+if opts.debug:
     plt.interactive(False)
     pdf = PdfPages('transplanting_date.pdf')
     fig = plt.figure(1,facecolor='w',figsize=(6,3.5))
     plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.90)
     plt.draw()
 
-fnam = '../../190823/vh/collocation_VH.tif'
-ds = gdal.Open(fnam)
+ds = gdal.Open(input_fnam)
 data = ds.ReadAsArray()
 trans = ds.GetGeoTransform()
 indy,indx = np.indices(data[0].shape)
@@ -57,7 +68,7 @@ lat = trans[3]+indx*trans[4]+indy*trans[5]
 xp,yp,zp = transform_wgs84_to_utm(lon,lat)
 ds = None # close dataset
 
-vh_prod = ProductIO.readProduct(fnam)
+vh_prod = ProductIO.readProduct(input_fnam)
 vh_list = list(vh_prod.getBandNames())
 nh = len(vh_list)
 dates = []
@@ -107,8 +118,8 @@ nx = xx.size
 inds = np.arange(nx)
 
 r = shapefile.Reader('../../190830/New_Test_Sites/New_Test_Sites')
-fnam = 'transplanting_date.dat'
-with open(fnam,'w') as fp:
+output_fnam = 'transplanting_date.dat'
+with open(output_fnam,'w') as fp:
     fp.write('# {:.5f} {:.5f} {:4d}\n'.format(t0,t1,nt))
     for i,shaperec in enumerate(r.iterShapeRecords()):
         if i%100 == 0:
@@ -210,7 +221,7 @@ with open(fnam,'w') as fp:
         fp.write('{:13.6e} {:2d} '.format(treg,freg))
         fp.write('{:13.6e} {:13.6e} {:2d} '.format(traw,vraw,fraw))
         fp.write('{:13.6e}\n'.format(draw))
-        if debug and not np.isnan(tmin):
+        if opts.debug and not np.isnan(tmin):
             fig.clear()
             ax1 = plt.subplot(111)
             ax1.plot(ntim,yi,'b-')
@@ -227,5 +238,5 @@ with open(fnam,'w') as fp:
             plt.draw()
             plt.savefig(pdf,format='pdf')
         #break
-if debug:
+if opts.debug:
     pdf.close()
