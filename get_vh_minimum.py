@@ -121,6 +121,16 @@ r = shapefile.Reader('../../190830/New_Test_Sites/New_Test_Sites')
 output_fnam = 'transplanting_date.dat'
 with open(output_fnam,'w') as fp:
     fp.write('# {:.5f} {:.5f} {:4d}\n'.format(t0,t1,nt))
+    fp.write('# {:3s} {:4s} '.format('i','ndat'))
+    fp.write('{:13s} {:11s} {:4s} '.format('tmin','vmin','fmin'))
+    fp.write('{:13s} {:11s} {:4s} '.format('tlft','vlft','flft'))
+    fp.write('{:13s} {:11s} {:4s} '.format('trgt','vrgt','frgt'))
+    fp.write('{:13s} {:13s} '.format('dmin','dstd'))
+    fp.write('{:11s} {:4s} '.format('tleg','fleg'))
+    fp.write('{:11s} {:4s} '.format('treg','freg'))
+    fp.write('{:13s} {:13s} '.format('sstd','scor'))
+    fp.write('{:13s} {:11s} {:4s} '.format('traw','vraw','fraw'))
+    fp.write('{:13s} {:13s} {:13s}\n'.format('draw','rstd','rcor'))
     for i,shaperec in enumerate(r.iterShapeRecords()):
         if i%100 == 0:
             sys.stderr.write('{} {}\n'.format(i,len(r)))
@@ -143,10 +153,14 @@ with open(output_fnam,'w') as fp:
         fleg = -1
         treg = np.nan
         freg = -1
+        sstd = np.nan
+        scor = np.nan
         traw = np.nan
         vraw = np.nan
         fraw = -1
         draw = np.nan
+        rstd = np.nan
+        rcor = np.nan
         if ndat > 0:
             dtmp = dset[0][flags]
             cnd = ~np.isnan(dtmp)
@@ -207,11 +221,15 @@ with open(output_fnam,'w') as fp:
                     treg = xx[indx_treg]
                     vreg = yy[indx_treg]
                     freg = 2
+                sstd = np.std(yy)
+                scor = np.corrcoef(xx,yy)[0,1]
                 indx_traw = np.argmin(yi)
                 traw = ntim[indx_traw]
                 vraw = yi[indx_traw]
                 fraw = (1 if indx_traw == 0 else (2 if indx_traw == nt-1 else 0))
-                draw = sp([traw])[0]-vraw
+                draw = y1[indx_traw]-vraw
+                rstd = np.std(yi)
+                rcor = np.corrcoef(ntim,yi)[0,1]
         fp.write('{:6d} {:3d} '.format(i,ndat))
         fp.write('{:13.6e} {:13.6e} {:2d} '.format(tmin,vmin,fmin))
         fp.write('{:13.6e} {:13.6e} {:2d} '.format(tlft,vlft,flft))
@@ -219,8 +237,9 @@ with open(output_fnam,'w') as fp:
         fp.write('{:13.6e} {:13.6e} '.format(dmin,dstd))
         fp.write('{:13.6e} {:2d} '.format(tleg,fleg))
         fp.write('{:13.6e} {:2d} '.format(treg,freg))
+        fp.write('{:13.6e} {:13.6e} '.format(sstd,scor))
         fp.write('{:13.6e} {:13.6e} {:2d} '.format(traw,vraw,fraw))
-        fp.write('{:13.6e}\n'.format(draw))
+        fp.write('{:13.6e} {:13.6e} {:13.6e}\n'.format(draw,rstd,rcor))
         if opts.debug and not np.isnan(tmin):
             fig.clear()
             ax1 = plt.subplot(111)
@@ -234,7 +253,7 @@ with open(output_fnam,'w') as fp:
             ax1.plot(tleg,vleg,'co')
             ax1.plot(treg,vreg,'co')
             ax1.set_ylim(-30.0,-10.0)
-            ax1.set_title('{:d}'.format(i))
+            ax1.set_title('{:d},{:.2e},{:.2e},{:.2e},{:.2e}'.format(i,sstd,scor,rstd,rcor))
             plt.draw()
             plt.savefig(pdf,format='pdf')
         #break
