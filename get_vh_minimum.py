@@ -175,6 +175,22 @@ with open(output_fnam,'w') as fp:
                 indx_y,indx_x = np.unravel_index(np.argmin(np.square(xp-xc)+np.square(yp-yc)),xp.shape)
                 yi = dset[:,indx_y,indx_x]
                 ndat = -1
+            else:
+                dp_min = 1.0e10
+                indx_y = None
+                indx_x = None
+                for ip in range(len(pp)):
+                    xc = pp[ip,0]
+                    yc = pp[ip,1]
+                    dp = np.square(xp-xc)+np.square(yp-yc)
+                    iy,ix = np.unravel_index(np.argmin(dp),xp.shape)
+                    dp_tmp = dp[iy,ix]
+                    if dp_tmp < dp_min:
+                        indx_y = iy
+                        indx_x = ix
+                        dp_min = dp_tmp
+                yi = dset[:,indx_y,indx_x]
+                ndat = -2
         if yi is not None:
             sp = UnivariateCubicSmoothingSpline(ntim,yi,smooth=0.05)
             yy = sp(xx)
