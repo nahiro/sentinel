@@ -161,64 +161,66 @@ with open(output_fnam,'w') as fp:
         draw = np.nan
         rstd = np.nan
         rcor = np.nan
+        yi = None
         if ndat > 0:
             dtmp = dset[0][flags]
             cnd = ~np.isnan(dtmp)
             if cnd.sum() > 0:
                 yi = dset[:,flags].reshape(dtim.size,-1).mean(axis=1)
-                sp = UnivariateCubicSmoothingSpline(ntim,yi,smooth=0.05)
-                yy = sp(xx)
-                y1 = sp(ntim)
-                indx_tmin = np.argmin(yy)
-                tmin = xx[indx_tmin]
-                vmin = yy[indx_tmin]
-                fmin = (1 if indx_tmin == 0 else (2 if indx_tmin == nx-1 else 0))
-                yt = yy.copy()
-                yt[xx > tmin] = 1.0e-10
-                indx_tlft = np.argmax(yt)
-                tlft = xx[indx_tlft]
-                vlft = yy[indx_tlft]
-                flft = (1 if indx_tlft == 0 else (2 if indx_tlft == nx-1 else 0))
-                yt = yy.copy()
-                yt[xx < tmin] = 1.0e-10
-                indx_trgt = np.argmax(yt)
-                trgt = xx[indx_trgt]
-                vrgt = yy[indx_trgt]
-                frgt = (1 if indx_trgt == 0 else (2 if indx_trgt == nx-1 else 0))
-                dmin = vmin-splev([tmin],splrep(ntim,yi,k=1))[0]
-                dstd = np.sqrt(np.square(y1-yi).sum()/yi.size)
-                cnd0 = (yy >= vmin+dstd)
-                cnd = cnd0 & (xx < tmin)
-                if cnd.sum() > 0:
-                    indx_tleg = inds[cnd][-1]
-                    tleg = xx[indx_tleg]
-                    vleg = yy[indx_tleg]
-                    fleg = 0
-                else:
-                    indx_tleg = 0
-                    tleg = xx[indx_tleg]
-                    vleg = yy[indx_tleg]
-                    fleg = 1
-                cnd = cnd0 & (xx > tmin)
-                if cnd.sum() > 0:
-                    indx_treg = inds[cnd][0]
-                    treg = xx[indx_treg]
-                    vreg = yy[indx_treg]
-                    freg = 0
-                else:
-                    indx_treg = nx-1
-                    treg = xx[indx_treg]
-                    vreg = yy[indx_treg]
-                    freg = 2
-                sstd = np.std(yy)
-                scor = np.corrcoef(xx,yy)[0,1]
-                indx_traw = np.argmin(yi)
-                traw = ntim[indx_traw]
-                vraw = yi[indx_traw]
-                fraw = (1 if indx_traw == 0 else (2 if indx_traw == nt-1 else 0))
-                draw = y1[indx_traw]-vraw
-                rstd = np.std(yi)
-                rcor = np.corrcoef(ntim,yi)[0,1]
+        if yi is not None:
+            sp = UnivariateCubicSmoothingSpline(ntim,yi,smooth=0.05)
+            yy = sp(xx)
+            y1 = sp(ntim)
+            indx_tmin = np.argmin(yy)
+            tmin = xx[indx_tmin]
+            vmin = yy[indx_tmin]
+            fmin = (1 if indx_tmin == 0 else (2 if indx_tmin == nx-1 else 0))
+            yt = yy.copy()
+            yt[xx > tmin] = -1.0e10
+            indx_tlft = np.argmax(yt)
+            tlft = xx[indx_tlft]
+            vlft = yy[indx_tlft]
+            flft = (1 if indx_tlft == 0 else (2 if indx_tlft == nx-1 else 0))
+            yt = yy.copy()
+            yt[xx < tmin] = -1.0e10
+            indx_trgt = np.argmax(yt)
+            trgt = xx[indx_trgt]
+            vrgt = yy[indx_trgt]
+            frgt = (1 if indx_trgt == 0 else (2 if indx_trgt == nx-1 else 0))
+            dmin = vmin-splev([tmin],splrep(ntim,yi,k=1))[0]
+            dstd = np.sqrt(np.square(y1-yi).sum()/yi.size)
+            cnd0 = (yy >= vmin+dstd)
+            cnd = cnd0 & (xx < tmin)
+            if cnd.sum() > 0:
+                indx_tleg = inds[cnd][-1]
+                tleg = xx[indx_tleg]
+                vleg = yy[indx_tleg]
+                fleg = 0
+            else:
+                indx_tleg = 0
+                tleg = xx[indx_tleg]
+                vleg = yy[indx_tleg]
+                fleg = 1
+            cnd = cnd0 & (xx > tmin)
+            if cnd.sum() > 0:
+                indx_treg = inds[cnd][0]
+                treg = xx[indx_treg]
+                vreg = yy[indx_treg]
+                freg = 0
+            else:
+                indx_treg = nx-1
+                treg = xx[indx_treg]
+                vreg = yy[indx_treg]
+                freg = 2
+            sstd = np.std(yy)
+            scor = np.corrcoef(xx,yy)[0,1]
+            indx_traw = np.argmin(yi)
+            traw = ntim[indx_traw]
+            vraw = yi[indx_traw]
+            fraw = (1 if indx_traw == 0 else (2 if indx_traw == nt-1 else 0))
+            draw = y1[indx_traw]-vraw
+            rstd = np.std(yi)
+            rcor = np.corrcoef(ntim,yi)[0,1]
         fp.write('{:6d} {:3d} '.format(i,ndat))
         fp.write('{:13.6e} {:13.6e} {:2d} '.format(tmin,vmin,fmin))
         fp.write('{:13.6e} {:13.6e} {:2d} '.format(tlft,vlft,flft))
@@ -234,13 +236,13 @@ with open(output_fnam,'w') as fp:
             ax1 = plt.subplot(111)
             ax1.plot(ntim,yi,'b-')
             ax1.plot(xx,yy,'r-')
-            ax1.plot(tmin,vmin-dmin,'go')
-            ax1.plot(traw,vraw+draw,'go')
+            ax1.plot(tmin,vmin-dmin,'g^')
+            ax1.plot(traw,vraw+draw,'gv')
             ax1.plot(tmin,vmin,'bo')
-            ax1.plot(tlft,vlft,'mo')
-            ax1.plot(trgt,vrgt,'mo')
-            ax1.plot(tleg,vleg,'co')
-            ax1.plot(treg,vreg,'co')
+            ax1.plot(tlft,vlft,'m<')
+            ax1.plot(trgt,vrgt,'m>')
+            ax1.plot(tleg,vleg,'c<')
+            ax1.plot(treg,vreg,'c>')
             ax1.set_ylim(-30.0,-10.0)
             ax1.set_title('{:d},{:.2e},{:.2e},{:.2e},{:.2e}'.format(i,sstd,scor,rstd,rcor))
             plt.draw()
