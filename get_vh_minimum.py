@@ -173,29 +173,18 @@ with open(output_fnam,'w') as fp:
                 tmin = xx[indx_tmin]
                 vmin = yy[indx_tmin]
                 fmin = (1 if indx_tmin == 0 else (2 if indx_tmin == nx-1 else 0))
-                dy = np.gradient(yy)
-                cnd = (dy >= 0.0) & (xx < tmin)
-                if cnd.sum() > 0:
-                    indx_tlft = inds[cnd][-1]
-                    tlft = xx[indx_tlft]
-                    vlft = yy[indx_tlft]
-                    flft = 0
-                else:
-                    indx_tlft = 0
-                    tlft = xx[indx_tlft]
-                    vlft = yy[indx_tlft]
-                    flft = 1
-                cnd = (dy <= 0.0) & (xx > tmin)
-                if cnd.sum() > 0:
-                    indx_trgt = inds[cnd][0]
-                    trgt = xx[indx_trgt]
-                    vrgt = yy[indx_trgt]
-                    frgt = 0
-                else:
-                    indx_trgt = nx-1
-                    trgt = xx[indx_trgt]
-                    vrgt = yy[indx_trgt]
-                    frgt = 2
+                yt = yy.copy()
+                yt[xx > tmin] = 1.0e-10
+                indx_tlft = np.argmax(yt)
+                tlft = xx[indx_tlft]
+                vlft = yy[indx_tlft]
+                flft = (1 if indx_tlft == 0 else (2 if indx_tlft == nx-1 else 0))
+                yt = yy.copy()
+                yt[xx < tmin] = 1.0e-10
+                indx_trgt = np.argmax(yt)
+                trgt = xx[indx_trgt]
+                vrgt = yy[indx_trgt]
+                frgt = (1 if indx_trgt == 0 else (2 if indx_trgt == nx-1 else 0))
                 dmin = vmin-splev([tmin],splrep(ntim,yi,k=1))[0]
                 dstd = np.sqrt(np.square(y1-yi).sum()/yi.size)
                 cnd0 = (yy >= vmin+dstd)
