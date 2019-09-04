@@ -196,8 +196,8 @@ with open(output_fnam,'w') as fp:
                     trgt = xx[indx_trgt]
                     vrgt = yy[indx_trgt]
                     frgt = 2
-                dmin = vmin-splev(xx,splrep(ntim,yi,k=1))[indx_tmin]
-                dstd = np.sqrt(np.square(y1-yi).sum()/y1.size)
+                dmin = vmin-splev([tmin],splrep(ntim,yi,k=1))[0]
+                dstd = np.sqrt(np.square(y1-yi).sum()/yi.size)
                 cnd0 = (yy >= vmin+dstd)
                 cnd = cnd0 & (xx < tmin)
                 if cnd.sum() > 0:
