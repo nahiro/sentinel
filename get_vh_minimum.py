@@ -167,6 +167,14 @@ with open(output_fnam,'w') as fp:
             cnd = ~np.isnan(dtmp)
             if cnd.sum() > 0:
                 yi = dset[:,flags].reshape(dtim.size,-1).mean(axis=1)
+        else:
+            pp = np.array(shp.points)
+            xc = pp[:,0].mean()
+            yc = pp[:,1].mean()
+            if p.contains_point((xc,yc)):
+                indx_y,indx_x = np.unravel_index(np.argmin(np.square(xp-xc)+np.square(yp-yc)),xp.shape)
+                yi = dset[:,indx_y,indx_x]
+                ndat = -1
         if yi is not None:
             sp = UnivariateCubicSmoothingSpline(ntim,yi,smooth=0.05)
             yy = sp(xx)
