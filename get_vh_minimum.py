@@ -7,7 +7,7 @@ os.system('export _JAVA_OPTIONS=-Xmx{}m'.format(mem_size))   # Save memory for J
 import shutil
 import sys
 import re
-from datetime import datetime
+from datetime import datetime,timedelta
 import numpy as np
 from scipy.interpolate import splrep,splev
 from csaps import UnivariateCubicSmoothingSpline
@@ -21,9 +21,19 @@ from matplotlib.path import Path
 from matplotlib.backends.backend_pdf import PdfPages
 from optparse import OptionParser,IndentedHelpFormatter
 
+# Default values
+SHPNAM = os.path.join('New_Test_Sites','New_Test_Sites.shp')
+DATNAM = 'transplanting_date.dat'
+FIGNAM = 'transplanting_date.pdf'
+
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
+parser.add_option('-e','--end',default=None,help='End date of the analysis in the format YYYYMMDD.')
+parser.add_option('-p','--period',default=None,help='Observation period in day.')
+parser.add_option('-s','--shpnam',default=SHPNAM,help='Input shapefile name (%default)')
+parser.add_option('-o','--datnam',default=DATNAM,help='Output data name (%default)')
+parser.add_option('-F','--fignam',default=FIGNAM,help='Output figure name for debug (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -54,7 +64,7 @@ def transform_wgs84_to_utm(longitude,latitude):
 
 if opts.debug:
     plt.interactive(False)
-    pdf = PdfPages('transplanting_date.pdf')
+    pdf = PdfPages(opts.fignam)
     fig = plt.figure(1,facecolor='w',figsize=(6,3.5))
     plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.90)
     plt.draw()
@@ -81,8 +91,11 @@ for i in range(nh):
 vh = vh_prod.getBand(vh_list[0])
 x0 = 0
 y0 = 0
-d0 = datetime(2019,4,10)
-d1 = datetime(2019,6,10)
+if opts.end is not None:
+    d1 = datetime.strptime(opts.end,'%Y%m%d')
+else:
+    d1 = datetime.now()
+d0 = d1-timedelta(days=opts.period)
 w0 = vh.getRasterWidth()
 h0 = vh.getRasterHeight()
 x1 = w0
@@ -117,9 +130,8 @@ xx = np.arange(t0,t1,0.01)
 nx = xx.size
 inds = np.arange(nx)
 
-r = shapefile.Reader('../../190830/New_Test_Sites/New_Test_Sites')
-output_fnam = 'transplanting_date.dat'
-with open(output_fnam,'w') as fp:
+r = shapefile.Reader(opts.shpnam)
+with open(opts.datnam,'w') as fp:
     fp.write('# {:.5f} {:.5f} {:4d}\n'.format(t0,t1,nt))
     fp.write('# {:3s} {:4s} '.format('i','ndat'))
     fp.write('{:13s} {:11s} {:4s} '.format('tmin','vmin','fmin'))
