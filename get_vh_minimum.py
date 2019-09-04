@@ -22,6 +22,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
+PERIOD = 60
 SHPNAM = os.path.join('New_Test_Sites','New_Test_Sites.shp')
 DATNAM = 'transplanting_date.dat'
 FIGNAM = 'transplanting_date.pdf'
@@ -30,7 +31,7 @@ FIGNAM = 'transplanting_date.pdf'
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
 parser.add_option('-e','--end',default=None,help='End date of the analysis in the format YYYYMMDD.')
-parser.add_option('-p','--period',default=None,help='Observation period in day.')
+parser.add_option('-p','--period',default=PERIOD,help='Observation period in day (%default)')
 parser.add_option('-s','--shpnam',default=SHPNAM,help='Input shapefile name (%default)')
 parser.add_option('-o','--datnam',default=DATNAM,help='Output data name (%default)')
 parser.add_option('-F','--fignam',default=FIGNAM,help='Output figure name for debug (%default)')
