@@ -244,7 +244,7 @@ with open(output_fnam,'w') as fp:
             ax1.plot(tleg,vleg,'c<')
             ax1.plot(treg,vreg,'c>')
             ax1.set_ylim(-30.0,-10.0)
-            ax1.set_title('{:d},{:.2e},{:.2e},{:.2e},{:.2e}'.format(i,sstd,scor,rstd,rcor))
+            ax1.set_title('{:d},{:6.2f},{:6.3f},{:6.2f},{:6.3f}'.format(i,sstd,scor,rstd,rcor))
             plt.draw()
             plt.savefig(pdf,format='pdf')
         #break
