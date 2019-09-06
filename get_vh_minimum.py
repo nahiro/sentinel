@@ -23,8 +23,9 @@ from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
 END = datetime.now().strftime('%Y%m%d')
-PERIOD = 60
-SIGWID = 15.0
+PERIOD = 60 # day
+SIGWID = 15.0 # dB
+MAXDIS = 100.0 # m
 SHPNAM = os.path.join('New_Test_Sites','New_Test_Sites.shp')
 DATNAM = 'transplanting_date.dat'
 FIGNAM = 'transplanting_date.pdf'
@@ -35,6 +36,7 @@ parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
 parser.add_option('-e','--end',default=END,help='End date of the analysis in the format YYYYMMDD (%default)')
 parser.add_option('-p','--period',default=PERIOD,type='int',help='Observation period in day (%default)')
 parser.add_option('-w','--sigwid',default=SIGWID,type='float',help='Signal width in day (%default)')
+parser.add_option('-m','--maxdis',default=MAXDIS,type='float',help='Max distance in m (%default)')
 parser.add_option('-s','--shpnam',default=SHPNAM,help='Input shapefile name (%default)')
 parser.add_option('-o','--datnam',default=DATNAM,help='Output data name (%default)')
 parser.add_option('-F','--fignam',default=FIGNAM,help='Output figure name for debug (%default)')
@@ -187,9 +189,14 @@ with open(opts.datnam,'w') as fp:
             xc = pp[:,0].mean()
             yc = pp[:,1].mean()
             if p.contains_point((xc,yc)):
-                indx_y,indx_x = np.unravel_index(np.argmin(np.square(xp-xc)+np.square(yp-yc)),xp.shape)
-                yi = dset[:,indx_y,indx_x]
-                ndat = -1
+                dp = np.square(xp-xc)+np.square(yp-yc)
+                indx_y,indx_x = np.unravel_index(np.argmin(dp),xp.shape)
+                dp_min = np.sqrt(dp[indx_y,indx_x])
+                if dp_min < opts.maxdis:
+                    yi = dset[:,indx_y,indx_x]
+                    ndat = -1
+                else:
+                    sys.stderr.write('Case A, x={}, y={}, dp_min={}\n'.format(indx_x,indx_y,dp_min))
             else:
                 dp_min = 1.0e10
                 indx_y = None
@@ -204,8 +211,12 @@ with open(opts.datnam,'w') as fp:
                         indx_y = iy
                         indx_x = ix
                         dp_min = dp_tmp
-                yi = dset[:,indx_y,indx_x]
-                ndat = -2
+                dp_min = np.sqrt(dp_min)
+                if dp_min < opts.maxdis:
+                    yi = dset[:,indx_y,indx_x]
+                    ndat = -2
+                else:
+                    sys.stderr.write('Case B, x={}, y={}, dp_min={}\n'.format(indx_x,indx_y,dp_min))
         if yi is not None:
             sp = UnivariateCubicSmoothingSpline(ntim,yi,smooth=0.05)
             yy = sp(xx)
