@@ -22,7 +22,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
+END = datetime.now().strftime('%Y%m%d')
 PERIOD = 60
+SIGWID = 15.0
 SHPNAM = os.path.join('New_Test_Sites','New_Test_Sites.shp')
 DATNAM = 'transplanting_date.dat'
 FIGNAM = 'transplanting_date.pdf'
@@ -30,8 +32,9 @@ FIGNAM = 'transplanting_date.pdf'
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
-parser.add_option('-e','--end',default=None,help='End date of the analysis in the format YYYYMMDD.')
-parser.add_option('-p','--period',default=PERIOD,help='Observation period in day (%default)')
+parser.add_option('-e','--end',default=END,help='End date of the analysis in the format YYYYMMDD (%default)')
+parser.add_option('-p','--period',default=PERIOD,type='int',help='Observation period in day (%default)')
+parser.add_option('-w','--sigwid',default=SIGWID,type='float',help='Signal width in day (%default)')
 parser.add_option('-s','--shpnam',default=SHPNAM,help='Input shapefile name (%default)')
 parser.add_option('-o','--datnam',default=DATNAM,help='Output data name (%default)')
 parser.add_option('-F','--fignam',default=FIGNAM,help='Output figure name for debug (%default)')
@@ -92,10 +95,7 @@ for i in range(nh):
 vh = vh_prod.getBand(vh_list[0])
 x0 = 0
 y0 = 0
-if opts.end is not None:
-    d1 = datetime.strptime(opts.end,'%Y%m%d')
-else:
-    d1 = datetime.now()
+d1 = datetime.strptime(opts.end,'%Y%m%d')
 d0 = d1-timedelta(days=opts.period)
 w0 = vh.getRasterWidth()
 h0 = vh.getRasterHeight()
@@ -134,16 +134,17 @@ inds = np.arange(nx)
 r = shapefile.Reader(opts.shpnam)
 with open(opts.datnam,'w') as fp:
     fp.write('# {:.5f} {:.5f} {:4d}\n'.format(t0,t1,nt))
-    fp.write('# {:3s} {:4s} '.format('i','ndat'))
-    fp.write('{:13s} {:11s} {:4s} '.format('tmin','vmin','fmin'))
-    fp.write('{:13s} {:11s} {:4s} '.format('tlft','vlft','flft'))
-    fp.write('{:13s} {:11s} {:4s} '.format('trgt','vrgt','frgt'))
-    fp.write('{:13s} {:13s} '.format('dmin','dstd'))
-    fp.write('{:11s} {:4s} '.format('tleg','fleg'))
-    fp.write('{:11s} {:4s} '.format('treg','freg'))
-    fp.write('{:13s} {:13s} '.format('sstd','scor'))
-    fp.write('{:13s} {:11s} {:4s} '.format('traw','vraw','fraw'))
-    fp.write('{:13s} {:13s} {:13s}\n'.format('draw','rstd','rcor'))
+    fp.write('# {:>3s} {:>4s} '.format('i','ndat'))
+    fp.write('{:>13s} {:>11s} {:>4s} '.format('tmin','vmin','fmin'))
+    fp.write('{:>13s} {:>11s} {:>4s} '.format('tlft','vlft','flft'))
+    fp.write('{:>13s} {:>11s} {:>4s} '.format('trgt','vrgt','frgt'))
+    fp.write('{:>13s} {:>13s} '.format('dmin','dstd'))
+    fp.write('{:>11s} {:>4s} '.format('tleg','fleg'))
+    fp.write('{:>11s} {:>4s} '.format('treg','freg'))
+    fp.write('{:>13s} {:>13s} '.format('sstd','scor'))
+    fp.write('{:>13s} {:>11s} {:>4s} '.format('traw','vraw','fraw'))
+    fp.write('{:>13s} {:>13s} {:>13s} '.format('draw','rstd','rcor'))
+    fp.write('{:>13s}\n'.format('bavg'))
     for i,shaperec in enumerate(r.iterShapeRecords()):
         if i%100 == 0:
             sys.stderr.write('{} {}\n'.format(i,len(r)))
@@ -174,6 +175,7 @@ with open(opts.datnam,'w') as fp:
         draw = np.nan
         rstd = np.nan
         rcor = np.nan
+        bavg = np.nan
         yi = None
         if ndat > 0:
             dtmp = dset[0][flags]
@@ -258,6 +260,8 @@ with open(opts.datnam,'w') as fp:
             draw = y1[indx_traw]-vraw
             rstd = np.std(yi)
             rcor = np.corrcoef(ntim,yi)[0,1]
+            cnd = np.abs(ntim-tmin) > opts.sigwid
+            bavg = np.mean(yi[cnd])
         fp.write('{:6d} {:3d} '.format(i,ndat))
         fp.write('{:13.6e} {:13.6e} {:2d} '.format(tmin,vmin,fmin))
         fp.write('{:13.6e} {:13.6e} {:2d} '.format(tlft,vlft,flft))
@@ -267,12 +271,14 @@ with open(opts.datnam,'w') as fp:
         fp.write('{:13.6e} {:2d} '.format(treg,freg))
         fp.write('{:13.6e} {:13.6e} '.format(sstd,scor))
         fp.write('{:13.6e} {:13.6e} {:2d} '.format(traw,vraw,fraw))
-        fp.write('{:13.6e} {:13.6e} {:13.6e}\n'.format(draw,rstd,rcor))
+        fp.write('{:13.6e} {:13.6e} {:13.6e} '.format(draw,rstd,rcor))
+        fp.write('{:13.6e}\n'.format(bavg))
         if opts.debug and not np.isnan(tmin):
             fig.clear()
             ax1 = plt.subplot(111)
             ax1.plot(ntim,yi,'b-')
             ax1.plot(xx,yy,'r-')
+            ax1.axhline(bavg,color='c')
             ax1.plot(tmin,vmin-dmin,'g^')
             ax1.plot(traw,vraw+draw,'gv')
             ax1.plot(tmin,vmin,'bo')
