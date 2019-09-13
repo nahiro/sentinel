@@ -41,6 +41,7 @@ parser.add_option('-F','--fignam',default=FIGNAM,help='Output figure name for de
 parser.add_option('--ax1_ymax',default=None,type='float',help='Axis1 Y max. (%default)')
 parser.add_option('--ax1_ymin',default=None,type='float',help='Axis1 Y min. (%default)')
 parser.add_option('--ax1_ystp',default=None,type='float',help='Axis1 Y step. (%default)')
+parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 d1 = datetime.strptime(opts.end,'%Y%m%d')
@@ -118,80 +119,84 @@ if opts.debug:
 
 xval = np.arange(xmin,xmax,0.1)
 dx_1 = 1.0/np.gradient(xval)
-for sid in range(jdat.size):
-    if sid%100 == 0:
-        sys.stderr.write('{}\n'.format(sid))
-    if opts.debug:
-        fig.clear()
-        plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.90)
-        ax1 = plt.subplot(111)
-        ax1.minorticks_on()
-        ax1.grid(True)
-    cnd = np.abs(jdat-sid) < 1.0e-4
-    tt = tdat[:,cnd].reshape(ydat.shape)
-    ss = sdat[:,cnd].reshape(ydat.shape)
-    indx = np.argsort(ss)[0:int(ss.size*0.6)]
-    bb = ss[indx]
-    bavg = np.nanmean(bb)
-    bstd = np.nanstd(bb)
-    blev = bavg+opts.bthr
-    ysig = ss-blev
-    cnd2 = (ysig > 0.0)
-    yval = (ysig[cnd2].reshape(-1,1)*np.exp(-0.5*np.square((xval.reshape(1,-1)-tt[cnd2].reshape(-1,1))/opts.xsgm))).sum(axis=0)
-    y_1d = np.gradient(yval)*dx_1
-    y_2d = np.gradient(y_1d)*dx_1
-    ind0 = np.arange(yval.size)
-    sind = []
-    eind = []
-    ind1 = np.where(yval > opts.ythr)[0]
-    if ind1.size > 0:
-        sind.append(ind1[0])
-        dind = np.diff(ind1)
-        ind2 = np.where(dind > 1)[0]
-        if ind2.size > 0:
-            for itmp in ind2:
-                eind.append(ind1[itmp])
-                sind.append(ind1[itmp+1])
-        eind.append(ind1[-1])
-    for si,ei in zip(sind,eind):
-        cnd3 = (tt >= xval[si]) & (tt <= xval[ei]) & (ysig > opts.sthr)
-        if cnd3.sum() < opts.nthr:
-            continue
-        ind3 = ind0[si:ei+1]
-        ind4 = np.where((np.abs(y_1d[ind3]) < opts.dthr) & (y_2d[ind3] < 0.0))[0]
-        if ind4.size > 0:
-            dind = np.diff(ind4)
-            ind5 = np.where(dind > 1)[0]
-            if ind5.size > 0:
-                sj = ind4[0]
-                ej = ind4[ind5[0]]
-                ind6 = ind3[sj:ej+1][np.argmax(yval[ind3][sj:ej+1])]
-            else:
-                ind6 = ind0[ind3][np.argmax(yval[ind3])]
-        else:
-            ind6 = ind0[ind3][np.argmax(yval[ind3])]
+with open(opts.outnam,'w') as fp:
+    for sid in range(jdat.size):
+        if opts.verbose and sid%100 == 0:
+            sys.stderr.write('{}\n'.format(sid))
         if opts.debug:
-            ax1.hlines(opts.ythr,xval[si],xval[ei],zorder=10)
-            ax1.plot(xval[ind6],yval[ind6],'ro',zorder=10)
-    if opts.debug:
-        ax1.plot(xval,yval,'b-',zorder=1)
-        ax1.set_ylabel('Signal value (dB)')
-        ax1.set_xlim(xmin,xmax)
-        if opts.ax1_ymin is not None:
-            ax1.set_ylim(bottom=opts.ax1_ymin)
-        if opts.ax1_ymax is not None:
-            ax1.set_ylim(top=opts.ax1_ymax)
-        if opts.ax1_ystp is not None:
-            ax1.yaxis.set_major_locator(plt.MultipleLocator(opts.ax1_ystp))
-        ax1.set_title('#{} ({} - {})'.format(sid,num2date(xmin).strftime('%Y-%m-%d'),num2date(xmax).strftime('%Y-%m-%d')))
-        ax1.xaxis.set_major_locator(plt.FixedLocator(values))
-        ax1.xaxis.set_major_formatter(plt.FixedFormatter(labels))
-        ax1.xaxis.set_minor_locator(plt.FixedLocator(ticks))
-        ax1.xaxis.set_tick_params(pad=7)
-        ax1.yaxis.set_label_coords(-0.10,0.5)
-        fig.autofmt_xdate()
-        plt.draw()
-        plt.savefig(pdf,format='pdf')
-    break
+            fig.clear()
+            plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.90)
+            ax1 = plt.subplot(111)
+            ax1.minorticks_on()
+            ax1.grid(True)
+        cnd = np.abs(jdat-sid) < 1.0e-4
+        tt = tdat[:,cnd].reshape(ydat.shape)
+        ss = sdat[:,cnd].reshape(ydat.shape)
+        indx = np.argsort(ss)[0:int(ss.size*0.6)]
+        bb = ss[indx]
+        bavg = np.nanmean(bb)
+        bstd = np.nanstd(bb)
+        blev = bavg+opts.bthr
+        ysig = ss-blev
+        cnd2 = (ysig > 0.0)
+        yval = (ysig[cnd2].reshape(-1,1)*np.exp(-0.5*np.square((xval.reshape(1,-1)-tt[cnd2].reshape(-1,1))/opts.xsgm))).sum(axis=0)
+        y_1d = np.gradient(yval)*dx_1
+        y_2d = np.gradient(y_1d)*dx_1
+        ind0 = np.arange(yval.size)
+        sind = []
+        eind = []
+        ind1 = np.where(yval > opts.ythr)[0]
+        if ind1.size > 0:
+            sind.append(ind1[0])
+            dind = np.diff(ind1)
+            ind2 = np.where(dind > 1)[0]
+            if ind2.size > 0:
+                for itmp in ind2:
+                    eind.append(ind1[itmp])
+                    sind.append(ind1[itmp+1])
+            eind.append(ind1[-1])
+        for si,ei in zip(sind,eind):
+            cnd3 = (tt >= xval[si]) & (tt <= xval[ei]) & (ysig > opts.sthr)
+            if cnd3.sum() < opts.nthr:
+                continue
+            ind3 = ind0[si:ei+1]
+            ind4 = np.where((np.abs(y_1d[ind3]) < opts.dthr) & (y_2d[ind3] < 0.0))[0]
+            if ind4.size > 0:
+                dind = np.diff(ind4)
+                ind5 = np.where(dind > 1)[0]
+                if ind5.size > 0:
+                    sj = ind4[0]
+                    ej = ind4[ind5[0]]
+                    ind6 = ind3[sj:ej+1][np.nanargmax(yval[ind3][sj:ej+1])]
+                else:
+                    ind6 = ind0[ind3][np.nanargmax(yval[ind3])]
+            else:
+                ind6 = ind0[ind3][np.nanargmax(yval[ind3])]
+            xpek = xval[ind6]
+            ypek = np.nanmax(yval[ind3])
+            fp.write('{:6d} {:13.6e} {:13.6e}\n'.format(sid,xpek,ypek))
+            if opts.debug:
+                ax1.hlines(opts.ythr,xval[si],xval[ei],zorder=10)
+                ax1.plot(xval[ind6],yval[ind6],'ro',zorder=10)
+        if opts.debug:
+            ax1.plot(xval,yval,'b-',zorder=1)
+            ax1.set_ylabel('Signal value (dB)')
+            ax1.set_xlim(xmin,xmax)
+            if opts.ax1_ymin is not None:
+                ax1.set_ylim(bottom=opts.ax1_ymin)
+            if opts.ax1_ymax is not None:
+                ax1.set_ylim(top=opts.ax1_ymax)
+            if opts.ax1_ystp is not None:
+                ax1.yaxis.set_major_locator(plt.MultipleLocator(opts.ax1_ystp))
+            ax1.set_title('#{} ({} - {})'.format(sid,num2date(xmin).strftime('%Y-%m-%d'),num2date(xmax).strftime('%Y-%m-%d')))
+            ax1.xaxis.set_major_locator(plt.FixedLocator(values))
+            ax1.xaxis.set_major_formatter(plt.FixedFormatter(labels))
+            ax1.xaxis.set_minor_locator(plt.FixedLocator(ticks))
+            ax1.xaxis.set_tick_params(pad=7)
+            ax1.yaxis.set_label_coords(-0.10,0.5)
+            fig.autofmt_xdate()
+            plt.draw()
+            plt.savefig(pdf,format='pdf')
+        #break
 if opts.debug:
     pdf.close()
