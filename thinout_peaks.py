@@ -14,33 +14,22 @@ if opts.npz:
     sid = data['sid']
     xpek = data['xpek']
     ypek = data['ypek']
-    ntmp = sid.max()+1
-    if opts.ngrd is None:
-        opts.ngrd = ntmp
-    elif opts.ngrd != ntmp:
-        sys.stderr.write('Warning, opts.ngrd={}, ntmp={}\n'.format(opts.ngrd,ntmp))
-    xpek_sid = [[] for i in range(opts.ngrd)]
-    ypek_sid = [[] for i in range(opts.ngrd)]
-    for i,x,y in zip(sid,xpek,ypek):
-        xpek_sid[i].append(x)
-        ypek_sid[i].append(y)
-    for i in range(opts.ngrd):
-        xpek_sid[i] = np.array(xpek_sid[i])
-        ypek_sid[i] = np.array(ypek_sid[i])
 else:
     sid,xpek,ypek,ns,ymax = np.loadtxt('select_peaks.dat',unpack=True)
     sid = (sid+0.1).astype(np.int64)
-    ntmp = sid.max()+1
-    if opts.ngrd is None:
-        opts.ngrd = ntmp
-    elif opts.ngrd != ntmp:
-        sys.stderr.write('Warning, opts.ngrd={}, ntmp={}\n'.format(opts.ngrd,ntmp))
-    xpek_sid = []
-    ypek_sid = []
-    for i in range(opts.ngrd):
-        cnd = np.abs(sid-i) < 1.0e-4
-        xpek_sid.append(xpek[cnd])
-        ypek_sid.append(ypek[cnd])
+ntmp = sid.max()+1
+if opts.ngrd is None:
+    opts.ngrd = ntmp
+elif opts.ngrd != ntmp:
+    sys.stderr.write('Warning, opts.ngrd={}, ntmp={}\n'.format(opts.ngrd,ntmp))
+xpek_sid = [[] for i in range(opts.ngrd)]
+ypek_sid = [[] for i in range(opts.ngrd)]
+for i,x,y in zip(sid,xpek,ypek):
+    xpek_sid[i].append(x)
+    ypek_sid[i].append(y)
+for i in range(opts.ngrd):
+    xpek_sid[i] = np.array(xpek_sid[i])
+    ypek_sid[i] = np.array(ypek_sid[i])
 
 for i in range(opts.ngrd):
     sind = []
