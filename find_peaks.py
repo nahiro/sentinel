@@ -194,7 +194,7 @@ with open(opts.outnam,'w') as fp:
                         xpks = []
                         ypks = []
                         for sj,ej in zip(sjs,ejs):
-                            ind6 = ind3[sj:ej+1][np.nanargmax(yval[ind3][sj:ej+1])] # the first peak
+                            ind6 = ind3[sj:ej+1][np.nanargmax(yval[ind3][sj:ej+1])]
                             xpks.append(xval[ind6])
                             ypks.append(yval[ind6])
                     else:
