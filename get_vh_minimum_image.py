@@ -26,6 +26,7 @@ END = datetime.now().strftime('%Y%m%d')
 PERIOD = 60 # day
 SIGWID = 15.0 # dB
 MAXDIS = 100.0 # m
+VINT = 100
 SHPNAM = os.path.join('New_Test_Sites','New_Test_Sites.shp')
 DATNAM = 'transplanting_date.dat'
 FIGNAM = 'transplanting_date.pdf'
@@ -35,10 +36,13 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
 parser.add_option('-e','--end',default=END,help='End date of the analysis in the format YYYYMMDD (%default)')
 parser.add_option('-p','--period',default=PERIOD,type='int',help='Observation period in day (%default)')
+parser.add_option('-i','--ind',default=None,type='int',action='append',help='Selected indices (%default)')
 parser.add_option('-w','--sigwid',default=SIGWID,type='float',help='Signal width in day (%default)')
 parser.add_option('-m','--maxdis',default=MAXDIS,type='float',help='Max distance in m (%default)')
 parser.add_option('-o','--datnam',default=DATNAM,help='Output data name (%default)')
 parser.add_option('-F','--fignam',default=FIGNAM,help='Output figure name for debug (%default)')
+parser.add_option('--vint',default=VINT,type='int',help='Verbose output interval (%default)')
+parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -137,6 +141,10 @@ nt = ntim.size
 xx = np.arange(t0,t1,0.01)
 nx = xx.size
 inds = np.arange(nx)
+if opts.ind is not None:
+    indi = opts.ind
+else:
+    indi = range(ngrd)
 
 with open(opts.datnam,'w') as fp:
     fp.write('# {:.5f} {:.5f} {:4d}\n'.format(t0,t1,nt))
@@ -151,8 +159,8 @@ with open(opts.datnam,'w') as fp:
     fp.write('{:>11s} {:>11s} {:>4s} '.format('traw','vraw','fraw'))
     fp.write('{:>13s} {:>13s} {:>13s} '.format('draw','rstd','rcor'))
     fp.write('{:>13s}\n'.format('bavg'))
-    for i in range(ngrd):
-        if i%10000 == 0:
+    for i in indi:
+        if opts.verbose and i%opts.vint == 0:
             sys.stderr.write('{:8d} {:8d}\n'.format(i,ngrd))
         ndat = 1
         tmin = np.nan
