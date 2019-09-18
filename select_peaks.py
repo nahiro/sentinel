@@ -58,9 +58,8 @@ else:
 ntmp = sid_0.max()+1
 if opts.ngrd is None:
     opts.ngrd = ntmp
-else:
-    if opts.ngrd != ntmp:
-        sys.stderr.write('Warning, opts.ngrd={}, ntmp={}\n'.format(opts.ngrd,ntmp))
+elif opts.ngrd != ntmp:
+    sys.stderr.write('Warning, opts.ngrd={}, ntmp={}\n'.format(opts.ngrd,ntmp))
 xpek_sid = [[] for i in range(opts.ngrd)]
 ypek_sid = [[] for i in range(opts.ngrd)]
 for i,x,y in zip(sid,xpek,ypek):
