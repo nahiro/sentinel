@@ -30,6 +30,7 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
 parser.add_option('-e','--end',default=END,help='End date of the analysis in the format YYYYMMDD (%default)')
 parser.add_option('-E','--enum',default=None,type='int',help='End number (%default)')
+parser.add_option('-i','--ind',default=None,type='int',action='append',help='Selected indices (%default)')
 parser.add_option('-p','--period',default=PERIOD,type='int',help='Observation period in day (%default)')
 parser.add_option('-w','--xsgm',default=XSGM,type='float',help='Standard deviation of gaussian in day (%default)')
 parser.add_option('-s','--sthr',default=STHR,type='float',help='Threshold of bg-subtracted signal in dB (%default)')
@@ -137,8 +138,12 @@ if opts.debug:
 
 xval = np.arange(xmin,xmax,0.1)
 dx_1 = 1.0/np.gradient(xval)
+if opts.ind is not None:
+    inds = opts.ind
+else:
+    inds = range(jdat.size)
 with open(opts.outnam,'w') as fp:
-    for sid in range(jdat.size):
+    for sid in inds:
         if opts.verbose and sid%opts.vint == 0:
             sys.stderr.write('{}\n'.format(sid))
         if opts.debug:
