@@ -31,25 +31,11 @@ if opts.npz:
     sid_a = data['sid_a']
     sid_b = data['sid_b']
     sid_c = data['sid_c']
-    ntmp = sid_0.max()+1
-    if opts.ngrd is None:
-        opts.ngrd = ntmp
-    else:
-        if opts.ngrd != ntmp:
-            sys.stderr.write('Warning, opts.ngrd={}, ntmp={}\n'.format(opts.ngrd,ntmp))
     # read peaks
     data = np.load('find_peaks.npz')
-    sid = data['sid']
+    sid = data['sid'] # do NOT assume that peak data include all indices.
     xpek = data['xpek']
     ypek = data['ypek']
-    xpek_sid = [[] for i in range(opts.ngrd)]
-    ypek_sid = [[] for i in range(opts.ngrd)]
-    for i,x,y in zip(sid,xpek,ypek):
-        xpek_sid[i].append(x)
-        ypek_sid[i].append(y)
-    for i in range(opts.ngrd):
-        xpek_sid[i] = np.array(xpek_sid[i])
-        ypek_sid[i] = np.array(ypek_sid[i])
 else:
     # read nearby indices
     sid_0,sid_1,leng_1,sid_2,leng_2,sid_3,leng_3,sid_4,leng_4,sid_5,leng_5,sid_6,leng_6,sid_7,leng_7,sid_8,leng_8,sid_9,leng_9,sid_a,leng_a,sid_b,leng_b,sid_c,leng_c = np.loadtxt('find_nearest.dat',unpack=True)
@@ -69,14 +55,24 @@ else:
     # read peaks
     sid,xpek,ypek = np.loadtxt('find_peaks.dat',unpack=True)
     sid = (sid+0.1).astype(np.int64)
-    xpek_sid = []
-    ypek_sid = []
-    for i in sid_0:
-        cnd = np.abs(sid-i) < 1.0e-4
-        xpek_sid.append(xpek[cnd])
-        ypek_sid.append(ypek[cnd])
+ntmp = sid_0.max()+1
+if opts.ngrd is None:
+    opts.ngrd = ntmp
+else:
+    if opts.ngrd != ntmp:
+        sys.stderr.write('Warning, opts.ngrd={}, ntmp={}\n'.format(opts.ngrd,ntmp))
+xpek_sid = [[] for i in range(opts.ngrd)]
+ypek_sid = [[] for i in range(opts.ngrd)]
+for i,x,y in zip(sid,xpek,ypek):
+    xpek_sid[i].append(x)
+    ypek_sid[i].append(y)
+for i in range(opts.ngrd):
+    xpek_sid[i] = np.array(xpek_sid[i])
+    ypek_sid[i] = np.array(ypek_sid[i])
 
-for i in sid_0:
+for i in range(opts.ngrd):
+    if i != sid_0[i]:
+        raise ValueError('Error, i={}, sid_0={}'.format(i,sid_0[i]))
     indx = np.array([sid_1[i],sid_2[i],sid_3[i],sid_4[i],sid_5[i],sid_6[i],sid_7[i],sid_8[i],sid_9[i],sid_a[i],sid_b[i],sid_c[i]])
     for x,y in zip(xpek_sid[i],ypek_sid[i]):
         ys = []
