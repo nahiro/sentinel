@@ -1,19 +1,48 @@
 #!/usr/bin/env python
 import sys
 import numpy as np
+from optparse import OptionParser,IndentedHelpFormatter
 
-sid,xpek,ypek,ns,ymax = np.loadtxt('select_peaks.dat',unpack=True)
-sid = (sid+0.1).astype(np.int64)
-ns = (ns+0.1).astype(np.int64)
+# Read options
+parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('--ngrd',default=None,type='int',help='Number of image grid for NPZ mode (%default)')
+parser.add_option('-z','--npz',default=False,action='store_true',help='NPZ mode (%default)')
+(opts,args) = parser.parse_args()
 
-xpek_sid = []
-ypek_sid = []
-for i in range(sid.max()+1):
-    cnd = np.abs(sid-i) < 1.0e-4
-    xpek_sid.append(xpek[cnd])
-    ypek_sid.append(ypek[cnd])
+if opts.npz:
+    data = np.load('select_peaks.npz')
+    sid = data['sid']
+    xpek = data['xpek']
+    ypek = data['ypek']
+    ntmp = sid.max()+1
+    if opts.ngrd is None:
+        opts.ngrd = ntmp
+    elif opts.ngrd != ntmp:
+        sys.stderr.write('Warning, opts.ngrd={}, ntmp={}\n'.format(opts.ngrd,ntmp))
+    xpek_sid = [[] for i in range(opts.ngrd)]
+    ypek_sid = [[] for i in range(opts.ngrd)]
+    for i,x,y in zip(sid,xpek,ypek):
+        xpek_sid[i].append(x)
+        ypek_sid[i].append(y)
+    for i in range(opts.ngrd):
+        xpek_sid[i] = np.array(xpek_sid[i])
+        ypek_sid[i] = np.array(ypek_sid[i])
+else:
+    sid,xpek,ypek,ns,ymax = np.loadtxt('select_peaks.dat',unpack=True)
+    sid = (sid+0.1).astype(np.int64)
+    ntmp = sid.max()+1
+    if opts.ngrd is None:
+        opts.ngrd = ntmp
+    elif opts.ngrd != ntmp:
+        sys.stderr.write('Warning, opts.ngrd={}, ntmp={}\n'.format(opts.ngrd,ntmp))
+    xpek_sid = []
+    ypek_sid = []
+    for i in range(opts.ngrd):
+        cnd = np.abs(sid-i) < 1.0e-4
+        xpek_sid.append(xpek[cnd])
+        ypek_sid.append(ypek[cnd])
 
-for i in range(sid.max()+1):
+for i in range(opts.ngrd):
     sind = []
     eind = []
     ind1 = np.arange(xpek_sid[i].size)
@@ -30,5 +59,5 @@ for i in range(sid.max()+1):
         x = xpek_sid[i][si:ei+1]
         y = ypek_sid[i][si:ei+1]
         j = np.argmax(y)
-        sys.stdout.write('{:6d} {:15.8e} {:8.3f}\n'.format(i,x[j],y[j]))
+        sys.stdout.write('{:8d} {:15.8e} {:8.3f}\n'.format(i,x[j],y[j]))
     #break
