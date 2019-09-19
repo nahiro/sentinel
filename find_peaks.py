@@ -61,9 +61,12 @@ else:
 xmin = 1.0e10
 xmax = -1.0e10
 jdat = None
-tdat = []
 ydat = []
-sdat = []
+tmin_array = []
+vmin_array = []
+dstd_array = []
+rstd_array = []
+bavg_array = []
 for i,f in enumerate(fs):
     if opts.npz:
         m = re.search('collocation_(\d+)_(\d+).npz',os.path.basename(f))
@@ -81,6 +84,8 @@ for i,f in enumerate(fs):
             j = data['j']
             tmin = data['tmin']
             vmin = data['vmin']
+            dstd = data['dstd']
+            rstd = data['rstd']
             bavg = data['bavg']
         else:
             j,ndat,tmin,vmin,fmin,tlft,vlft,flft,trgt,vrgt,frgt,dmin,dstd,tleg,fleg,treg,freg,sstd,scor,traw,vraw,fraw,draw,rstd,rcor,bavg = np.loadtxt(f,unpack=True)
@@ -91,9 +96,12 @@ for i,f in enumerate(fs):
     else:
         if not np.all(j == jdat):
             raise ValueError('Error, different j')
-    tdat.append(tmin)
     ydat.append(d1_tmp)
-    sdat.append(bavg-vmin)
+    tmin_array.append(tmin)
+    vmin_array.append(vmin)
+    dstd_array.append(dstd)
+    rstd_array.append(rstd)
+    bavg_array.append(bavg)
     x0_tmp = date2num(d0_tmp)
     x1_tmp = date2num(d1_tmp)
     if x0_tmp < xmin:
@@ -101,9 +109,12 @@ for i,f in enumerate(fs):
     if x1_tmp > xmax:
         xmax = x1_tmp
 jdat = np.array(jdat)
-tdat = np.array(tdat)
 ydat = np.array(ydat)
-sdat = np.array(sdat)
+tmin_array = np.array(tmin_array)
+vmin_array = np.array(vmin_array)
+dstd_array = np.array(dstd_array)
+rstd_array = np.array(rstd_array)
+bavg_array = np.array(bavg_array)
 
 if opts.debug:
     plt.interactive(True)
@@ -153,16 +164,17 @@ with open(opts.outnam,'w') as fp:
             ax1.minorticks_on()
             ax1.grid(True)
         cnd = np.abs(jdat-sid) < 1.0e-4
-        tt = tdat[:,cnd].reshape(ydat.shape)
-        ss = sdat[:,cnd].reshape(ydat.shape)
+        tmin = tmin_array[:,cnd].reshape(ydat.shape)
+        vmin = vmin_array[:,cnd].reshape(ydat.shape)
+        bavg = bavg_array[:,cnd].reshape(ydat.shape)
+        ss = bavg-vmin
         indx = np.argsort(ss)[0:int(ss.size*0.6)]
         bb = ss[indx]
-        bavg = np.nanmean(bb)
-        bstd = np.nanstd(bb)
-        blev = bavg+opts.bthr
+        ba = np.nanmean(bb)
+        blev = ba+opts.bthr
         ysig = ss-blev
         cnd2 = (ysig > 0.0)
-        yval = (ysig[cnd2].reshape(-1,1)*np.exp(-0.5*np.square((xval.reshape(1,-1)-tt[cnd2].reshape(-1,1))/opts.xsgm))).sum(axis=0)
+        yval = (ysig[cnd2].reshape(-1,1)*np.exp(-0.5*np.square((xval.reshape(1,-1)-tmin[cnd2].reshape(-1,1))/opts.xsgm))).sum(axis=0)
         y_1d = np.gradient(yval)*dx_1
         y_2d = np.gradient(y_1d)*dx_1
         ind0 = np.arange(yval.size)
@@ -179,7 +191,7 @@ with open(opts.outnam,'w') as fp:
                     sind.append(ind1[itmp+1])
             eind.append(ind1[-1])
         for si,ei in zip(sind,eind):
-            cnd3 = (tt >= xval[si]) & (tt <= xval[ei]) & (ysig > opts.sthr)
+            cnd3 = (tmin >= xval[si]) & (tmin <= xval[ei]) & (ysig > opts.sthr)
             if cnd3.sum() < opts.nthr:
                 continue
             ind3 = ind0[si:ei+1]
