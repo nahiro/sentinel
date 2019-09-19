@@ -166,6 +166,8 @@ with open(opts.outnam,'w') as fp:
         cnd = np.abs(jdat-sid) < 1.0e-4
         tmin = tmin_array[:,cnd].reshape(ydat.shape)
         vmin = vmin_array[:,cnd].reshape(ydat.shape)
+        dstd = dstd_array[:,cnd].reshape(ydat.shape)
+        rstd = rstd_array[:,cnd].reshape(ydat.shape)
         bavg = bavg_array[:,cnd].reshape(ydat.shape)
         ss = bavg-vmin
         indx = np.argsort(ss)[0:int(ss.size*0.6)]
@@ -173,7 +175,7 @@ with open(opts.outnam,'w') as fp:
         ba = np.nanmean(bb)
         blev = ba+opts.bthr
         ysig = ss-blev
-        cnd2 = (ysig > 0.0)
+        cnd2 = (ysig > 0.0) & (dstd < 3.5) & (bavg > -22.5) & (bavg < -10.0) & (vmin < -12.0) & (rstd < 6.0)
         yval = (ysig[cnd2].reshape(-1,1)*np.exp(-0.5*np.square((xval.reshape(1,-1)-tmin[cnd2].reshape(-1,1))/opts.xsgm))).sum(axis=0)
         y_1d = np.gradient(yval)*dx_1
         y_2d = np.gradient(y_1d)*dx_1
