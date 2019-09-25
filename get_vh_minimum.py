@@ -26,6 +26,7 @@ END = datetime.now().strftime('%Y%m%d')
 PERIOD = 60 # day
 SIGWID = 15.0 # dB
 MAXDIS = 100.0 # m
+VINT = 100
 SHPNAM = os.path.join('New_Test_Sites','New_Test_Sites.shp')
 DATNAM = 'transplanting_date.dat'
 FIGNAM = 'transplanting_date.pdf'
@@ -40,6 +41,8 @@ parser.add_option('-m','--maxdis',default=MAXDIS,type='float',help='Max distance
 parser.add_option('-s','--shpnam',default=SHPNAM,help='Input shapefile name (%default)')
 parser.add_option('-o','--datnam',default=DATNAM,help='Output data name (%default)')
 parser.add_option('-F','--fignam',default=FIGNAM,help='Output figure name for debug (%default)')
+parser.add_option('--vint',default=VINT,type='int',help='Verbose output interval (%default)')
+parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -148,7 +151,7 @@ with open(opts.datnam,'w') as fp:
     fp.write('{:>13s} {:>13s} {:>13s} '.format('draw','rstd','rcor'))
     fp.write('{:>13s}\n'.format('bavg'))
     for i,shaperec in enumerate(r.iterShapeRecords()):
-        if i%100 == 0:
+        if opts.verbose and i%opts.vint == 0:
             sys.stderr.write('{} {}\n'.format(i,len(r)))
         shp = shaperec.shape
         p = Path(shp.points)
