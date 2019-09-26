@@ -4,6 +4,8 @@ import sys
 import re
 from datetime import datetime,timedelta
 import numpy as np
+import tifffile
+import xml.etree.ElementTree as ET
 from scipy.interpolate import splrep,splev
 from csaps import UnivariateCubicSmoothingSpline
 import gdal
@@ -74,6 +76,15 @@ if opts.debug:
     plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.90)
     plt.draw()
 
+ds = gdal.Open(input_fnam)
+data = ds.ReadAsArray()
+trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
+indy,indx = np.indices(data[0].shape)
+lon = trans[0]+indx*trans[1]+indy*trans[2]
+lat = trans[3]+indx*trans[4]+indy*trans[5]
+xp,yp,zp = transform_wgs84_to_utm(lon,lat)
+ds = None # close dataset
+
 tif_tags = {}
 with tifffile.TiffFile(input_fnam) as tif:
     for tag in tif.pages[0].tags.values():
@@ -110,15 +121,6 @@ nt = ntim.size
 xx = np.arange(t0,t1,0.01)
 nx = xx.size
 inds = np.arange(nx)
-
-ds = gdal.Open(input_fnam)
-data = ds.ReadAsArray()
-trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
-indy,indx = np.indices(data[0].shape)
-lon = trans[0]+indx*trans[1]+indy*trans[2]
-lat = trans[3]+indx*trans[4]+indy*trans[5]
-xp,yp,zp = transform_wgs84_to_utm(lon,lat)
-ds = None # close dataset
 
 r = shapefile.Reader(opts.shpnam)
 with open(opts.datnam,'w') as fp:

@@ -1,20 +1,16 @@
 #!/usr/bin/env python
 import os
-import psutil
-mem_size = int(psutil.virtual_memory().available*0.8e-6)
-os.environ['_JAVA_OPTIONS'] = '-Xmx{}m'.format(mem_size)     # Save memory for JAVA
-os.system('export _JAVA_OPTIONS=-Xmx{}m'.format(mem_size))   # Save memory for JAVA
-import shutil
 import sys
 import re
 from datetime import datetime,timedelta
 import numpy as np
+import tifffile
+import xml.etree.ElementTree as ET
 from scipy.interpolate import splrep,splev
 from scipy.interpolate import griddata
 from csaps import UnivariateCubicSmoothingSpline
 import gdal
 import osr
-from snappy import ProductIO
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 from matplotlib.path import Path
@@ -49,6 +45,8 @@ if len(args) < 1:
     parser.print_help()
     sys.exit(0)
 input_fnam = args[0]
+d1 = datetime.strptime(opts.end,'%Y%m%d')
+d0 = d1-timedelta(days=opts.period)
 
 def transform_utm_to_wgs84(easting,northing,utm_zone):
     is_northern = (1 if northing.mean() > 0 else 0)
@@ -78,6 +76,12 @@ if opts.debug:
     plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.90)
     plt.draw()
 
+xstp = 10.0
+ystp = -10.0
+xmin,xmax,ymin,ymax = (743800.0,756800.0,9236000.0,9251800.0)
+xg,yg = np.meshgrid(np.arange(xmin,xmax+0.1*xstp,xstp),np.arange(ymax,ymin-0.1*ystp,ystp))
+ngrd = xg.size
+
 ds = gdal.Open(input_fnam)
 data = ds.ReadAsArray()
 trans = ds.GetGeoTransform()
@@ -87,51 +91,33 @@ lat = trans[3]+indx*trans[4]+indy*trans[5]
 xp,yp,zp = transform_wgs84_to_utm(lon,lat)
 ds = None # close dataset
 
-xstp = 10.0
-ystp = -10.0
-xmin,xmax,ymin,ymax = (743800.0,756800.0,9236000.0,9251800.0)
-xg,yg = np.meshgrid(np.arange(xmin,xmax+0.1*xstp,xstp),np.arange(ymax,ymin-0.1*ystp,ystp))
-ngrd = xg.size
-
-vh_prod = ProductIO.readProduct(input_fnam)
-vh_list = list(vh_prod.getBandNames())
-nh = len(vh_list)
-dates = []
-for i in range(nh):
-    m = re.search('_(\d+)$',vh_list[i])
-    if not m:
-        raise ValueError('Error in finding date >>> '+vh_list[i])
-    dh = datetime.strptime(m.group(1),'%Y%m%d')
-    dates.append(dh)
-vh = vh_prod.getBand(vh_list[0])
-x0 = 0
-y0 = 0
-d1 = datetime.strptime(opts.end,'%Y%m%d')
-d0 = d1-timedelta(days=opts.period)
-w0 = vh.getRasterWidth()
-h0 = vh.getRasterHeight()
-x1 = w0
-y1 = h0
-w = x1-x0
-h = y1-y0
+tif_tags = {}
+with tifffile.TiffFile(input_fnam) as tif:
+    for tag in tif.pages[0].tags.values():
+        name,value = tag.name,tag.value
+        tif_tags[name] = value
+    data = tif.pages[0].asarray()
+rot = ET.fromstring(tif_tags['65000'])
+vh_list = []
 dset = []
 dtim = []
-for i in range(nh):
-    if dates[i] < d0:
+for i,value in enumerate(rot.iter('BAND_NAME')):
+    band = value.text
+    sys.stderr.write(band+'\n')
+    m = re.search('_(\d+)$',band)
+    if not m:
+        raise ValueError('Error in finding date >>> '+band)
+    vh_list.append(band)
+    dh = datetime.strptime(m.group(1),'%Y%m%d')
+    if dh < d0:
         continue
-    if dates[i] > d1:
+    if dh > d1:
         break
-    data = np.zeros((h,w),dtype=np.float32)
-    sys.stderr.write(vh_list[i]+'\n')
-    vh = vh_prod.getBand(vh_list[i])
-    wi = vh.getRasterWidth()
-    hi = vh.getRasterHeight()
-    if wi != w0 or hi != h0:
-        raise ValueError('Error, different size >>> ({},{}), expected ({},{})'.format(wi,hi,w0,h0))
-    vh.readPixels(x0,y0,w,h,data)
-    dset.append(griddata((xp.flatten(),yp.flatten()),data.flatten(),(xg.flatten(),yg.flatten()),method='nearest'))
-    dtim.append(dates[i])
-vh_prod.dispose()
+    dset.append(griddata((xp.flatten(),yp.flatten()),data[i].flatten(),(xg.flatten(),yg.flatten()),method='nearest'))
+    dtim.append(dh)
+nh = i+1
+if nh != len(data):
+    raise ValueError('Error, nh={}, len(data)={}'.format(nh,len(data)))
 dset = np.array(dset)
 dtim = np.array(dtim)
 ntim = date2num(dtim)
