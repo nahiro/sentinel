@@ -65,6 +65,8 @@ ydat = []
 tmin_array = []
 vmin_array = []
 dstd_array = []
+fleg_array = []
+freg_array = []
 rstd_array = []
 bavg_array = []
 for i,f in enumerate(fs):
@@ -85,6 +87,8 @@ for i,f in enumerate(fs):
             tmin = data['tmin']
             vmin = data['vmin']
             dstd = data['dstd']
+            fleg = data['fleg']
+            freg = data['freg']
             rstd = data['rstd']
             bavg = data['bavg']
         else:
@@ -100,6 +104,8 @@ for i,f in enumerate(fs):
     tmin_array.append(tmin)
     vmin_array.append(vmin)
     dstd_array.append(dstd)
+    fleg_array.append(fleg)
+    freg_array.append(freg)
     rstd_array.append(rstd)
     bavg_array.append(bavg)
     x0_tmp = date2num(d0_tmp)
@@ -113,6 +119,8 @@ ydat = np.array(ydat)
 tmin_array = np.array(tmin_array)
 vmin_array = np.array(vmin_array)
 dstd_array = np.array(dstd_array)
+fleg_array = np.array(fleg_array)
+freg_array = np.array(freg_array)
 rstd_array = np.array(rstd_array)
 bavg_array = np.array(bavg_array)
 
@@ -167,6 +175,8 @@ with open(opts.outnam,'w') as fp:
         tmin = tmin_array[:,cnd].reshape(ydat.shape)
         vmin = vmin_array[:,cnd].reshape(ydat.shape)
         dstd = dstd_array[:,cnd].reshape(ydat.shape)
+        fleg = fleg_array[:,cnd].reshape(ydat.shape)
+        freg = freg_array[:,cnd].reshape(ydat.shape)
         rstd = rstd_array[:,cnd].reshape(ydat.shape)
         bavg = bavg_array[:,cnd].reshape(ydat.shape)
         ss = bavg-vmin
@@ -175,7 +185,7 @@ with open(opts.outnam,'w') as fp:
         ba = np.nanmean(bb)
         blev = ba+opts.bthr
         ysig = ss-blev
-        cnd2 = (ysig > 0.0) & (dstd < 3.5) & (bavg > -22.5) & (bavg < -10.0) & (vmin < -12.0) & (rstd < 6.0)
+        cnd2 = (ysig > 0.0) & (dstd < 3.5) & (bavg > -22.5) & (bavg < -10.0) & (vmin < -12.0) & (rstd < 6.0) & (fleg == 0) & (freg == 0)
         yval = (ysig[cnd2].reshape(-1,1)*np.exp(-0.5*np.square((xval.reshape(1,-1)-tmin[cnd2].reshape(-1,1))/opts.xsgm))).sum(axis=0)
         y_1d = np.gradient(yval)*dx_1
         y_2d = np.gradient(y_1d)*dx_1
