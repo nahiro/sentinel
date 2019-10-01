@@ -32,6 +32,8 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
 parser.add_option('-e','--end',default=END,help='End date of the analysis in the format YYYYMMDD (%default)')
 parser.add_option('-p','--period',default=PERIOD,type='int',help='Observation period in day (%default)')
+parser.add_option('-i','--ind',default=None,type='int',action='append',help='Selected indices (%default)')
+parser.add_option('--trans_date',default=None,help='Transplanting date file (%default)')
 parser.add_option('-w','--sigwid',default=SIGWID,type='float',help='Signal width in day (%default)')
 parser.add_option('-m','--maxdis',default=MAXDIS,type='float',help='Max distance in m (%default)')
 parser.add_option('-s','--shpnam',default=SHPNAM,help='Input shapefile name (%default)')
@@ -68,13 +70,6 @@ def transform_wgs84_to_utm(longitude,latitude):
     wgs84_to_utm_geo_transform = osr.CoordinateTransformation(wgs84_coordinate_system,utm_coordinate_system) # create transform component
     xyz = np.array(wgs84_to_utm_geo_transform.TransformPoints(np.dstack((longitude,latitude)).reshape((-1,2)))).reshape(longitude.shape[0],longitude.shape[1],3)
     return xyz[:,:,0],xyz[:,:,1],xyz[:,:,2] # returns easting, northing, altitude
-
-if opts.debug:
-    plt.interactive(False)
-    pdf = PdfPages(opts.fignam)
-    fig = plt.figure(1,facecolor='w',figsize=(6,3.5))
-    plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.90)
-    plt.draw()
 
 ds = gdal.Open(input_fnam)
 data = ds.ReadAsArray()
@@ -122,7 +117,57 @@ xx = np.arange(t0,t1,0.01)
 nx = xx.size
 inds = np.arange(nx)
 
+if opts.debug:
+    plt.interactive(False)
+    pdf = PdfPages(opts.fignam)
+    values = []
+    labels = []
+    ticks = []
+    ds = (ntim.max()-ntim.min())/365
+    for y in range(dtim.min().year,dtim.max().year+1):
+        if ds > 2.0:
+            for m in range(1,13,3):
+                d = datetime(y,m,1)
+                values.append(date2num(d))
+                labels.append(d.strftime('%Y-%m'))
+            for m in range(1,13,1):
+                d = datetime(y,m,1)
+                ticks.append(date2num(d))
+        elif ds > 1.0:
+            for m in range(1,13,2):
+                d = datetime(y,m,1)
+                values.append(date2num(d))
+                labels.append(d.strftime('%Y-%m'))
+            for m in range(1,13,1):
+                d = datetime(y,m,1)
+                ticks.append(date2num(d))
+        else:
+            for m in range(1,13,1):
+                d = datetime(y,m,1)
+                values.append(date2num(d))
+                labels.append(d.strftime('%Y-%m'))
+                for day in [5,10,15,20,25]:
+                    d = datetime(y,m,day)
+                    ticks.append(date2num(d))
+    fig = plt.figure(1,facecolor='w',figsize=(6,3.5))
+    plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.90)
+    plt.draw()
+
 r = shapefile.Reader(opts.shpnam)
+if opts.trans_date is not None:
+    indi = []
+    pdat = []
+    with open(opts.trans_date,'r') as fp:
+        for line in fp:
+            item = line.split()
+            if len(item) < 2 or item[0][0] == '#':
+                continue
+            indi.append(int(item[0]))
+            pdat.append(datetime.strptime(item[1],'%Y-%m-%d'))
+elif opts.ind is not None:
+    indi = opts.ind
+else:
+    indi = range(len(r))
 with open(opts.datnam,'w') as fp:
     fp.write('# {:.5f} {:.5f} {:4d}\n'.format(t0,t1,nt))
     fp.write('# {:>5s} {:>4s} '.format('i','ndat'))
@@ -136,10 +181,10 @@ with open(opts.datnam,'w') as fp:
     fp.write('{:>11s} {:>11s} {:>4s} '.format('traw','vraw','fraw'))
     fp.write('{:>13s} {:>13s} {:>13s} '.format('draw','rstd','rcor'))
     fp.write('{:>13s}\n'.format('bavg'))
-    for i,shaperec in enumerate(r.iterShapeRecords()):
-        if opts.verbose and i%opts.vint == 0:
-            sys.stderr.write('{} {}\n'.format(i,len(r)))
-        shp = shaperec.shape
+    for inum,i in enumerate(indi):
+        if opts.verbose and inum%opts.vint == 0:
+            sys.stderr.write('{} {}\n'.format(inum,len(indi)))
+        shp = r.shape(i)
         p = Path(shp.points)
         flags = p.contains_points(np.hstack((xp.flatten()[:,np.newaxis],yp.flatten()[:,np.newaxis]))).reshape(dset[0].shape)
         ndat = flags.sum()
@@ -287,6 +332,12 @@ with open(opts.datnam,'w') as fp:
             ax1.plot(tleg,vleg,'c<')
             ax1.plot(treg,vreg,'c>')
             ax1.set_ylim(-30.0,-10.0)
+            if opts.trans_date is not None:
+                ax1.axvline(date2num(pdat[inum]),color='k')
+            ax1.xaxis.set_major_locator(plt.FixedLocator(values))
+            ax1.xaxis.set_major_formatter(plt.FixedFormatter(labels))
+            ax1.xaxis.set_minor_locator(plt.FixedLocator(ticks))
+            fig.autofmt_xdate()
             ax1.set_title('{:d},{:6.2f},{:6.3f},{:6.2f},{:6.3f}'.format(i,sstd,scor,rstd,rcor))
             plt.draw()
             plt.savefig(pdf,format='pdf')
