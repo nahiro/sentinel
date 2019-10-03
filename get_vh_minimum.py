@@ -180,7 +180,7 @@ with open(opts.datnam,'w') as fp:
     fp.write('{:>13s} {:>13s} '.format('sstd','scor'))
     fp.write('{:>11s} {:>11s} {:>4s} '.format('traw','vraw','fraw'))
     fp.write('{:>13s} {:>13s} {:>13s} '.format('draw','rstd','rcor'))
-    fp.write('{:>13s}\n'.format('bavg'))
+    fp.write('{:>13s} {:>13s}\n'.format('bavg','bstd'))
     for inum,i in enumerate(indi):
         if opts.verbose and inum%opts.vint == 0:
             sys.stderr.write('{} {}\n'.format(inum,len(indi)))
@@ -212,6 +212,7 @@ with open(opts.datnam,'w') as fp:
         rstd = np.nan
         rcor = np.nan
         bavg = np.nan
+        bstd = np.nan
         yi = None
         if ndat > 0:
             dtmp = dset[0][flags]
@@ -307,6 +308,7 @@ with open(opts.datnam,'w') as fp:
             rcor = np.corrcoef(ntim,yi)[0,1]
             cnd = np.abs(ntim-tmin) > opts.sigwid
             bavg = np.mean(yi[cnd])
+            bstd = np.std(yi[cnd])
         fp.write('{:8d} {:3d} '.format(i,ndat))
         fp.write('{:11.3f} {:13.6e} {:2d} '.format(tmin,vmin,fmin))
         fp.write('{:11.3f} {:13.6e} {:2d} '.format(tlft,vlft,flft))
@@ -317,7 +319,7 @@ with open(opts.datnam,'w') as fp:
         fp.write('{:13.6e} {:13.6e} '.format(sstd,scor))
         fp.write('{:11.3f} {:13.6e} {:2d} '.format(traw,vraw,fraw))
         fp.write('{:13.6e} {:13.6e} {:13.6e} '.format(draw,rstd,rcor))
-        fp.write('{:13.6e}\n'.format(bavg))
+        fp.write('{:13.6e} {:13.6e}\n'.format(bavg,bstd))
         if opts.debug and not np.isnan(tmin):
             fig.clear()
             ax1 = plt.subplot(111)

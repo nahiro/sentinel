@@ -173,6 +173,7 @@ with open(opts.datnam,'w') as fp:
         rstd = np.nan
         rcor = np.nan
         bavg = np.nan
+        bstd = np.nan
         yi = None
         dtmp = dset[0][i]
         cnd = ~np.isnan(dtmp)
