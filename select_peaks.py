@@ -5,13 +5,15 @@ from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
 NTHR = 5
-YTHR = 10.0 # dB
+YTHR = 5.0 # dB
+DTHR = 10.0 # day
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('--ngrd',default=None,type='int',help='Number of image grid for NPZ mode (%default)')
 parser.add_option('-n','--nthr',default=NTHR,type='int',help='Minimum number of nearby signal above threshold (%default)')
 parser.add_option('-y','--ythr',default=YTHR,type='float',help='Threshold of superposed gaussians in dB for peak selection (%default)')
+parser.add_option('-d','--dthr',default=DTHR,type='float',help='Threshold of transplanting date difference in day (%default)')
 parser.add_option('-z','--npz',default=False,action='store_true',help='NPZ mode (%default)')
 (opts,args) = parser.parse_args()
 
@@ -80,7 +82,7 @@ for i in range(opts.ngrd):
                 continue
             dx = np.abs(xpek_sid[j]-x)
             k = np.argmin(dx)
-            if dx[k] < 10.0:
+            if dx[k] < opts.dthr:
                 ys.append(ypek_sid[j][k])
         ys = np.array(ys)
         ns = ys.size
@@ -88,9 +90,9 @@ for i in range(opts.ngrd):
             ymax = ys.max()
         else:
             ymax = 0.0
-        if y >= 10.0:
+        if y >= opts.ythr:
             flag = True
-        elif ns >= 5 and ymax >= 10.0:
+        elif ns >= opts.nthr and ymax >= opts.ythr:
             flag = True
         else:
             flag = False
