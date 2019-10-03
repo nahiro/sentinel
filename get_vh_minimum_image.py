@@ -84,7 +84,7 @@ ngrd = xg.size
 
 ds = gdal.Open(input_fnam)
 data = ds.ReadAsArray()
-trans = ds.GetGeoTransform()
+trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
 indy,indx = np.indices(data[0].shape)
 lon = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
 lat = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
@@ -96,12 +96,12 @@ with tifffile.TiffFile(input_fnam) as tif:
     for tag in tif.pages[0].tags.values():
         name,value = tag.name,tag.value
         tif_tags[name] = value
-    data = tif.pages[0].asarray()
-rot = ET.fromstring(tif_tags['65000'])
+    #data = tif.pages[0].asarray()
+root = ET.fromstring(tif_tags['65000'])
 vh_list = []
 dset = []
 dtim = []
-for i,value in enumerate(rot.iter('BAND_NAME')):
+for i,value in enumerate(root.iter('BAND_NAME')):
     band = value.text
     sys.stderr.write(band+'\n')
     m = re.search('_(\d+)$',band)
