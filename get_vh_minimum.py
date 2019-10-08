@@ -340,7 +340,15 @@ with open(opts.datnam,'w') as fp:
             ax1.xaxis.set_major_formatter(plt.FixedFormatter(labels))
             ax1.xaxis.set_minor_locator(plt.FixedLocator(ticks))
             fig.autofmt_xdate()
-            ax1.set_title('{:d},{:6.2f},{:6.3f},{:6.2f},{:6.3f}'.format(i,sstd,scor,rstd,rcor))
+            if (dstd < 3.5) and (bavg > -22.5) and (bavg < -10.0) and (vmin < -12.0) and (bstd < 5.5) and (fleg == 0) and (freg == 0):
+                ax1.set_title('{:d},{:6.3f},{:6.3f},{:6.2f},{:6.2f},{},{}'.format(i,dstd,bstd,bavg,vmin,fleg,freg),color='r')
+            else:
+                ax1.set_title('{:d},{:6.3f}{},{:6.3f}{},{:6.2f}{},{:6.2f}{},{}{},{}{}'.format(i,dstd,('$^{*}$' if dstd >= 3.5 else ''),
+                                                                                                bstd,('$^{*}$' if bstd >= 5.5 else ''),
+                                                                                                bavg,('$^{*}$' if bavg <= -22.5 or bavg >= 10.0 else ''),
+                                                                                                vmin,('$^{*}$' if vmin >= -12.0 else ''),
+                                                                                                fleg,('$^{*}$' if fleg != 0 else ''),
+                                                                                                freg,('$^{*}$' if freg != 0 else '')))
             plt.draw()
             plt.savefig(pdf,format='pdf')
         #break
