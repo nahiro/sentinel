@@ -41,9 +41,12 @@ parser.add_option('--dthr',default=DTHR,type='float',help='Threshold of dy/dt in
 parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
 parser.add_option('-o','--outnam',default=OUTNAM,help='Output data name (%default)')
 parser.add_option('-F','--fignam',default=FIGNAM,help='Output figure name for debug (%default)')
-parser.add_option('--ax1_ymax',default=None,type='float',help='Axis1 Y max. (%default)')
 parser.add_option('--ax1_ymin',default=None,type='float',help='Axis1 Y min. (%default)')
+parser.add_option('--ax1_ymax',default=None,type='float',help='Axis1 Y max. (%default)')
 parser.add_option('--ax1_ystp',default=None,type='float',help='Axis1 Y step. (%default)')
+parser.add_option('--ax2_ymin',default=None,type='float',help='Axis2 Y min. (%default)')
+parser.add_option('--ax2_ymax',default=None,type='float',help='Axis2 Y max. (%default)')
+parser.add_option('--ax2_ystp',default=None,type='float',help='Axis2 Y step. (%default)')
 parser.add_option('-S','--subpeak',default=False,action='store_true',help='Output sub peaks (%default)')
 parser.add_option('-z','--npz',default=False,action='store_true',help='NPZ mode (%default)')
 parser.add_option('--vint',default=VINT,type='int',help='Verbose output interval (%default)')
@@ -92,7 +95,7 @@ for i,f in enumerate(fs):
             rstd = data['rstd']
             bavg = data['bavg']
         else:
-            j,ndat,tmin,vmin,fmin,tlft,vlft,flft,trgt,vrgt,frgt,dmin,dstd,tleg,fleg,treg,freg,sstd,scor,traw,vraw,fraw,draw,rstd,rcor,bavg = np.loadtxt(f,unpack=True)
+            j,ndat,tmin,vmin,fmin,tlft,vlft,flft,trgt,vrgt,frgt,dmin,dstd,tleg,fleg,treg,freg,sstd,scor,traw,vraw,fraw,draw,rstd,rcor,bavg,bstd = np.loadtxt(f,unpack=True)
     except Exception:
         continue
     if jdat is None:
@@ -126,7 +129,7 @@ bavg_array = np.array(bavg_array)
 
 if opts.debug:
     plt.interactive(True)
-    fig = plt.figure(1,facecolor='w',figsize=(6,3.5))
+    fig = plt.figure(1,facecolor='w',figsize=(6,6))
     pdf = PdfPages(opts.fignam)
     values = []
     labels = []
@@ -167,10 +170,11 @@ with open(opts.outnam,'w') as fp:
             sys.stderr.write('{}\n'.format(sid))
         if opts.debug:
             fig.clear()
-            plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.90)
-            ax1 = plt.subplot(111)
+            plt.subplots_adjust(top=0.90,bottom=0.12,left=0.15,right=0.90,hspace=0.1)
+            ax1 = plt.subplot(211)
             ax1.minorticks_on()
-            ax1.grid(True)
+            ax2 = plt.subplot(212)
+            ax2.minorticks_on()
         cnd = np.abs(jdat-sid) < 1.0e-4
         tmin = tmin_array[:,cnd].reshape(ydat.shape)
         vmin = vmin_array[:,cnd].reshape(ydat.shape)
@@ -179,14 +183,19 @@ with open(opts.outnam,'w') as fp:
         freg = freg_array[:,cnd].reshape(ydat.shape)
         rstd = rstd_array[:,cnd].reshape(ydat.shape)
         bavg = bavg_array[:,cnd].reshape(ydat.shape)
-        ss = bavg-vmin
-        indx = np.argsort(ss)[0:int(ss.size*0.6)]
+
+
+        cnd1 = (dstd < 3.5) & (bavg > -22.5) & (bavg < -10.0) & (vmin < -12.0) & (rstd < 6.0) & (fleg == 0) & (freg == 0)
+        ts = tmin[cnd1]
+
+        ss = bavg[cnd1]-vmin[cnd1]
+        indx = np.argsort(ss)[0:int(ss.size*0.4)]
         bb = ss[indx]
         ba = np.nanmean(bb)
         blev = ba+opts.bthr
         ysig = ss-blev
-        cnd2 = (ysig > 0.0) & (dstd < 3.5) & (bavg > -22.5) & (bavg < -10.0) & (vmin < -12.0) & (rstd < 6.0) & (fleg == 0) & (freg == 0)
-        yval = (ysig[cnd2].reshape(-1,1)*np.exp(-0.5*np.square((xval.reshape(1,-1)-tmin[cnd2].reshape(-1,1))/opts.xsgm))).sum(axis=0)
+        cnd2 = (ysig > 0.0)# & (dstd < 3.5) & (bavg > -22.5) & (bavg < -10.0) & (vmin < -12.0) & (rstd < 6.0) & (fleg == 0) & (freg == 0)
+        yval = (ysig[cnd2].reshape(-1,1)*np.exp(-0.5*np.square((xval.reshape(1,-1)-ts[cnd2].reshape(-1,1))/opts.xsgm))).sum(axis=0)
         y_1d = np.gradient(yval)*dx_1
         y_2d = np.gradient(y_1d)*dx_1
         ind0 = np.arange(yval.size)
@@ -203,7 +212,7 @@ with open(opts.outnam,'w') as fp:
                     sind.append(ind1[itmp+1])
             eind.append(ind1[-1])
         for si,ei in zip(sind,eind):
-            cnd3 = (tmin >= xval[si]) & (tmin <= xval[ei]) & (ysig > opts.sthr)
+            cnd3 = (ts >= xval[si]) & (ts <= xval[ei]) & (ysig > opts.sthr)
             if cnd3.sum() < opts.nthr:
                 continue
             ind3 = ind0[si:ei+1]
@@ -243,14 +252,20 @@ with open(opts.outnam,'w') as fp:
             for xpek,ypek in zip(xpks,ypks):
                 fp.write('{:6d} {:15.8e} {:13.6e}\n'.format(sid,xpek,ypek))
             if opts.debug:
-                ax1.hlines(opts.ythr,xval[si],xval[ei],zorder=10)
+                ax2.hlines(opts.ythr,xval[si],xval[ei],zorder=10)
                 if opts.subpeak and len(xpks) > 1:
                     for xpek,ypek in zip(xpks,ypks):
-                        ax1.plot(xpek,ypek,'ro',zorder=10)
+                        ax2.plot(xpek,ypek,'ro',zorder=10)
                 else:
-                    ax1.plot(xval[ind6],yval[ind6],'ro',zorder=10)
+                    ax2.plot(xval[ind6],yval[ind6],'ro',zorder=10)
         if opts.debug:
-            ax1.plot(xval,yval,'b-',zorder=1)
+            xb = ts[indx]
+            ax1.plot(tmin,bavg-vmin,'k.',zorder=1)
+            ax1.scatter(ts,ss.clip(0.0,8.0),marker='o',c=ss,vmin=0.0,vmax=8.0,cmap=cm.jet,zorder=10)
+            ax1.plot(xb,bb,'o',mfc='none',mec='k',zorder=10)
+            #ax1.plot(ts,ss.clip(0.0,8.0),'o',mfc='none',mec='r')
+            ax1.axhline(ba,color='r')
+            ax1.axhline(blev,color='r',ls=':')
             ax1.set_ylabel('Signal value (dB)')
             ax1.set_xlim(xmin,xmax)
             if opts.ax1_ymin is not None:
@@ -261,11 +276,25 @@ with open(opts.outnam,'w') as fp:
                 ax1.yaxis.set_major_locator(plt.MultipleLocator(opts.ax1_ystp))
             ax1.set_title('#{} ({} - {})'.format(sid,num2date(xmin).strftime('%Y-%m-%d'),num2date(xmax).strftime('%Y-%m-%d')))
             ax1.xaxis.set_major_locator(plt.FixedLocator(values))
-            ax1.xaxis.set_major_formatter(plt.FixedFormatter(labels))
+            #ax1.xaxis.set_major_formatter(plt.FixedFormatter(labels))
             ax1.xaxis.set_minor_locator(plt.FixedLocator(ticks))
-            ax1.xaxis.set_tick_params(pad=7)
+            #ax1.xaxis.set_tick_params(pad=7)
             ax1.yaxis.set_label_coords(-0.10,0.5)
-            fig.autofmt_xdate()
+            ax2.plot(xval,yval,'b-',zorder=1)
+            ax2.set_ylabel('Signal value (dB)')
+            ax2.set_xlim(xmin,xmax)
+            if opts.ax2_ymin is not None:
+                ax2.set_ylim(bottom=opts.ax2_ymin)
+            if opts.ax2_ymax is not None:
+                ax2.set_ylim(top=opts.ax2_ymax)
+            if opts.ax2_ystp is not None:
+                ax2.yaxis.set_major_locator(plt.MultipleLocator(opts.ax2_ystp))
+            ax2.xaxis.set_major_locator(plt.FixedLocator(values))
+            ax2.xaxis.set_major_formatter(plt.FixedFormatter(labels))
+            ax2.xaxis.set_minor_locator(plt.FixedLocator(ticks))
+            ax2.xaxis.set_tick_params(pad=7)
+            ax2.yaxis.set_label_coords(-0.10,0.5)
+            fig.autofmt_xdate(bottom=0.15)
             plt.draw()
             plt.savefig(pdf,format='pdf')
         if opts.enum is not None and sid >= opts.enum:
