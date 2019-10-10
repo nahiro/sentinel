@@ -14,6 +14,8 @@ from optparse import OptionParser,IndentedHelpFormatter
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('-s','--tmin',default=None,help='Min date in the format YYYYMMDD (%default)')
+parser.add_option('-e','--tmax',default=None,help='Max date in the format YYYYMMDD (%default)')
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 (opts,args) = parser.parse_args()
 
@@ -54,6 +56,10 @@ for rec in records:
         tmin = t
     if t > tmax:
         tmax = t
+if opts.tmin is not None:
+    tmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
+if opts.tmax is not None:
+    tmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
 tdif = tmax-tmin
 
 values = []
