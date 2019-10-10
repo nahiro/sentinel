@@ -10,8 +10,15 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.dates import date2num,num2date
 from matplotlib.path import Path
+from optparse import OptionParser,IndentedHelpFormatter
+
+# Read options
+parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('-t','--title',default=None,help='Figure title (%default)')
+(opts,args) = parser.parse_args()
 
 prj = ccrs.UTM(zone=48,southern_hemisphere=True)
+utc_offset = 7.0/24.0 # day
 
 fnam = '/home/naohiro/Work/SATREPS/Shapefile/cihea_testsite_mod/cihea_testsite_mod.shp'
 block_shp = list(shpreader.Reader(fnam).geometries())
@@ -42,7 +49,7 @@ xg,yg = np.meshgrid(xp,yp)
 tmin = 1.0e10
 tmax = -1.0e10
 for rec in records:
-    t = rec.attributes['trans_date']
+    t = rec.attributes['trans_date']+utc_offset
     if t > 1000 and t < tmin:
         tmin = t
     if t > tmax:
@@ -83,21 +90,21 @@ for y in range(num2date(tmin).year,num2date(tmax).year+1):
 plt.interactive(True)
 fig = plt.figure(1,facecolor='w',figsize=(7,6))
 fig.clear()
-plt.subplots_adjust(top=0.95,bottom=0.05,left=0.10,right=0.80)
+plt.subplots_adjust(top=0.93,bottom=0.03,left=0.10,right=0.80)
 ax1 = plt.subplot(111,projection=prj)
 for shp,rec in zip(shapes,records):
-    t = rec.attributes['trans_date']
+    t = rec.attributes['trans_date']+utc_offset
     if t > 1000.0:
         ax1.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((t-tmin)/tdif))
 im = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=cm.jet)
 ax1.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 for bs,br in zip(block_shp,block_rec):
     for n in range(len(bs)):
+        #xc = bs[0].boundary.centroid.x
+        #yc = bs[0].boundary.centroid.y
         points = list(zip(*bs[n].exterior.coords.xy))
         p = Path(points)
         flags = p.contains_points(np.hstack((xg.flatten()[:,np.newaxis],yg.flatten()[:,np.newaxis]))).reshape(xg.shape)
-        #xc = bs.boundary.centroid.x
-        #yc = bs.boundary.centroid.y
         distance = np.empty(xg.shape,dtype=np.float64)
         for i,x_pt in enumerate(xp):
             for j,y_pt in enumerate(yp):
@@ -106,10 +113,11 @@ for bs,br in zip(block_shp,block_rec):
                 else:
                     distance[j,i] = -1.0e10
         indy,indx = np.unravel_index(np.argmax(distance),distance.shape)
-        xc = xp[indx]
-        yc = yp[indy]
-        tc = br.attributes['Blok']
-        ax1.text(xc,yc,tc,transform=prj,ha='center',va='center')
+        if indx > 0 and indy > 0:
+            xt = xp[indx]
+            yt = yp[indy]
+            t = br.attributes['Blok']
+            ax1.text(xt,yt,t,transform=prj,ha='center',va='center')
         #break
 ax2 = plt.colorbar(im).ax
 ax2.yaxis.set_major_locator(plt.FixedLocator(values))
@@ -117,5 +125,7 @@ ax2.yaxis.set_major_formatter(plt.FixedFormatter(labels))
 ax2.yaxis.set_minor_locator(plt.FixedLocator(ticks))
 ax1.set_xlim(xmin,xmax)
 ax1.set_ylim(ymin,ymax)
+if opts.title is not None:
+    ax1.set_title(opts.title)
 plt.draw()
 plt.savefig('transplanting_date.pdf')
