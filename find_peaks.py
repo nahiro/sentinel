@@ -70,8 +70,8 @@ vmin_array = []
 dstd_array = []
 fleg_array = []
 freg_array = []
-rstd_array = []
 bavg_array = []
+bstd_array = []
 for i,f in enumerate(fs):
     if opts.npz:
         m = re.search('collocation_(\d+)_(\d+).npz',os.path.basename(f))
@@ -92,8 +92,8 @@ for i,f in enumerate(fs):
             dstd = data['dstd']
             fleg = data['fleg']
             freg = data['freg']
-            rstd = data['rstd']
             bavg = data['bavg']
+            bstd = data['bstd']
         else:
             j,ndat,tmin,vmin,fmin,tlft,vlft,flft,trgt,vrgt,frgt,dmin,dstd,tleg,fleg,treg,freg,sstd,scor,traw,vraw,fraw,draw,rstd,rcor,bavg,bstd = np.loadtxt(f,unpack=True)
     except Exception:
@@ -109,8 +109,8 @@ for i,f in enumerate(fs):
     dstd_array.append(dstd)
     fleg_array.append(fleg)
     freg_array.append(freg)
-    rstd_array.append(rstd)
     bavg_array.append(bavg)
+    bstd_array.append(bstd)
     x0_tmp = date2num(d0_tmp)
     x1_tmp = date2num(d1_tmp)
     if x0_tmp < xmin:
@@ -124,8 +124,8 @@ vmin_array = np.array(vmin_array)
 dstd_array = np.array(dstd_array)
 fleg_array = np.array(fleg_array)
 freg_array = np.array(freg_array)
-rstd_array = np.array(rstd_array)
 bavg_array = np.array(bavg_array)
+bstd_array = np.array(bstd_array)
 
 if opts.debug:
     plt.interactive(True)
@@ -181,20 +181,17 @@ with open(opts.outnam,'w') as fp:
         dstd = dstd_array[:,cnd].reshape(ydat.shape)
         fleg = fleg_array[:,cnd].reshape(ydat.shape)
         freg = freg_array[:,cnd].reshape(ydat.shape)
-        rstd = rstd_array[:,cnd].reshape(ydat.shape)
         bavg = bavg_array[:,cnd].reshape(ydat.shape)
-
-
-        cnd1 = (dstd < 3.5) & (bavg > -22.5) & (bavg < -10.0) & (vmin < -12.0) & (rstd < 6.0) & (fleg == 0) & (freg == 0)
+        bstd = bstd_array[:,cnd].reshape(ydat.shape)
+        cnd1 = (dstd < 3.5) & (bavg > -22.5) & (bavg < -10.0) & (vmin < -12.0) & (bstd < 5.5) & (fleg == 0) & (freg == 0)
         ts = tmin[cnd1]
-
         ss = bavg[cnd1]-vmin[cnd1]
         indx = np.argsort(ss)[0:int(ss.size*0.4)]
         bb = ss[indx]
         ba = np.nanmean(bb)
         blev = ba+opts.bthr
         ysig = ss-blev
-        cnd2 = (ysig > 0.0)# & (dstd < 3.5) & (bavg > -22.5) & (bavg < -10.0) & (vmin < -12.0) & (rstd < 6.0) & (fleg == 0) & (freg == 0)
+        cnd2 = (ysig > 0.0)
         yval = (ysig[cnd2].reshape(-1,1)*np.exp(-0.5*np.square((xval.reshape(1,-1)-ts[cnd2].reshape(-1,1))/opts.xsgm))).sum(axis=0)
         y_1d = np.gradient(yval)*dx_1
         y_2d = np.gradient(y_1d)*dx_1
