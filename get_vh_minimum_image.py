@@ -20,6 +20,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 END = datetime.now().strftime('%Y%m%d')
 PERIOD = 60 # day
+POLARIZATION = 'VH'
 SIGWID = 15.0 # dB
 MAXDIS = 100.0 # m
 VINT = 100
@@ -32,6 +33,7 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
 parser.add_option('-e','--end',default=END,help='End date of the analysis in the format YYYYMMDD (%default)')
 parser.add_option('-p','--period',default=PERIOD,type='int',help='Observation period in day (%default)')
+parser.add_option('-P','--polarization',default=POLARIZATION,help='Polarization (%default)')
 parser.add_option('-i','--ind',default=None,type='int',action='append',help='Selected indices (%default)')
 parser.add_option('-w','--sigwid',default=SIGWID,type='float',help='Signal width in day (%default)')
 parser.add_option('-m','--maxdis',default=MAXDIS,type='float',help='Max distance in m (%default)')
@@ -113,6 +115,8 @@ dset = []
 dtim = []
 for i,value in enumerate(root.iter('BAND_NAME')):
     band = value.text
+    if not opts.polarization in band.upper():
+        continue
     sys.stderr.write(band+'\n')
     m = re.search('_(\d+)$',band)
     if not m:
