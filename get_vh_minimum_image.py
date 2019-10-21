@@ -83,12 +83,22 @@ xg,yg = np.meshgrid(np.arange(xmin,xmax+0.1*xstp,xstp),np.arange(ymax,ymin-0.1*y
 ngrd = xg.size
 
 ds = gdal.Open(input_fnam)
+prj = ds.GetProjection()
+srs = osr.SpatialReference(wkt=prj)
 data = ds.ReadAsArray()
 trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
 indy,indx = np.indices(data[0].shape)
-lon = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
-lat = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
-xp,yp,zp = transform_wgs84_to_utm(lon,lat)
+if srs.IsProjected:
+    pnam = srs.GetAttrValue('projcs')
+    if re.search('UTM',pnam):
+        xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
+        yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
+    else:
+        raise ValueError('Unsupported projection >>> '+pnam)
+else:
+    lon = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
+    lat = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
+    xp,yp,zp = transform_wgs84_to_utm(lon,lat)
 ds = None # close dataset
 
 tif_tags = {}
