@@ -15,6 +15,7 @@ RESOLUTION = 10 # m
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-r','--resolution',default=RESOLUTION,type='int',help='Spatial resolution in m (%default)')
+parser.add_option('-G','--geotiff',default=False,action='store_true',help='GeoTiff mode (%default)')
 parser.set_usage('Usage: %prog input_fnam [options]')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -27,7 +28,10 @@ if not m:
     if not m:
         raise ValueError('Error in file name >>> '+input_fnam)
 dstr = m.group(1)[:8]
-output_fnam = '{}.dim'.format(dstr)
+if opts.geotiff:
+    output_fnam = '{}.tif'.format(dstr)
+else:
+    output_fnam = '{}.dim'.format(dstr)
 if os.path.exists(output_fnam):
     sys.exit()
 
@@ -52,4 +56,7 @@ params.put('copyMetadata',True)
 params.put('geoRegion',geom)
 data_tmp = GPF.createProduct('Subset',params,data)
 data = data_tmp
-ProductIO.writeProduct(data,output_fnam,'BEAM-DIMAP')
+if opts.geotiff:
+    ProductIO.writeProduct(data,output_fnam,'GeoTiff')
+else:
+    ProductIO.writeProduct(data,output_fnam,'BEAM-DIMAP')

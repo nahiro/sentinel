@@ -20,6 +20,7 @@ parser.add_option('-D','--datdir',default=DATDIR,help='Sentinel-1 data directory
 parser.add_option('-s','--start',default=None,help='Start date of the query in the format YYYYMMDD.')
 parser.add_option('-e','--end',default=None,help='End date of the query in the format YYYYMMDD.')
 parser.add_option('-r','--resolution',default=RESOLUTION,type='int',help='Spatial resolution in m (%default)')
+parser.add_option('-G','--geotiff',default=False,action='store_true',help='GeoTiff mode (%default)')
 (opts,args) = parser.parse_args()
 if opts.end is None:
     opts.end = datetime.now().strftime('%Y%m%d')
@@ -79,6 +80,8 @@ for year in range(dmin.year,dmax.year+1):
         command = 'sentinel2_subset.py'
         command += ' '+gnam
         command += ' --resolution {}'.format(opts.resolution)
+        if opts.geotiff:
+            command += ' --geotiff'
         if flag:
             os.symlink(fnam,gnam)
         call(command,shell=True)
