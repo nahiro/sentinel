@@ -90,7 +90,7 @@ srs = osr.SpatialReference(wkt=prj)
 data = ds.ReadAsArray()
 trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
 indy,indx = np.indices(data[0].shape)
-if srs.IsProjected:
+if srs.IsProjected():
     pnam = srs.GetAttrValue('projcs')
     if re.search('UTM',pnam):
         xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
