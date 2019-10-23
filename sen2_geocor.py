@@ -29,9 +29,9 @@ ref_band = ref_bands.index('8')
 ds = gdal.Open(ref_fnam)
 prj = ds.GetProjection()
 srs = osr.SpatialReference(wkt=prj)
-ref_data = ds.ReadAsArray()
+ref_data = ds.ReadAsArray()[ref_band]
 trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
-indy,indx = np.indices(ref_data[ref_band].shape)
+indy,indx = np.indices(ref_data.shape)
 if srs.IsProjected():
     pnam = srs.GetAttrValue('projcs')
     if re.search('UTM',pnam):
@@ -44,6 +44,13 @@ else:
 ds = None # close dataset
 ref_xp0 = ref_xp[0,:]
 ref_yp0 = ref_yp[:,0]
+ref_xp_min = ref_xp0.min()
+ref_xp_max = ref_xp0.max()
+ref_yp_min = ref_yp0.min()
+ref_yp_max = ref_yp0.max()
+ref_yp_stp = ref_yp0[1]-ref_yp0[0]
+if ref_yp_stp >= 0.0:
+    raise ValueError('Error, ref_yp_stp={}'.format(ref_yp_stp))
 
 trg_fnam = os.path.join(datdir,'20190525.tif')
 
@@ -62,9 +69,9 @@ trg_band = trg_bands.index('B8')
 ds = gdal.Open(trg_fnam)
 prj = ds.GetProjection()
 srs = osr.SpatialReference(wkt=prj)
-trg_data = ds.ReadAsArray()
+trg_data = ds.ReadAsArray()[trg_band]
 trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
-indy,indx = np.indices(trg_data[trg_band].shape)
+indy,indx = np.indices(trg_data.shape)
 if srs.IsProjected():
     pnam = srs.GetAttrValue('projcs')
     if re.search('UTM',pnam):
@@ -77,9 +84,16 @@ else:
 ds = None # close dataset
 trg_xp0 = trg_xp[0,:]
 trg_yp0 = trg_yp[:,0]
+trg_xp_min = trg_xp0.min()
+trg_xp_max = trg_xp0.max()
+trg_yp_min = trg_yp0.min()
+trg_yp_max = trg_yp0.max()
+trg_yp_stp = trg_yp0[1]-trg_yp0[0]
+if trg_yp_stp >= 0.0:
+    raise ValueError('Error, trg_yp_stp={}'.format(trg_yp_stp))
 
-ref_height,ref_width = ref_data[ref_band].shape
-trg_height,trg_width = trg_data[trg_band].shape
+ref_height,ref_width = ref_data.shape
+trg_height,trg_width = trg_data.shape
 
 template_width = 100 # target pixel
 template_height = 100 # target pixel
@@ -96,6 +110,20 @@ for trg_indyc in np.arange(0,trg_height,template_half_height):
         continue
     if trg_indy2 > trg_height:
         break
+    ref_yp1 = trg_yp0[trg_indyc-template_half_width] # yp1 > ypc
+    ref_yp2 = trg_yp0[trg_indyc+template_half_width] # yp2 < ypc
+    if ref_yp1 > ref_yp_max:
+        continue
+    if ref_yp2 < ref_yp_min:
+        continue
+    ref_indy1 = np.where(ref_yp0 <= ref_yp1)[0]
+    if ref_indy1.size < 1:
+        continue
+    ref_indy1 = ref_indy1[0]
+    ref_indy2 = np.where(ref_yp0 >= ref_yp2)[0]
+    if ref_indy2.size < 1:
+        continue
+    ref_indy2 = ref_indy2[-1]+1
     for trg_indxc in np.arange(0,trg_width,template_half_width):
         trg_indx1 = trg_indxc-template_half_width-margin_width
         trg_indx2 = trg_indxc+template_half_width+margin_width+1
@@ -103,13 +131,32 @@ for trg_indyc in np.arange(0,trg_height,template_half_height):
             continue
         if trg_indx2 > trg_width:
             break
-        #print(trg_indyc,trg_indxc)
+        ref_xp1 = trg_xp0[trg_indxc-template_half_width]
+        ref_xp2 = trg_xp0[trg_indxc+template_half_width]
+        if ref_xp1 < ref_xp_min:
+            continue
+        if ref_xp2 > ref_xp_max:
+            continue
+        ref_indx1 = np.where(ref_xp0 >= ref_xp1)[0]
+        if ref_indx1.size < 1:
+            continue
+        ref_indx1 = ref_indx1[0]
+        ref_indx2 = np.where(ref_xp0 <= ref_xp2)[0]
+        if ref_indx2.size < 1:
+            continue
+        ref_indx2 = ref_indx2[-1]+1
+        # target subset
+        trg_subset_xp = trg_xp[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
+        trg_subset_yp = trg_yp[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
+        trg_subset_data = trg_data[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
+        # reference subset
+        ref_subset_xp = ref_xp[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
+        ref_subset_yp = ref_yp[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
+        ref_subset_data = ref_data[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
+        if ref_subset_data.min() < 1:
+            continue
         """
-        trg_subset_data = trg_data[] # subset of target
-        trg_subset_xp = trg_xp[]
-        trg_subset_yp = trg_yp[]
-        ref_subset_data = ref_data[]
-        ref_subset_xp = ref_xp[]
-        ref_subset_yp = ref_yp[]
         interp2d(trg_subset_xp,trg_subset_yp,trg_subset_data,ref_subset_xp,ref_subset_yp)
         """
+        break
+    break
