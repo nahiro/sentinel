@@ -4,8 +4,6 @@ import sys
 import re
 import gdal
 import osr
-#import tifffile
-#import xml.etree.ElementTree as ET
 import numpy as np
 from scipy.interpolate import interp2d
 from scipy.optimize import leastsq
@@ -55,20 +53,6 @@ def residuals(p,refx,refy,refz,trgx,trgy,trgz,pmax):
     r = np.corrcoef(intz.flatten(),refz.flatten())[0,1]
     return np.full(2,1.0-r)
 
-#tif_tags = {}
-#with tifffile.TiffFile(ref_fnam) as tif:
-#    for tag in tif.pages[0].tags.values():
-#        name,value = tag.name,tag.value
-#        tif_tags[name] = value
-#ref_bands = []
-#for line in tif_tags['ImageDescription'].splitlines():
-#    m = re.search('(\d+)\s*;',line);
-#    if m:
-#        band = m.group(1)
-#        ref_bands.append(band)
-#ref_band = ref_bands.index('8')
-#ref_band = 7
-
 ds = gdal.Open(ref_fnam)
 prj = ds.GetProjection()
 srs = osr.SpatialReference(wkt=prj)
@@ -97,18 +81,6 @@ if ref_xp_stp <= 0.0:
     raise ValueError('Error, ref_xp_stp={}'.format(ref_xp_stp))
 if ref_yp_stp >= 0.0:
     raise ValueError('Error, ref_yp_stp={}'.format(ref_yp_stp))
-
-#tif_tags = {}
-#with tifffile.TiffFile(trg_fnam) as tif:
-#    for tag in tif.pages[0].tags.values():
-#        name,value = tag.name,tag.value
-#        tif_tags[name] = value
-#root = ET.fromstring(tif_tags['65000'])
-#trg_bands = []
-#for i,value in enumerate(root.iter('BAND_NAME')):
-#    band = value.text
-#    trg_bands.append(band)
-#trg_band = trg_bands.index('B8')
 
 ds = gdal.Open(trg_fnam)
 prj = ds.GetProjection()
@@ -214,9 +186,6 @@ for trg_indyc in np.arange(0,trg_height,subset_half_height):
                                             epsfcn=opts.feps,full_output=True)
         p2 = result[0]
         r = 1.0-result[2]['fvec'][0]
-        #f = interp2d(trg_subset_xp0+p2[0],trg_subset_yp0+p2[1],trg_subset_data,kind='linear')
-        #trg_interp_data = f(ref_subset_xp0,ref_subset_yp0)[::-1]
-        #r = np.corrcoef(trg_interp_data.flatten(),ref_subset_data.flatten())[0,1]
         if r > opts.rthr:
             sys.stdout.write('{:6d} {:6d} {:8.2f} {:8.2f} {:6.2f} {:6.2f} {:8.3f}\n'.format(trg_indxc,trg_indyc,trg_xp0[trg_indxc]+p2[0],trg_yp0[trg_indyc]+p2[1],p2[0],p2[1],r))
         #break
