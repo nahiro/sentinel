@@ -25,6 +25,7 @@ for line in tif_tags['ImageDescription'].splitlines():
         band = m.group(1)
         ref_bands.append(band)
 ref_band = ref_bands.index('8')
+ref_band = 7
 
 ds = gdal.Open(ref_fnam)
 prj = ds.GetProjection()
@@ -146,17 +147,20 @@ for trg_indyc in np.arange(0,trg_height,template_half_height):
             continue
         ref_indx2 = ref_indx2[-1]+1
         # target subset
-        trg_subset_xp = trg_xp[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
-        trg_subset_yp = trg_yp[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
+        #trg_subset_xp = trg_xp[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
+        #trg_subset_yp = trg_yp[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
+        trg_subset_xp0 = trg_xp0[trg_indx1:trg_indx2]
+        trg_subset_yp0 = trg_yp0[trg_indy1:trg_indy2]
         trg_subset_data = trg_data[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
         # reference subset
-        ref_subset_xp = ref_xp[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
-        ref_subset_yp = ref_yp[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
+        #ref_subset_xp = ref_xp[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
+        #ref_subset_yp = ref_yp[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
+        ref_subset_xp0 = ref_xp0[ref_indx1:ref_indx2]
+        ref_subset_yp0 = ref_yp0[ref_indy1:ref_indy2]
         ref_subset_data = ref_data[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
         if ref_subset_data.min() < 1:
             continue
-        """
-        interp2d(trg_subset_xp,trg_subset_yp,trg_subset_data,ref_subset_xp,ref_subset_yp)
-        """
+        f = interp2d(trg_subset_xp0,trg_subset_yp0,trg_subset_data,kind='linear')
+        trg_interp_data = f(ref_subset_xp0,ref_subset_yp0)[::-1]
         break
     break
