@@ -34,6 +34,7 @@ parser.add_option('--margin_width',default=MARGIN_WIDTH,type='int',help='Margin 
 parser.add_option('--margin_height',default=MARGIN_HEIGHT,type='int',help='Margin height in target pixel (%default)')
 parser.add_option('-r','--rthr',default=RTHR,type='float',help='Threshold of correlation coefficient (%default)')
 parser.add_option('-E','--feps',default=FEPS,type='float',help='Step length for curve_fit (%default)')
+parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -187,6 +188,9 @@ for trg_indyc in np.arange(0,trg_height,subset_half_height):
         p2 = result[0]
         r = 1.0-result[2]['fvec'][0]
         if r > opts.rthr:
-            sys.stdout.write('{:6d} {:6d} {:8.2f} {:8.2f} {:6.2f} {:6.2f} {:8.3f}\n'.format(trg_indxc,trg_indyc,trg_xp0[trg_indxc]+p2[0],trg_yp0[trg_indyc]+p2[1],p2[0],p2[1],r))
+            line = '{:8.1f} {:8.1f} {:8.2f} {:8.2f} {:6.2f} {:6.2f} {:8.3f}\n'.format(trg_indxc+0.5,trg_indyc+0.5,trg_xp0[trg_indxc]+p2[0],trg_yp0[trg_indyc]+p2[1],p2[0],p2[1],r)
+            sys.stdout.write(line)
+            if opts.verbose:
+                sys.stderr.write(line)
         #break
     #break
