@@ -9,6 +9,15 @@ import numpy as np
 from scipy.interpolate import interp2d
 from scipy.optimize import leastsq
 
+def residuals(p,refx,refy,refz,trgx,trgy,trgz):
+    pmax = np.abs(p).max()
+    if pmax > 50.0:
+        return np.full(10,1.0+pmax-50.0)
+    f = interp2d(trgx+p[0],trgy+p[1],trgz,kind='linear')
+    intz = f(refx,refy)[::-1]
+    r = np.corrcoef(intz.flatten(),refz.flatten())[0,1]
+    return np.full(10,1.0-r)
+
 datdir = '/home/naohiro/Work/Sentinel-2/191022'
 
 ref_fnam = os.path.join(datdir,'wv2_180629_mul.tif')
@@ -147,20 +156,19 @@ for trg_indyc in np.arange(0,trg_height,template_half_height):
             continue
         ref_indx2 = ref_indx2[-1]+1
         # target subset
-        #trg_subset_xp = trg_xp[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
-        #trg_subset_yp = trg_yp[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
         trg_subset_xp0 = trg_xp0[trg_indx1:trg_indx2]
         trg_subset_yp0 = trg_yp0[trg_indy1:trg_indy2]
         trg_subset_data = trg_data[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
         # reference subset
-        #ref_subset_xp = ref_xp[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
-        #ref_subset_yp = ref_yp[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
         ref_subset_xp0 = ref_xp0[ref_indx1:ref_indx2]
         ref_subset_yp0 = ref_yp0[ref_indy1:ref_indy2]
         ref_subset_data = ref_data[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
         if ref_subset_data.min() < 1:
             continue
-        f = interp2d(trg_subset_xp0,trg_subset_yp0,trg_subset_data,kind='linear')
-        trg_interp_data = f(ref_subset_xp0,ref_subset_yp0)[::-1]
-        break
-    break
+        p1 = np.array([0.0,0.0])
+        result = leastsq(residuals,p1,args=(ref_subset_xp0,ref_subset_yp0,ref_subset_data,trg_subset_xp0,trg_subset_yp0,trg_subset_data),epsfcn=1.0e-1,full_output=True)
+        p2 = result[0]
+        r = 1.0-result[2]['fvec'][0]
+        sys.stdout.write('{:6d} {:6d} {:8.2f} {:8.2f} {:6.2f} {:6.2f} {:8.3f}\n'.format(trg_indxc,trg_indyc,trg_xp0[trg_indxc]+p2[0],trg_yp0[trg_indyc]+p2[1],p2[0],p2[1],r))
+        #break
+    #break
