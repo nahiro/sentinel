@@ -49,7 +49,9 @@ if len(args) < 1:
     sys.exit(0)
 ref_fnam = args[0]
 trg_fnam = args[1]
-tmp_fnam = 'tmp.tif'
+trg_bnam = os.path.splitext(os.path.basename(trg_fnam))[0]
+tmp_fnam = trg_bnam+'_tmp.tif'
+out_fnam = trg_bnam+'_geocor.tif'
 if opts.trg_epsg is None:
     ds = gdal.Open(trg_fnam)
     prj = ds.GetProjection()
@@ -57,7 +59,6 @@ if opts.trg_epsg is None:
     opts.trg_epsg = srs.GetAttrValue('AUTHORITY',1)
     ds = None # close dataset
 
-out_fnam = os.path.splitext(os.path.basename(trg_fnam))[0]+'_geocor.tif'
 if opts.use_gcps is not None:
     fnam = opts.use_gcps
 else:
