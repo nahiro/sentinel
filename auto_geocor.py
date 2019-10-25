@@ -18,7 +18,7 @@ RESAMPLING = 'cubic'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.set_usage('Usage: %prog reference_geotiff_file target_geotiff_file [options]')
+parser.set_usage('Usage: %prog reference_georeferenced_image target_georeferenced_image [options]')
 parser.add_option('-b','--ref_band',default=None,type='int',help='Reference band# (%default)')
 parser.add_option('-B','--trg_band',default=None,type='int',help='Target band# (%default)')
 parser.add_option('-x','--trg_indx_start',default=None,type='int',help='Target start x index (0)')
