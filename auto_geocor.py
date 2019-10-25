@@ -2,6 +2,8 @@
 import os
 import sys
 import numpy as np
+import gdal
+import osr
 try:
     from io import StringIO
 except Exception:
@@ -52,6 +54,7 @@ trg_fnam = args[1]
 trg_bnam = os.path.splitext(os.path.basename(trg_fnam))[0]
 tmp_fnam = trg_bnam+'_tmp.tif'
 out_fnam = trg_bnam+'_geocor.tif'
+
 if opts.trg_epsg is None:
     ds = gdal.Open(trg_fnam)
     prj = ds.GetProjection()
@@ -104,8 +107,11 @@ else:
         command += ' --feps {}'.format(opts.feps)
     if opts.debug:
         command += ' --debug'
-    out = check_output(command,shell=True)
-    fnam = StringIO(out.decode())
+    out = check_output(command,shell=True).decode()
+    fnam = StringIO(out)
+    if opts.save_gcps is not None:
+        with open(opts.save_gcps,'w') as fp:
+            fp.write(out)
 xi,yi,xp,yp,dx,dy,r = np.loadtxt(fnam,unpack=True)
 
 command = 'gdal_translate'
