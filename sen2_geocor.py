@@ -26,6 +26,12 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.set_usage('Usage: %prog reference_geotiff_file target_geotiff_file [options]')
 parser.add_option('-b','--ref_band',default=REF_BAND,type='int',help='Reference band# (%default)')
 parser.add_option('-B','--trg_band',default=TRG_BAND,type='int',help='Target band# (%default)')
+parser.add_option('-x','--trg_indx_start',default=None,type='int',help='Target start x index (0)')
+parser.add_option('-X','--trg_indx_stop',default=None,type='int',help='Target stop x index (target width)')
+parser.add_option('-s','--trg_indx_step',default=None,type='int',help='Target step x index (half of subset_width)')
+parser.add_option('-y','--trg_indy_start',default=None,type='int',help='Target start y index (0)')
+parser.add_option('-Y','--trg_indy_stop',default=None,type='int',help='Target stop y index (target height)')
+parser.add_option('-S','--trg_indy_step',default=None,type='int',help='Target step y index (half of subset_height)')
 parser.add_option('-W','--subset_width',default=SUBSET_WIDTH,type='int',help='Subset width in target pixel (%default)')
 parser.add_option('-H','--subset_height',default=SUBSET_HEIGHT,type='int',help='Subset height in target pixel (%default)')
 parser.add_option('--shift_width',default=SHIFT_WIDTH,type='int',help='Max shift width in target pixel (%default)')
@@ -114,11 +120,22 @@ if trg_yp_stp >= 0.0:
 
 ref_height,ref_width = ref_data.shape
 trg_height,trg_width = trg_data.shape
-
 subset_half_width = opts.subset_width//2
 subset_half_height = opts.subset_height//2
-for trg_indyc in np.arange(0,trg_height,subset_half_height):
-#for trg_indyc in [450]:
+if opts.trg_indx_start is None:
+    opts.trg_indx_start = 0
+if opts.trg_indx_stop is None:
+    opts.trg_indx_stop = trg_width
+if opts.trg_indx_step is None:
+    opts.trg_indx_step = subset_half_width
+if opts.trg_indy_start is None:
+    opts.trg_indy_start = 0
+if opts.trg_indy_stop is None:
+    opts.trg_indy_stop = trg_height
+if opts.trg_indy_step is None:
+    opts.trg_indy_step = subset_half_height
+
+for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_step):
     trg_indy1 = trg_indyc-subset_half_height-opts.margin_height
     trg_indy2 = trg_indyc+subset_half_height+opts.margin_height+1
     if trg_indy1 < 0:
@@ -139,8 +156,7 @@ for trg_indyc in np.arange(0,trg_height,subset_half_height):
     if ref_indy2.size < 1:
         continue
     ref_indy2 = ref_indy2[-1]+1
-    for trg_indxc in np.arange(0,trg_width,subset_half_width):
-    #for trg_indxc in [1250]:
+    for trg_indxc in np.arange(opts.trg_indx_start,opts.trg_indx_stop,opts.trg_indx_step):
         trg_indx1 = trg_indxc-subset_half_width-opts.margin_width
         trg_indx2 = trg_indxc+subset_half_width+opts.margin_width+1
         if trg_indx1 < 0:

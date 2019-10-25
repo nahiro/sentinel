@@ -14,6 +14,12 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.set_usage('Usage: %prog reference_geotiff_file target_geotiff_file [options]')
 parser.add_option('-b','--ref_band',default=None,type='int',help='Reference band# (%default)')
 parser.add_option('-B','--trg_band',default=None,type='int',help='Target band# (%default)')
+parser.add_option('-x','--trg_indx_start',default=None,type='int',help='Target start x index (0)')
+parser.add_option('-X','--trg_indx_stop',default=None,type='int',help='Target stop x index (target width)')
+parser.add_option('-s','--trg_indx_step',default=None,type='int',help='Target step x index (half of subset_width)')
+parser.add_option('-y','--trg_indy_start',default=None,type='int',help='Target start y index (0)')
+parser.add_option('-Y','--trg_indy_stop',default=None,type='int',help='Target stop y index (target height)')
+parser.add_option('-S','--trg_indy_step',default=None,type='int',help='Target step y index (half of subset_height)')
 parser.add_option('-W','--subset_width',default=None,type='int',help='Subset width in target pixel (%default)')
 parser.add_option('-H','--subset_height',default=None,type='int',help='Subset height in target pixel (%default)')
 parser.add_option('--shift_width',default=None,type='int',help='Max shift width in target pixel (%default)')
@@ -40,6 +46,18 @@ if opts.ref_band is not None:
     command += ' --ref_band {}'.format(opts.ref_band)
 if opts.trg_band is not None:
     command += ' --trg_band {}'.format(opts.trg_band)
+if opts.trg_indx_start is not None:
+    command += ' --trg_indx_start {}'.format(opts.trg_indx_start)
+if opts.trg_indx_stop is not None:
+    command += ' --trg_indx_stop {}'.format(opts.trg_indx_stop)
+if opts.trg_indx_step is not None:
+    command += ' --trg_indx_step {}'.format(opts.trg_indx_step)
+if opts.trg_indy_start is not None:
+    command += ' --trg_indy_start {}'.format(opts.trg_indy_start)
+if opts.trg_indy_stop is not None:
+    command += ' --trg_indy_stop {}'.format(opts.trg_indy_stop)
+if opts.trg_indy_step is not None:
+    command += ' --trg_indy_step {}'.format(opts.trg_indy_step)
 if opts.subset_width is not None:
     command += ' --subset_width {}'.format(opts.subset_width)
 if opts.subset_height is not None:
