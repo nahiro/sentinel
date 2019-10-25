@@ -70,14 +70,7 @@ trans = ds.GetGeoTransform()
 indy,indx = np.indices(ref_data.shape)
 ref_xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
 ref_yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
-if srs.IsProjected():
-    pnam = srs.GetAttrValue('projcs')
-    if re.search('UTM',pnam):
-        ref_crs = 'utm'
-    else:
-        ref_crs = 'projected'
-else:
-    ref_crs = 'unprojected'
+ref_epsg = srs.GetAttrValue('AUTHORITY',1)
 ds = None # close dataset
 ref_xp0 = ref_xp[0,:]
 ref_yp0 = ref_yp[:,0]
@@ -100,16 +93,9 @@ trans = ds.GetGeoTransform()
 indy,indx = np.indices(trg_data.shape)
 trg_xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
 trg_yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
-if srs.IsProjected():
-    pnam = srs.GetAttrValue('projcs')
-    if re.search('UTM',pnam):
-        trg_crs = 'utm'
-    else:
-        trg_crs = 'projected'
-else:
-    trg_crs = 'unprojected'
-if trg_crs != ref_crs:
-    sys.stderr.write('Warning, different CRS, ref:{}, trg:{}\n'.format(ref_crs,trg_crs))
+trg_epsg = srs.GetAttrValue('AUTHORITY',1)
+if trg_epsg != ref_epsg:
+    sys.stderr.write('Warning, different EPSG, ref:{}, trg:{}\n'.format(ref_epsg,trg_epsg))
 ds = None # close dataset
 trg_xp0 = trg_xp[0,:]
 trg_yp0 = trg_yp[:,0]
