@@ -23,7 +23,7 @@ RTHR = 0.3
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.set_usage('Usage: %prog reference_geotiff_file target_geotiff_file [options]')
+parser.set_usage('Usage: %prog reference_georeferenced_image target_georeferenced_image [options]')
 parser.add_option('-b','--ref_band',default=REF_BAND,type='int',help='Reference band# (%default)')
 parser.add_option('-B','--trg_band',default=TRG_BAND,type='int',help='Target band# (%default)')
 parser.add_option('-x','--trg_indx_start',default=None,type='int',help='Target start x index (0)')
@@ -38,6 +38,8 @@ parser.add_option('--shift_width',default=SHIFT_WIDTH,type='int',help='Max shift
 parser.add_option('--shift_height',default=SHIFT_HEIGHT,type='int',help='Max shift height in target pixel (%default)')
 parser.add_option('--margin_width',default=MARGIN_WIDTH,type='int',help='Margin width in target pixel (%default)')
 parser.add_option('--margin_height',default=MARGIN_HEIGHT,type='int',help='Margin height in target pixel (%default)')
+parser.add_option('--ref_data_min',default=None,type='float',help='Minimum reference data value (%default)')
+parser.add_option('--ref_data_max',default=None,type='float',help='Maximum reference data value (%default)')
 parser.add_option('-r','--rthr',default=RTHR,type='float',help='Threshold of correlation coefficient (%default)')
 parser.add_option('-E','--feps',default=FEPS,type='float',help='Step length for curve_fit (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
@@ -64,7 +66,7 @@ ds = gdal.Open(ref_fnam)
 prj = ds.GetProjection()
 srs = osr.SpatialReference(wkt=prj)
 ref_data = ds.ReadAsArray()[opts.ref_band]
-trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
+trans = ds.GetGeoTransform()
 indy,indx = np.indices(ref_data.shape)
 ref_xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
 ref_yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
@@ -94,7 +96,7 @@ ds = gdal.Open(trg_fnam)
 prj = ds.GetProjection()
 srs = osr.SpatialReference(wkt=prj)
 trg_data = ds.ReadAsArray()[opts.trg_band]
-trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
+trans = ds.GetGeoTransform()
 indy,indx = np.indices(trg_data.shape)
 trg_xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
 trg_yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
@@ -189,7 +191,9 @@ for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_
         ref_subset_xp0 = ref_xp0[ref_indx1:ref_indx2]
         ref_subset_yp0 = ref_yp0[ref_indy1:ref_indy2]
         ref_subset_data = ref_data[ref_indy1:ref_indy2,ref_indx1:ref_indx2]
-        if ref_subset_data.min() < 1:
+        if opts.ref_data_min is not None and ref_subset_data.min() < opts.ref_data_min:
+            continue
+        if opts.ref_data_max is not None and ref_subset_data.max() > opts.ref_data_max:
             continue
         p1 = np.array([0.0,0.0])
         rmax = -1.0e10
@@ -212,5 +216,3 @@ for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_
             sys.stdout.write(line)
             if opts.verbose:
                 sys.stderr.write(line)
-        #break
-    #break
