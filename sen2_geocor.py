@@ -54,11 +54,11 @@ def residuals(p,refx,refy,refz,trgx,trgy,trgz,pmax):
         sys.stderr.write('{}\n'.format(p))
     pabs = np.abs(p).max()
     if pabs > pmax:
-        return np.full(2,2.0+pabs-pmax)
+        return np.full(3,2.0+pabs-pmax) # length = len(p)+1
     f = interp2d(trgx+p[0],trgy+p[1],trgz,kind='linear')
     intz = f(refx,refy)[::-1]
     r = np.corrcoef(intz.flatten(),refz.flatten())[0,1]
-    return np.full(2,1.0-r)
+    return np.full(3,1.0-r) # length = len(p)+1
 
 ds = gdal.Open(ref_fnam)
 prj = ds.GetProjection()
@@ -66,15 +66,16 @@ srs = osr.SpatialReference(wkt=prj)
 ref_data = ds.ReadAsArray()[opts.ref_band]
 trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
 indy,indx = np.indices(ref_data.shape)
+ref_xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
+ref_yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
 if srs.IsProjected():
     pnam = srs.GetAttrValue('projcs')
     if re.search('UTM',pnam):
-        ref_xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
-        ref_yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
+        ref_crs = 'utm'
     else:
-        raise ValueError('Unsupported projection >>> '+pnam)
+        ref_crs = 'projected'
 else:
-    raise ValueError('Unsupported projection >>> '+prj)
+    ref_crs = 'unprojected'
 ds = None # close dataset
 ref_xp0 = ref_xp[0,:]
 ref_yp0 = ref_yp[:,0]
@@ -95,15 +96,18 @@ srs = osr.SpatialReference(wkt=prj)
 trg_data = ds.ReadAsArray()[opts.trg_band]
 trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
 indy,indx = np.indices(trg_data.shape)
+trg_xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
+trg_yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
 if srs.IsProjected():
     pnam = srs.GetAttrValue('projcs')
     if re.search('UTM',pnam):
-        trg_xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
-        trg_yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
+        trg_crs = 'utm'
     else:
-        raise ValueError('Unsupported projection >>> '+pnam)
+        trg_crs = 'projected'
 else:
-    raise ValueError('Unsupported projection >>> '+prj)
+    trg_crs = 'unprojected'
+if trg_crs != ref_crs:
+    sys.stderr.write('Warning, different CRS, ref:{}, trg:{}\n'.format(ref_crs,trg_crs))
 ds = None # close dataset
 trg_xp0 = trg_xp[0,:]
 trg_yp0 = trg_yp[:,0]
