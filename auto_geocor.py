@@ -44,6 +44,7 @@ parser.add_option('-n','--npoly',default=None,type='int',help='Order of polynomi
 parser.add_option('-R','--resampling',default=RESAMPLING,help='Resampling method (%default)')
 parser.add_option('--refine_gcps',default=None,type='float',help='Tolerance to refine GCPs for polynomial interpolation (%default)')
 parser.add_option('--tps',default=False,action='store_true',help='Use thin plate spline transformer (%default)')
+parser.add_option('-e','--exp',default=False,action='store_true',help='Output in exp format (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 2:
@@ -105,6 +106,8 @@ else:
         command += ' --rthr {}'.format(opts.rthr)
     if opts.feps is not None:
         command += ' --feps {}'.format(opts.feps)
+    if opts.exp:
+        command += ' --exp'
     if opts.debug:
         command += ' --debug'
     out = check_output(command,shell=True).decode()
