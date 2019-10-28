@@ -46,7 +46,7 @@ parser.add_option('--refine_gcps',default=None,type='float',help='Tolerance to r
 parser.add_option('--tps',default=False,action='store_true',help='Use thin plate spline transformer (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
-if len(args) < 1:
+if len(args) < 2:
     parser.print_help()
     sys.exit(0)
 ref_fnam = args[0]

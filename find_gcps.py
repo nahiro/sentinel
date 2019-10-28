@@ -45,7 +45,7 @@ parser.add_option('-E','--feps',default=FEPS,type='float',help='Step length for 
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
-if len(args) < 1:
+if len(args) < 2:
     parser.print_help()
     sys.exit(0)
 ref_fnam = args[0]
