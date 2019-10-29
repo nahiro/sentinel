@@ -17,6 +17,7 @@ SCRDIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 REF_DATA_MIN = 1.0e-5 # for WorldView DN image
 RESAMPLING = 'cubic'
 MINIMUM_RATIO = 0.9
+MINIMUM_NUMBER = 10
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -46,9 +47,10 @@ parser.add_option('-e','--trg_epsg',default=None,help='Target EPSG (guessed from
 parser.add_option('-n','--npoly',default=None,type='int',help='Order of polynomial used for warping between 1 and 3 (selected based on the number of GCPs)')
 parser.add_option('-R','--resampling',default=RESAMPLING,help='Resampling method (%default)')
 parser.add_option('--refine_gcps',default=None,type='float',help='Tolerance to refine GCPs for polynomial interpolation (%default)')
-parser.add_option('--minimum_gcps',default=None,type='int',help='Minimum number of GCPs for the refine_gcps option (available number - discard_number or available number x minimum_ratio)')
-parser.add_option('--minimum_ratio',default=MINIMUM_RATIO,type='float',help='Minimum ratio of GCPs for the refine_gcps option (%default)')
-parser.add_option('--discard_number',default=None,type='int',help='Number of GCPs to be discarded for the refine_gcps option (%default)')
+parser.add_option('--minimum_gcps',default=None,type='int',help='Minimum number of GCPs to be left after refine_gcps (available number - discard_number or available number x minimum_ratio)')
+parser.add_option('--minimum_ratio',default=MINIMUM_RATIO,type='float',help='Minimum ratio of GCPs to be left after refine_gcps (%default)')
+parser.add_option('--discard_number',default=None,type='int',help='Maximum number of GCPs to be discarded by refine_gcps (%default)')
+parser.add_option('--minimum_number',default=MINIMUM_NUMBER,type='int',help='Minimum number of GCPs to perform refine_gcps (%default)')
 parser.add_option('--tps',default=False,action='store_true',help='Use thin plate spline transformer (%default)')
 parser.add_option('--exp',default=False,action='store_true',help='Output in exp format (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
@@ -137,7 +139,7 @@ if opts.tps:
     command += ' -tps'
 elif opts.npoly is not None:
     command += ' -order {}'.format(opts.npoly)
-if opts.refine_gcps is not None:
+if opts.refine_gcps is not None and xi.size >= opts.minimum_number:
     if opts.minimum_gcps is None:
         if opts.discard_number is not None:
             opts.minimum_gcps = xi.size-opts.discard_number
