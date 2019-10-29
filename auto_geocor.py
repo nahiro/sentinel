@@ -12,13 +12,15 @@ from subprocess import check_output,call
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
+SCRDIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 #REF_DATA_MIN = None
-REF_DATA_MIN = 0.1 # for WorldView DN image
+REF_DATA_MIN = 1.0e-5 # for WorldView DN image
 RESAMPLING = 'cubic'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog reference_georeferenced_image target_georeferenced_image [options]')
+parser.add_option('--scrdir',default=SCRDIR,help='Script directory where find_gcps.py exists (%default)')
 parser.add_option('-b','--ref_band',default=None,type='int',help='Reference band# (%default)')
 parser.add_option('-B','--trg_band',default=None,type='int',help='Target band# (%default)')
 parser.add_option('-x','--trg_indx_start',default=None,type='int',help='Target start x index (0)')
@@ -66,7 +68,7 @@ if opts.trg_epsg is None:
 if opts.use_gcps is not None:
     fnam = opts.use_gcps
 else:
-    command = 'find_gcps.py'
+    command = os.path.join(opts.scrdir,'find_gcps.py')
     command += ' '+ref_fnam
     command += ' '+trg_fnam
     command += ' -v'
@@ -131,9 +133,9 @@ if opts.tps:
     command += ' -tps'
 elif opts.npoly is not None:
     command += ' -order {}'.format(opts.npoly)
-command += ' -r {}'.format(opts.resampling)
 if opts.refine_gcps is not None:
     command += ' -refine_gcps {}'.format(opts.refine_gcps)
+command += ' -r {}'.format(opts.resampling)
 command += ' '+tmp_fnam
 command += ' '+out_fnam
 call(command,shell=True)
