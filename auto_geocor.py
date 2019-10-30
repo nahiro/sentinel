@@ -74,7 +74,8 @@ if opts.trg_epsg is None:
 if opts.use_gcps is not None:
     fnam = opts.use_gcps
 else:
-    command = os.path.join(opts.scrdir,'find_gcps.py')
+    command = 'python'
+    command += ' '+os.path.join(opts.scrdir,'find_gcps.py')
     command += ' '+ref_fnam
     command += ' '+trg_fnam
     command += ' -v'
