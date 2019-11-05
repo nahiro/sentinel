@@ -33,14 +33,14 @@ if opts.band is None:
 # Get snappy Operators
 GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
 # Read original product
-dstr = os.path.basename(fnams[0])[0:8]
-try:
-    dtim = datetime.strptime(dstr,'%Y%m%d')
-except Exception:
-    raise ValueError('Error in filename >>> '+fnams[0])
 data_1 = ProductIO.readProduct(fnams[0])
 # Attach bandname
 if not opts.skip_rename_master:
+    dstr = os.path.basename(fnams[0])[0:8]
+    try:
+        dtim = datetime.strptime(dstr,'%Y%m%d')
+    except Exception:
+        raise ValueError('Error in filename >>> '+fnams[0])
     band_list = list(data_1.getBandNames())
     bands = []
     for band in [band_list[j] for j in opts.band]:
@@ -57,14 +57,14 @@ if not opts.skip_rename_master:
 # Collocation
 for i in range(1,len(fnams)):
     # Read original product
-    dstr = os.path.basename(fnams[i])[0:8]
-    try:
-        dtim = datetime.strptime(dstr,'%Y%m%d')
-    except Exception:
-        raise ValueError('Error in filename >>> '+fnams[i])
     data_2 = ProductIO.readProduct(fnams[i])
     # Attach bandname
     if not opts.skip_rename_slave:
+        dstr = os.path.basename(fnams[i])[0:8]
+        try:
+            dtim = datetime.strptime(dstr,'%Y%m%d')
+        except Exception:
+            raise ValueError('Error in filename >>> '+fnams[i])
         band_list = list(data_2.getBandNames())
         bands = []
         for band in [band_list[j] for j in opts.band]:
