@@ -88,7 +88,6 @@ for i in range(1,len(fnams)):
     products.put("slave",data_2)
     data_tmp = GPF.createProduct('Collocate',params,products)
     data_1 = data_tmp
-    data_2.closeIO()
 # Remove flag bands
 band_list = list(data_1.getBandNames())
 bands = []
@@ -100,5 +99,9 @@ if len(bands) != len(band_list):
     params.put('sourceBands',','.join(bands))
     data_tmp = GPF.createProduct('BandSelect',params,data_1)
     data_1 = data_tmp
+# Change ValidPixelExpression
+nodes = list(data_1.getRasterDataNodes().toArray())
+for n in nodes:
+    n.setValidPixelExpression(None)
 # Output image
 ProductIO.writeProduct(data_1,opts.output_fnam,'GeoTiff')
