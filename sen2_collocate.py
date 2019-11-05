@@ -20,6 +20,8 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.set_usage('Usage: %prog list_of_input_file [options]')
 parser.add_option('-F','--output_fnam',default=FNAM,help='Output tiff file name (%default)')
 parser.add_option('-b','--band',default=None,type='int',action='append',help='Band# ({})'.format(BAND))
+parser.add_option('-s','--skip_rename_master',default=False,action='store_true',help='Do not rename master bands (%default)')
+parser.add_option('-S','--skip_rename_slave',default=False,action='store_true',help='Do not rename slave bands (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 2:
     parser.print_help()
@@ -38,19 +40,20 @@ except Exception:
     raise ValueError('Error in filename >>> '+fnams[0])
 data_1 = ProductIO.readProduct(fnams[0])
 # Attach bandname
-band_list = list(data_1.getBandNames())
-bands = []
-for band in [band_list[j] for j in opts.band]:
-    if dstr in band:
-        continue
-    band_new = band+'_'+dstr
-    ProductUtils.copyBand(band,data_1,band_new,data_1,True)
-    bands.append(band_new)
-if len(bands) > 0:
-    params = HashMap()
-    params.put('sourceBands',','.join(bands))
-    data_tmp = GPF.createProduct('BandSelect',params,data_1)
-    data_1 = data_tmp
+if not opts.skip_rename_master:
+    band_list = list(data_1.getBandNames())
+    bands = []
+    for band in [band_list[j] for j in opts.band]:
+        if dstr in band:
+            continue
+        band_new = band+'_'+dstr
+        ProductUtils.copyBand(band,data_1,band_new,data_1,True)
+        bands.append(band_new)
+    if len(bands) > 0:
+        params = HashMap()
+        params.put('sourceBands',','.join(bands))
+        data_tmp = GPF.createProduct('BandSelect',params,data_1)
+        data_1 = data_tmp
 # Collocation
 for i in range(1,len(fnams)):
     # Read original product
@@ -61,19 +64,20 @@ for i in range(1,len(fnams)):
         raise ValueError('Error in filename >>> '+fnams[i])
     data_2 = ProductIO.readProduct(fnams[i])
     # Attach bandname
-    band_list = list(data_2.getBandNames())
-    bands = []
-    for band in [band_list[j] for j in opts.band]:
-        if dstr in band:
-            continue
-        band_new = band+'_'+dstr
-        ProductUtils.copyBand(band,data_2,band_new,data_2,True)
-        bands.append(band_new)
-    if len(bands) > 0:
-        params = HashMap()
-        params.put('sourceBands',','.join(bands))
-        data_tmp = GPF.createProduct('BandSelect',params,data_2)
-        data_2 = data_tmp
+    if not opts.skip_rename_slave:
+        band_list = list(data_2.getBandNames())
+        bands = []
+        for band in [band_list[j] for j in opts.band]:
+            if dstr in band:
+                continue
+            band_new = band+'_'+dstr
+            ProductUtils.copyBand(band,data_2,band_new,data_2,True)
+            bands.append(band_new)
+        if len(bands) > 0:
+            params = HashMap()
+            params.put('sourceBands',','.join(bands))
+            data_tmp = GPF.createProduct('BandSelect',params,data_2)
+            data_2 = data_tmp
     # Collocate data
     params = HashMap()
     params.put('ResamplingType','Nearest neighbour')
