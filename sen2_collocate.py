@@ -33,7 +33,7 @@ if opts.band is None:
 # Get snappy Operators
 GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
 # Read original product
-data_1 = ProductIO.readProduct(fnams[0])
+data_1 = ProductIO.readProduct(os.path.abspath(fnams[0]))
 # Attach bandname
 if not opts.skip_rename_master:
     dstr = os.path.basename(fnams[0])[0:8]
@@ -57,7 +57,7 @@ if not opts.skip_rename_master:
 # Collocation
 for i in range(1,len(fnams)):
     # Read original product
-    data_2 = ProductIO.readProduct(fnams[i])
+    data_2 = ProductIO.readProduct(os.path.abspath(fnams[i]))
     # Attach bandname
     if not opts.skip_rename_slave:
         dstr = os.path.basename(fnams[i])[0:8]
@@ -88,6 +88,7 @@ for i in range(1,len(fnams)):
     products.put("slave",data_2)
     data_tmp = GPF.createProduct('Collocate',params,products)
     data_1 = data_tmp
+    data_2.closeIO()
 # Remove flag bands
 band_list = list(data_1.getBandNames())
 bands = []
