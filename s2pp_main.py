@@ -111,5 +111,5 @@ for year in range(dmin.year,dmax.year+1):
         command = 'remove_snap_cache.py'
         command += ' --dt_max {}'.format(opts.dt_max)
         call(command,shell=True)
-        break
-    break
+        #break
+    #break
