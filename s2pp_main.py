@@ -13,6 +13,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 DATDIR = '.'
 RESOLUTION = 10 # m
+DT_MAX = 10 # sec
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -21,6 +22,8 @@ parser.add_option('-s','--start',default=None,help='Start date of the query in t
 parser.add_option('-e','--end',default=None,help='End date of the query in the format YYYYMMDD.')
 parser.add_option('-r','--resolution',default=RESOLUTION,type='int',help='Spatial resolution in m (%default)')
 parser.add_option('-G','--geotiff',default=False,action='store_true',help='GeoTiff mode (%default)')
+parser.add_option('-m','--dt_max',default=DT_MAX,type='float',help='Max time difference in sec (%default)')
+parser.add_option('-u','--unzip',default=False,action='store_true',help='Unzip mode (%default)')
 (opts,args) = parser.parse_args()
 if opts.end is None:
     opts.end = datetime.now().strftime('%Y%m%d')
@@ -75,21 +78,38 @@ for year in range(dmin.year,dmax.year+1):
     for flag,fnam,gnam,dtim in zip(flaglist[indx],filelist[indx],datalist[indx],datelist[indx]):
         dstr = dtim.strftime('%Y%m%d')
         sys.stderr.write(dstr+'\n')
-        if os.path.exists('{}.dim'.format(dstr)):
+        if opts.geotiff:
+            if os.path.exists('{}.tif'.format(dstr)):
+                continue
+        elif os.path.exists('{}.dim'.format(dstr)):
             continue
+        unzip_flag = False
+        if opts.unzip:
+            rnam = os.path.splitext(os.path.basename(gnam))[0]+'.SAFE'
+            if not os.path.exists(rnam):
+                command = 'unzip'
+                command += ' -q'
+                command += ' '+fnam
+                call(command,shell=True)
+                unzip_flag = True
         command = 'sentinel2_subset.py'
-        command += ' '+gnam
+        if opts.unzip:
+            command += ' '+rnam
+        else:
+            command += ' '+gnam
         command += ' --resolution {}'.format(opts.resolution)
         if opts.geotiff:
             command += ' --geotiff'
         if flag:
             os.symlink(fnam,gnam)
         call(command,shell=True)
+        if unzip_flag:
+            call('rm -rf '+rnam,shell=True)
         if flag:
             call('rm '+gnam,shell=True)
-        call('rm -rf /tmp/snap-naohiro',shell=True)
-        call('rm -rf /tmp/jffi*.tmp',shell=True)
-        call('rm -rf /tmp/imageio*.tmp',shell=True)
-        call('rm -rf /home/naohiro/.snap/var/cache/temp/imageio*.tmp',shell=True)
-        #break
-    #break
+        # Remove cache
+        command = 'remove_snap_cache.py'
+        command += ' --dt_max {}'.format(opts.dt_max)
+        call(command,shell=True)
+        break
+    break
