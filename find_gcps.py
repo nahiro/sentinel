@@ -43,6 +43,7 @@ parser.add_option('--ref_data_max',default=None,type='float',help='Maximum refer
 parser.add_option('-r','--rthr',default=RTHR,type='float',help='Threshold of correlation coefficient (%default)')
 parser.add_option('-E','--feps',default=FEPS,type='float',help='Step length for curve_fit (%default)')
 parser.add_option('-e','--exp',default=False,action='store_true',help='Output in exp format (%default)')
+parser.add_option('-R','--reject_edge',default=False,action='store_true',help='Reject edge (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
@@ -186,7 +187,7 @@ for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_
         rmax = -1.0e10
         for i in range(-opts.shift_height,opts.shift_height+1):
             for j in range(-opts.shift_width,opts.shift_width+1):
-                p2 = np.array([np.abs(trg_yp_stp)*i,np.abs(trg_xp_stp)*j])
+                p2 = np.array([np.abs(trg_xp_stp)*j,np.abs(trg_yp_stp)*i])
                 r = 1.0-residuals(p2,ref_subset_xp0,ref_subset_yp0,ref_subset_data,
                                   trg_subset_xp0,trg_subset_yp0,trg_subset_data,1.0e10)[0]
                 if r > rmax:
@@ -197,6 +198,11 @@ for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_
                                             min(np.abs(trg_xp_stp*opts.shift_width),np.abs(trg_yp_stp*opts.shift_height))),
                                             epsfcn=opts.feps,full_output=True)
         p2 = result[0]
+        if opts.reject_edge:
+            if np.abs(p2[0]/(trg_xp_stp*opts.shift_width)) >= 0.99999:
+                continue
+            if np.abs(p2[1]/(trg_yp_stp*opts.shift_height)) >= 0.99999:
+                continue
         r = 1.0-result[2]['fvec'][0]
         if r > opts.rthr:
             if opts.exp:
