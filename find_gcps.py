@@ -199,9 +199,9 @@ for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_
                                             epsfcn=opts.feps,full_output=True)
         p2 = result[0]
         if opts.reject_edge:
-            if np.abs(p2[0]/(trg_xp_stp*opts.shift_width)) >= 0.99999:
+            if np.abs(p2[0]) >= np.abs(trg_xp_stp*(opts.shift_width-0.5)):
                 continue
-            if np.abs(p2[1]/(trg_yp_stp*opts.shift_height)) >= 0.99999:
+            if np.abs(p2[1]) >= np.abs(trg_yp_stp*(opts.shift_height-0.5)):
                 continue
         r = 1.0-result[2]['fvec'][0]
         if r > opts.rthr:
