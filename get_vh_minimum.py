@@ -85,12 +85,12 @@ with tifffile.TiffFile(input_fnam) as tif:
     for tag in tif.pages[0].tags.values():
         name,value = tag.name,tag.value
         tif_tags[name] = value
-    data = tif.pages[0].asarray()
-rot = ET.fromstring(tif_tags['65000'])
+    #data = tif.pages[0].asarray()
+root = ET.fromstring(tif_tags['65000'])
 vh_list = []
 dset = []
 dtim = []
-for i,value in enumerate(rot.iter('BAND_NAME')):
+for i,value in enumerate(root.iter('BAND_NAME')):
     band = value.text
     sys.stderr.write(band+'\n')
     m = re.search('_(\d+)$',band)
