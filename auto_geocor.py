@@ -53,7 +53,7 @@ parser.add_option('--discard_number',default=None,type='int',help='Maximum numbe
 parser.add_option('--minimum_number',default=MINIMUM_NUMBER,type='int',help='Minimum number of GCPs to perform refine_gcps (%default)')
 parser.add_option('--tps',default=False,action='store_true',help='Use thin plate spline transformer (%default)')
 parser.add_option('--exp',default=False,action='store_true',help='Output in exp format (%default)')
-parser.add_option('--reject_edge',default=False,action='store_true',help='Reject edge (%default)')
+parser.add_option('-u','--use_edge',default=False,action='store_true',help='Use GCPs near the edge of the correction range (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 2:
@@ -118,8 +118,8 @@ else:
         command += ' --feps {}'.format(opts.feps)
     if opts.exp:
         command += ' --exp'
-    if opts.reject_edge:
-        command += ' --reject_edge'
+    if opts.use_edge:
+        command += ' --use_edge'
     if opts.debug:
         command += ' --debug'
     out = check_output(command,shell=True).decode()

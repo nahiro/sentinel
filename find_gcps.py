@@ -43,7 +43,7 @@ parser.add_option('--ref_data_max',default=None,type='float',help='Maximum refer
 parser.add_option('-r','--rthr',default=RTHR,type='float',help='Threshold of correlation coefficient (%default)')
 parser.add_option('-E','--feps',default=FEPS,type='float',help='Step length for curve_fit (%default)')
 parser.add_option('-e','--exp',default=False,action='store_true',help='Output in exp format (%default)')
-parser.add_option('-R','--reject_edge',default=False,action='store_true',help='Reject edge (%default)')
+parser.add_option('-u','--use_edge',default=False,action='store_true',help='Use GCPs near the edge of the correction range (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
@@ -198,7 +198,7 @@ for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_
                                             min(np.abs(trg_xp_stp*opts.shift_width),np.abs(trg_yp_stp*opts.shift_height))),
                                             epsfcn=opts.feps,full_output=True)
         p2 = result[0]
-        if opts.reject_edge:
+        if not opts.use_edge:
             if np.abs(p2[0]) >= np.abs(trg_xp_stp*(opts.shift_width-0.5)):
                 continue
             if np.abs(p2[1]) >= np.abs(trg_yp_stp*(opts.shift_height-0.5)):
