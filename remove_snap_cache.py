@@ -7,6 +7,11 @@ from datetime import datetime,timedelta
 from subprocess import check_output,PIPE
 from optparse import OptionParser,IndentedHelpFormatter
 
+# Constants
+HOME = os.environ.get('HOME')
+if HOME is None:
+    HOME = os.environ.get('HOMEPATH')
+
 # Default values
 DT_MAX = 300 # 5 minutes
 
@@ -19,7 +24,7 @@ parser.add_option('-f','--force',default=False,action='store_true',help='Force t
 tcur = time.time()
 files = glob('/tmp/jffi*')
 files.extend(glob('/tmp/imageio*'))
-files.extend(glob('/home/naohiro/.snap/var/cache/temp/imageio*'))
+files.extend(glob(os.path.join(HOME,'.snap/var/cache/temp/imageio*')))
 
 for f in files:
     t = os.path.getmtime(f)
