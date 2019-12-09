@@ -4,6 +4,9 @@ import psutil
 import sys
 import re
 import time
+import select
+import _thread
+import threading
 import signal
 import atexit
 import numpy as np
@@ -221,29 +224,41 @@ if opts.download:
             while True: # loop to terminate the process
                 if not opts.verbose:
                     while True:
-                        line = p.stderr.readline()
-                        if line == '':
-                            break
-                        line_lower = line.lower()
-                        if re.search('raise ',line_lower):
-                            continue
-                        elif re.search('sentinelapiltaerror',line_lower):
-                            continue
-                        elif re.search('will ',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('triggering ',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('requests ',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('accept',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('quota',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('downloading ',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('downloading:',line_lower):
-                            sys.stderr.write(line.rstrip()+'\033[0K\r')
-                        sys.stderr.flush()
+                        try:
+                            timer = threading.Timer(opts.timeout,_thread.interrupt_main)
+                            timer.start()
+                            while p.stderr in select.select([p.stderr],[],[],opts.download_check_time)[0]:
+                                line = p.stderr.readline()
+                                if line:
+                                    line_lower = line.lower()
+                                    if re.search('raise ',line_lower):
+                                        continue
+                                    elif re.search('sentinelapiltaerror',line_lower):
+                                        continue
+                                    elif re.search('will ',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('triggering ',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('requests ',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('accept',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('quota',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('downloading ',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('downloading:',line_lower):
+                                        sys.stderr.write(line.rstrip()+'\033[0K\r')
+                                    sys.stderr.flush()
+                                    timer.cancel()
+                                    timer = threading.Timer(opts.timeout,_thread.interrupt_main)
+                                    timer.start()
+                                else:
+                                    break
+                            timer.cancel()
+                        except KeyboardInterrupt:
+                            pass
+                        break
                 # Exit if fnam exists or gnam exists and its size does not change for opts.timeout seconds
                 if p.poll() is not None: # the process has terminated
                     break
