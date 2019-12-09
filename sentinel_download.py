@@ -49,7 +49,7 @@ parser.add_option('-d','--download',default=False,action='store_true',help='Down
 parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
-parser.add_option('-V','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
+parser.add_option('-Q','--quiet',default=False,action='store_true',help='Quiet mode (%default)')
 (opts,args) = parser.parse_args()
 
 process_id = None
@@ -206,23 +206,23 @@ if opts.download:
             process_id = None
             start_time = time.time()
             try:
-                if opts.verbose:
-                    if os.name.lower() != 'posix':
-                        p = Popen(command,universal_newlines=True,encoding='utf-8',shell=True)
-                    else:
-                        p = Popen(command,universal_newlines=True,encoding='utf-8',shell=True,preexec_fn=os.setsid)
-                else:
+                if opts.quiet:
                     if os.name.lower() != 'posix':
                         p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=0,universal_newlines=True,encoding='utf-8',shell=True)
                     else:
                         p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=0,universal_newlines=True,encoding='utf-8',shell=True,preexec_fn=os.setsid)
+                else:
+                    if os.name.lower() != 'posix':
+                        p = Popen(command,universal_newlines=True,encoding='utf-8',shell=True)
+                    else:
+                        p = Popen(command,universal_newlines=True,encoding='utf-8',shell=True,preexec_fn=os.setsid)
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Failed to run the command. Wait for {} sec\n'.format(opts.wait_time))
                 time.sleep(opts.wait_time)
                 continue
             while True: # loop to terminate the process
-                if not opts.verbose:
+                if opts.quiet:
                     while True:
                         try:
                             timer = threading.Timer(opts.timeout,_thread.interrupt_main)
@@ -272,7 +272,7 @@ if opts.download:
             if p.poll() is None: # the process hasn't terminated yet.
                 sys.stderr.write('\nTimeout\n')
             kill_process()
-            if not opts.verbose:
+            if opts.quiet:
                 out,err = p.communicate()
                 sys.stderr.write('\n')
                 for line in err.splitlines():
