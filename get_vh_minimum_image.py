@@ -110,7 +110,7 @@ if opts.incidence_list is not None:
     cnd = (incidence_flag == 1)
     if cnd.sum() != 1:
         raise ValueError('Error in incidence_flag, cnd.sum()={}'.format(cnd.sum()))
-    baseline_indx = np.arange(nangle)[cnd]
+    baseline_indx = np.arange(nangle)[cnd][0]
     signal_avg = []
     for fnam in incidence_fnam:
         avg = np.load(fnam)
