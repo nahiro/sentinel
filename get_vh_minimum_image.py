@@ -27,6 +27,7 @@ VINT = 100
 SHPNAM = os.path.join('New_Test_Sites','New_Test_Sites.shp')
 DATNAM = 'transplanting_date.dat'
 FIGNAM = 'transplanting_date.pdf'
+INCIDENCE_ANGLE = 'incidence_angle.dat'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -35,6 +36,8 @@ parser.add_option('-e','--end',default=END,help='End date of the analysis in the
 parser.add_option('-p','--period',default=PERIOD,type='int',help='Observation period in day (%default)')
 parser.add_option('-P','--polarization',default=POLARIZATION,help='Polarization (%default)')
 parser.add_option('-i','--ind',default=None,type='int',action='append',help='Selected indices (%default)')
+parser.add_option('-I','--incidence_angle',default=INCIDENCE_ANGLE,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
+parser.add_option('-l','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
 parser.add_option('-w','--sigwid',default=SIGWID,type='float',help='Signal width in day (%default)')
 parser.add_option('-m','--maxdis',default=MAXDIS,type='float',help='Max distance in m (%default)')
 parser.add_option('-o','--datnam',default=DATNAM,help='Output data name (%default)')
@@ -84,6 +87,57 @@ xmin,xmax,ymin,ymax = (743800.0,756800.0,9236000.0,9251800.0)
 xg,yg = np.meshgrid(np.arange(xmin,xmax+0.1*xstp,xstp),np.arange(ymax,ymin-0.1*ystp,ystp))
 ngrd = xg.size
 
+if opts.incidence_list is not None:
+    incidence_flag = []
+    incidence_angle = []
+    incidence_fnam = []
+    with open (opts.incidence_list,'r') as fp:
+        for line in fp:
+            item = line.split()
+            if len(item) < 4:
+                continue
+            if item[0][0] == '#':
+                continue
+            pol = item[1].upper()
+            if pol != opts.polarization.upper():
+                continue
+            incidence_flag.append(int(item[0]))
+            incidence_angle.append(float(item[2]))
+            incidence_fnam.append(item[3])
+    incidence_flag = np.array(incidence_flag)
+    incidence_angle = np.array(incidence_angle)
+    nangle = incidence_angle.size
+    cnd = (incidence_flag == 1)
+    if cnd.sum() != 1:
+        raise ValueError('Error in incidence_flag, cnd.sum()={}'.format(cnd.sum()))
+    baseline_indx = np.arange(nangle)[cnd]
+    signal_avg = []
+    for fnam in incidence_fnam:
+        avg = np.load(fnam)
+        if avg.shape != xg.shape:
+            raise ValueError('Error, avg.shape={}, xg.shape={}, fnam={}'.format(avg.shape,xg.shape,fnam))
+        signal_avg.append(avg.flatten())
+    signal_dif = []
+    for i in range(nangle):
+        if i == baseline_indx:
+            signal_dif.append(0.0)
+        else:
+            signal_dif.append(signal_avg[baseline_indx]-signal_avg[i])
+    incidence_indx = {}
+    with open(opts.incidence_angle,'r') as fp:
+        for line in fp:
+            item = line.split()
+            if len(item) < 2:
+                continue
+            if item[0][0] == '#':
+                continue
+            ang = float(item[1])
+            dif = np.abs(incidence_angle-ang)
+            indx = np.argmin(dif)
+            if dif[indx] > 0.1:
+                raise ValueError('Error, dif={}'.format(dif[indx]))
+            incidence_indx.update({item[0]:indx})
+
 ds = gdal.Open(input_fnam)
 prj = ds.GetProjection()
 srs = osr.SpatialReference(wkt=prj)
@@ -121,13 +175,17 @@ for i,value in enumerate(root.iter('BAND_NAME')):
     m = re.search('_(\d+)$',band)
     if not m:
         raise ValueError('Error in finding date >>> '+band)
+    dstr = m.group(1)
     vh_list.append(band)
-    dh = datetime.strptime(m.group(1),'%Y%m%d')
+    dh = datetime.strptime(dstr,'%Y%m%d')
     if dh < d0:
         continue
     if dh > d1:
         break
-    dset.append(griddata((xp.flatten(),yp.flatten()),data[i].flatten(),(xg.flatten(),yg.flatten()),method='nearest'))
+    dtmp = griddata((xp.flatten(),yp.flatten()),data[i].flatten(),(xg.flatten(),yg.flatten()),method='nearest')
+    if opts.incidence_list is not None:
+        dtmp += signal_dif[incidence_indx[dstr]]
+    dset.append(dtmp)
     dtim.append(dh)
 nh = i+1
 if nh != len(data):
