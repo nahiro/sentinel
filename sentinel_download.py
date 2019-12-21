@@ -4,6 +4,9 @@ import psutil
 import sys
 import re
 import time
+import select
+import _thread
+import threading
 import signal
 import atexit
 import numpy as np
@@ -46,7 +49,7 @@ parser.add_option('-d','--download',default=False,action='store_true',help='Down
 parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
-parser.add_option('-V','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
+parser.add_option('-Q','--quiet',default=False,action='store_true',help='Quiet mode (%default)')
 (opts,args) = parser.parse_args()
 
 process_id = None
@@ -203,47 +206,59 @@ if opts.download:
             process_id = None
             start_time = time.time()
             try:
-                if opts.verbose:
-                    if os.name.lower() != 'posix':
-                        p = Popen(command,universal_newlines=True,encoding='utf-8',shell=True)
-                    else:
-                        p = Popen(command,universal_newlines=True,encoding='utf-8',shell=True,preexec_fn=os.setsid)
-                else:
+                if opts.quiet:
                     if os.name.lower() != 'posix':
                         p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=0,universal_newlines=True,encoding='utf-8',shell=True)
                     else:
                         p = Popen(command,stdout=PIPE,stderr=PIPE,bufsize=0,universal_newlines=True,encoding='utf-8',shell=True,preexec_fn=os.setsid)
+                else:
+                    if os.name.lower() != 'posix':
+                        p = Popen(command,universal_newlines=True,encoding='utf-8',shell=True)
+                    else:
+                        p = Popen(command,universal_newlines=True,encoding='utf-8',shell=True,preexec_fn=os.setsid)
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Failed to run the command. Wait for {} sec\n'.format(opts.wait_time))
                 time.sleep(opts.wait_time)
                 continue
             while True: # loop to terminate the process
-                if not opts.verbose:
+                if opts.quiet:
                     while True:
-                        line = p.stderr.readline()
-                        if line == '':
-                            break
-                        line_lower = line.lower()
-                        if re.search('raise ',line_lower):
-                            continue
-                        elif re.search('sentinelapiltaerror',line_lower):
-                            continue
-                        elif re.search('will ',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('triggering ',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('requests ',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('accept',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('quota',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('downloading ',line_lower):
-                            sys.stderr.write(line)
-                        elif re.search('downloading:',line_lower):
-                            sys.stderr.write(line.rstrip()+'\033[0K\r')
-                        sys.stderr.flush()
+                        try:
+                            timer = threading.Timer(opts.timeout,_thread.interrupt_main)
+                            timer.start()
+                            while p.stderr in select.select([p.stderr],[],[],opts.download_check_time)[0]:
+                                line = p.stderr.readline()
+                                if line:
+                                    line_lower = line.lower()
+                                    if re.search('raise ',line_lower):
+                                        continue
+                                    elif re.search('sentinelapiltaerror',line_lower):
+                                        continue
+                                    elif re.search('will ',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('triggering ',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('requests ',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('accept',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('quota',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('downloading ',line_lower):
+                                        sys.stderr.write(line)
+                                    elif re.search('downloading:',line_lower):
+                                        sys.stderr.write(line.rstrip()+'\033[0K\r')
+                                    sys.stderr.flush()
+                                    timer.cancel()
+                                    timer = threading.Timer(opts.timeout,_thread.interrupt_main)
+                                    timer.start()
+                                else:
+                                    break
+                            timer.cancel()
+                        except KeyboardInterrupt:
+                            pass
+                        break
                 # Exit if fnam exists or gnam exists and its size does not change for opts.timeout seconds
                 if p.poll() is not None: # the process has terminated
                     break
@@ -257,7 +272,7 @@ if opts.download:
             if p.poll() is None: # the process hasn't terminated yet.
                 sys.stderr.write('\nTimeout\n')
             kill_process()
-            if not opts.verbose:
+            if opts.quiet:
                 out,err = p.communicate()
                 sys.stderr.write('\n')
                 for line in err.splitlines():
