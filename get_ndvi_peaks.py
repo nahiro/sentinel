@@ -12,15 +12,19 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 SCL_MIN = 3.9
 SCL_MAX = 7.1
+TIFNAM = 'ndvi_peaks.tif'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
-parser.add_option('-s','--start',default=None,help='Start date of the analysis in the format YYYYMMDD (%default)')
-parser.add_option('-e','--end',default=None,help='End date of the analysis in the format YYYYMMDD (%default)')
+parser.add_option('-p','--pmin',default=None,help='Minimum planting date in the format YYYYMMDD (%default)')
+parser.add_option('-P','--pmax',default=None,help='Maximum planting date in the format YYYYMMDD (%default)')
+parser.add_option('-d','--hmin',default=None,help='Minimum heading date in the format YYYYMMDD (%default)')
+parser.add_option('-D','--hmax',default=None,help='Maximum heading date in the format YYYYMMDD (%default)')
 parser.add_option('-l','--scl_min',default=SCL_MIN,type='float',help='Minimum scene classification value (%default)')
 parser.add_option('-L','--scl_max',default=SCL_MAX,type='float',help='Maximum scene classification value (%default)')
 parser.add_option('-m','--mask',default=None,help='Mask file in GeoTIFF/npy format (%default)')
+parser.add_option('-o','--tifnam',default=TIFNAM,help='Output GeoTIFF name (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
     parser.print_help()
@@ -78,16 +82,26 @@ for i in range(1,nband):
         raise ValueError('Error, different time {}'.format(i))
 dtim = dtim_list[0].copy()
 ntim = date2num(dtim)
-if opts.start is not None:
-    dmin = datetime.strptime(opts.start,'%Y%m%d')
+if opts.pmin is not None:
+    dmin = datetime.strptime(opts.pmin,'%Y%m%d')
 else:
     dmin = dtim.min()
-if opts.end is not None:
-    dmax = datetime.strptime(opts.end,'%Y%m%d')
+if opts.pmax is not None:
+    dmax = datetime.strptime(opts.pmax,'%Y%m%d')
 else:
     dmax = dtim.max()
-nmin = date2num(dmin)
-nmax = date2num(dmax)
+pmin = date2num(dmin)
+pmax = date2num(dmax)
+if opts.hmin is not None:
+    dmin = datetime.strptime(opts.hmin,'%Y%m%d')
+else:
+    dmin = dtim.min()
+if opts.hmax is not None:
+    dmax = datetime.strptime(opts.hmax,'%Y%m%d')
+else:
+    dmax = dtim.max()
+hmin = date2num(dmin)
+hmax = date2num(dmax)
 
 all_bands = []
 for i in range(nband):
@@ -106,7 +120,8 @@ b08_data = all_bands[ibands.index(8)]
 ndvi = (b08_data-b04_data)/(b08_data+b04_data)
 
 xx = np.arange(np.floor(ntim.min()),np.ceil(ntim.max())+0.1,1.0)
-cndx = (xx > nmin) & (xx < nmax)
+cndp = (xx >= pmin) & (xx <= pmax)
+cndh = (xx >= hmin) & (xx <= hmax)
 for iline in range(ny):
 #for iline in range(825, 826):
     for ipixel in range(nx):
@@ -122,17 +137,17 @@ for iline in range(ny):
         sp = UnivariateCubicSmoothingSpline(xc,yc,smooth=2.0e-3)
         yy = sp(xx)
         # Find planting/heading stage based on peak points
-        indx = np.argmin(yy[cndx])
-        ndvi_data[0,iline,ipixel] = xx[cndx][indx]  # Put date of minNDVI (this is defined as planting stage)
-        ndvi_data[1,iline,ipixel] = yy[cndx][indx]  # Put minNDVI value
-        indx = np.argmax(yy[cndx])
-        ndvi_data[2,iline,ipixel] = xx[cndx][indx]  # Put date of maxNDVI (this is defined as heading stage)
-        ndvi_data[3,iline,ipixel] = yy[cndx][indx]  # Put maxNDVI value
+        indx = np.argmin(yy[cndp])
+        ndvi_data[0,iline,ipixel] = xx[cndp][indx]  # Put date of minNDVI (this is defined as planting stage)
+        ndvi_data[1,iline,ipixel] = yy[cndp][indx]  # Put minNDVI value
+        indx = np.argmax(yy[cndh])
+        ndvi_data[2,iline,ipixel] = xx[cndh][indx]  # Put date of maxNDVI (this is defined as heading stage)
+        ndvi_data[3,iline,ipixel] = yy[cndh][indx]  # Put maxNDVI value
 np.save('ndvi_data.npy',ndvi_data)
 
 # Output results
 drv = gdal.GetDriverByName('GTiff')
-ds = drv.Create(outnam,nx,ny,4,gdal.GDT_Float32,['COMPRESS=LZW','TILED=YES'])
+ds = drv.Create(opts.tifnam,nx,ny,4,gdal.GDT_Float32,['COMPRESS=LZW','TILED=YES'])
 ds.SetGeoTransform((xmin,xstp,0.0,ymax,0.0,ystp))
 srs = osr.SpatialReference()
 srs.ImportFromEPSG(32748)
