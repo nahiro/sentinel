@@ -9,11 +9,17 @@ from csaps import UnivariateCubicSmoothingSpline
 from matplotlib.dates import date2num
 from optparse import OptionParser,IndentedHelpFormatter
 
+# Default values
+SCL_MIN = 3.9
+SCL_MAX = 7.1
+
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
 parser.add_option('-s','--start',default=None,help='Start date of the analysis in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=None,help='End date of the analysis in the format YYYYMMDD (%default)')
+parser.add_option('-l','--scl_min',default=SCL_MIN,type='float',help='Minimum scene classification value (%default)')
+parser.add_option('-L','--scl_max',default=SCL_MAX,type='float',help='Maximum scene classification value (%default)')
 parser.add_option('-m','--mask',default=None,help='Mask file in GeoTIFF/npy format (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -91,7 +97,7 @@ all_bands[:nband-1] *= 1.0e-4
 
 # Apply Flag and calculate NDVI -----------------------------------------------#
 scl_data = all_bands[ibands.index(17)]
-cnd = (scl_data < 3.9) | (scl_data > 7.1)
+cnd = (scl_data < opts.scl_min) | (scl_data > opts.scl_max)
 for i in range(0,nband-1):
     all_bands[i][cnd] = np.nan
 b04_data = all_bands[ibands.index(4)]
