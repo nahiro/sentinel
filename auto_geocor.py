@@ -143,30 +143,47 @@ else:
             fp.write(out)
 xi,yi,xp,yp,dx,dy,r = np.loadtxt(fnam,unpack=True)
 
-command = 'gdal_translate'
-for i,j,x,y in zip(xi,yi,xp,yp):
-    command += ' -gcp {} {} {} {}'.format(i,j,x,y)
-command += ' '+trg_fnam
-command += ' '+tmp_fnam
-call(command,shell=True)
+if trg_fnam is not None:
+    command = 'gdal_translate'
+    for i,j,x,y in zip(xi,yi,xp,yp):
+        command += ' -gcp {} {} {} {}'.format(i,j,x,y)
+    command += ' '+trg_fnam
+    command += ' '+tmp_fnam
+    call(command,shell=True)
 
-command = 'gdalwarp'
-command += ' -t_srs EPSG:{}'.format(opts.trg_epsg)
-command += ' -overwrite'
-if opts.tps:
-    command += ' -tps'
-elif opts.npoly is not None:
-    command += ' -order {}'.format(opts.npoly)
-if opts.refine_gcps is not None and xi.size >= opts.minimum_number:
-    if opts.minimum_gcps is None:
-        if opts.discard_number is not None:
-            opts.minimum_gcps = xi.size-opts.discard_number
-        else:
-            opts.minimum_gcps = int(opts.minimum_ratio*xi.size+0.5)
-    command += ' -refine_gcps {} {}'.format(opts.refine_gcps,opts.minimum_gcps)
-command += ' -r {}'.format(opts.resampling)
-command += ' '+tmp_fnam
-command += ' '+out_fnam
-call(command,shell=True)
-if os.path.exists(tmp_fnam):
-    os.remove(tmp_fnam)
+    command = 'gdalwarp'
+    command += ' -t_srs EPSG:{}'.format(opts.trg_epsg)
+    command += ' -overwrite'
+    if opts.tps:
+        command += ' -tps'
+    elif opts.npoly is not None:
+        command += ' -order {}'.format(opts.npoly)
+    if opts.refine_gcps is not None and xi.size >= opts.minimum_number:
+        if opts.minimum_gcps is None:
+            if opts.discard_number is not None:
+                opts.minimum_gcps = xi.size-opts.discard_number
+            else:
+                opts.minimum_gcps = int(opts.minimum_ratio*xi.size+0.5)
+        command += ' -refine_gcps {} {}'.format(opts.refine_gcps,opts.minimum_gcps)
+    command += ' -r {}'.format(opts.resampling)
+    command += ' '+tmp_fnam
+    command += ' '+out_fnam
+    call(command,shell=True)
+    if os.path.exists(tmp_fnam):
+        os.remove(tmp_fnam)
+
+if opts.trg_shapefile is not None:
+    out_shapefile = os.path.splitext(os.path.basename(opts.trg_shapefile))[0]+'_geocor.shp'
+    command = 'ogr2ogr'
+    command += ' -t_srs EPSG:{}'.format(opts.trg_epsg)
+    command += ' -overwrite'
+    if opts.tps:
+        command += ' -tps'
+    elif opts.npoly is not None:
+        command += ' -order {}'.format(opts.npoly)
+    for i,j,x,y in zip(xi,yi,xp,yp):
+        command += ' -gcp {} {} {} {}'.format(i,j,x,y)
+    command += ' -f "ESRI Shapefile"'
+    command += ' '+out_shapefile
+    command += ' '+opts.trg_shapefile
+    call(command,shell=True)
