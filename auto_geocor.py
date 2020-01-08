@@ -21,7 +21,9 @@ MINIMUM_NUMBER = 10
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.set_usage('Usage: %prog reference_georeferenced_image target_georeferenced_image [options]')
+parser.set_usage('Usage: %prog target_georeferenced_image reference_georeferenced_image [options]\n'
+'       reference_georeferenced_image is not required if the use_gcps option is given.\n'
+'       Both target_georeferenced_image and reference_georeferenced_image are not required if the use_gcps option and the trg_shapefile option are given.\n')
 parser.add_option('--scrdir',default=SCRDIR,help='Script directory where find_gcps.py exists (%default)')
 parser.add_option('-b','--ref_band',default=None,type='int',help='Reference band# (%default)')
 parser.add_option('-B','--trg_band',default=None,type='int',help='Target band# (%default)')
@@ -43,6 +45,7 @@ parser.add_option('-r','--rthr',default=None,type='float',help='Threshold of cor
 parser.add_option('-E','--feps',default=None,type='float',help='Step length for curve_fit (%default)')
 parser.add_option('-g','--use_gcps',default=None,help='GCP file name to use (%default)')
 parser.add_option('-G','--save_gcps',default=None,help='GCP file name to save (%default)')
+parser.add_option('--trg_shapefile',default=None,help='Target shapefile (%default)')
 parser.add_option('-e','--trg_epsg',default=None,help='Target EPSG (guessed from target data)')
 parser.add_option('-n','--npoly',default=None,type='int',help='Order of polynomial used for warping between 1 and 3 (selected based on the number of GCPs)')
 parser.add_option('-R','--resampling',default=RESAMPLING,help='Resampling method (%default)')
@@ -56,21 +59,32 @@ parser.add_option('--exp',default=False,action='store_true',help='Output in exp 
 parser.add_option('-u','--use_edge',default=False,action='store_true',help='Use GCPs near the edge of the correction range (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
-if len(args) < 2:
-    parser.print_help()
-    sys.exit(0)
-ref_fnam = args[0]
-trg_fnam = args[1]
-trg_bnam = os.path.splitext(os.path.basename(trg_fnam))[0]
-tmp_fnam = trg_bnam+'_tmp.tif'
-out_fnam = trg_bnam+'_geocor.tif'
+if opts.use_gcps is None: # Both trg and ref images are required
+    if len(args) < 2:
+        parser.print_help()
+        sys.exit(0)
+    trg_fnam = args[0]
+    ref_fnam = args[1]
+elif opts.trg_shapefile is None: # Only trg image is required
+    if len(args) < 1:
+        parser.print_help()
+        sys.exit(0)
+    trg_fnam = args[0]
+elif len(args) >= 1: # trg image is optional
+    trg_fnam = args[0]
+else: # No trg image
+    trg_fnam = None
 
-if opts.trg_epsg is None:
-    ds = gdal.Open(trg_fnam)
-    prj = ds.GetProjection()
-    srs = osr.SpatialReference(wkt=prj)
-    opts.trg_epsg = srs.GetAttrValue('AUTHORITY',1)
-    ds = None # close dataset
+if trg_fnam is not None:
+    trg_bnam = os.path.splitext(os.path.basename(trg_fnam))[0]
+    tmp_fnam = trg_bnam+'_tmp.tif'
+    out_fnam = trg_bnam+'_geocor.tif'
+    if opts.trg_epsg is None:
+        ds = gdal.Open(trg_fnam)
+        prj = ds.GetProjection()
+        srs = osr.SpatialReference(wkt=prj)
+        opts.trg_epsg = srs.GetAttrValue('AUTHORITY',1)
+        ds = None # close dataset
 
 if opts.use_gcps is not None:
     fnam = opts.use_gcps
