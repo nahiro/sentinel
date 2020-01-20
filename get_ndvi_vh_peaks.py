@@ -18,7 +18,8 @@ SEN1_DISTANCE = 30
 SEN2_DISTANCE = 30
 SEN1_PROMINENCE = 0.5
 SEN2_PROMINENCE = 0.1
-SEN1_THRESHOLD = -17.0 # dB
+SEN1_THRESHOLD = -12.0 # dB
+SEN1_SEN2_DIF = 20.0 # day
 POLARIZATION = 'VH'
 NPYNAM = 'peak_data.npy'
 TIFNAM = 'peak_data.tif'
@@ -38,6 +39,7 @@ parser.add_option('--sen2_distance',default=SEN2_DISTANCE,type='int',help='Minim
 parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help='Minimum prominence in dB for Sentinel-1 (%default)')
 parser.add_option('--sen2_prominence',default=SEN2_PROMINENCE,type='float',help='Minimum prominence in reflectance for Sentinel-2 (%default)')
 parser.add_option('--sen1_threshold',default=SEN1_THRESHOLD,type='float',help='Minimum signal in dB for Sentinel-1 (%default)')
+parser.add_option('--sen1_sen2_dif',default=SEN1_SEN2_DIF,type='float',help='Maximum transplanting-date difference between Sentinel-1 and Sentinel-2 in day (%default)')
 parser.add_option('--polarization',default=POLARIZATION,help='Polarization (%default)')
 parser.add_option('-I','--incidence_angle',default=INCIDENCE_ANGLE,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
 parser.add_option('-i','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
@@ -304,12 +306,12 @@ for iline in range(ny):
         peak_data[3,iline,ipixel] = sen2_y2[cnd][indx]  # Put maxNDVI value
         x1 = sen2_x1[cnd][indx]
 
-        cnd = (sen1_y1 < opts.sen1_threshold)
+        cnd = (sen1_y1 < opts.sen1_threshold) & (np.abs(sen1_x1-x1)<opts.sen1_sen2_dif)
         if cnd.sum() < 1:
             continue
-        indx = np.argmin(np.abs(sen1_x1[cnd]-x1))
-        peak_data[4,iline,ipixel] = sen1_x1[cnd][indx]  # Put date of minNDVI (this is defined as planting stage)
-        peak_data[5,iline,ipixel] = sen1_y1[cnd][indx]  # Put minNDVI value
+        indx = np.argmin(sen1_y1[cnd])
+        peak_data[4,iline,ipixel] = sen1_x1[cnd][indx]  # Put date of minVH (this is defined as planting stage)
+        peak_data[5,iline,ipixel] = sen1_y1[cnd][indx]  # Put minVH value
 
 if opts.npynam is not None:
     np.save(opts.npynam,peak_data)
