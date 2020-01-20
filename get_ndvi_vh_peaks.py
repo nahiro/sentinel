@@ -275,11 +275,11 @@ for iline in range(ny):
                 continue
         elif min_peaks.size < 1:
             if max_peaks.size > 1:
-                sys.stderr.write('Warning, more than one max peaks have been found.\n')
+                sys.stderr.write('Warning, more than one ({}) max peaks have been found, ipixel={}, iline={}.\n'.format(max_peaks.size,ipixel,iline))
             min_peaks = np.append(0,min_peaks)
         elif max_peaks.size < 1:
             if min_peaks.size > 1:
-                sys.stderr.write('Warning, more than one min peaks have been found.\n')
+                sys.stderr.write('Warning, more than one ({}) min peaks have been found, ipixel={}, iline={}.\n'.format(min_peaks.size,ipixel,iline))
             max_peaks = np.append(max_peaks,xx.size-1)
         else:
             if max_peaks[0] < min_peaks[0]: # upslope
@@ -287,7 +287,8 @@ for iline in range(ny):
             if min_peaks[-1] > max_peaks[-1]: # upslope
                 max_peaks = np.append(max_peaks,xx.size-1)
         if min_peaks.size != max_peaks.size:
-            raise ValueError('Error, min_peaks.size={}, max_peaks.size={}, ipixel={}, iline={}'.format(min_peaks.size,max_peaks.size,ipixel,iline))
+            sys.stderr.write('Warning, min_peaks.size={}, max_peaks.size={}, ipixel={}, iline={}\n'.format(min_peaks.size,max_peaks.size,ipixel,iline))
+            continue
         sen2_x1 = xx[min_peaks]
         sen2_x2 = xx[max_peaks]
         sen2_y1 = sen2_yy[min_peaks]
