@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import os
 import sys
+import shutil
 import re
 from datetime import datetime,timedelta
 import gdal
 import osr
+import shapefile
 import numpy as np
 from scipy.signal import find_peaks
 from csaps import UnivariateCubicSmoothingSpline
@@ -21,8 +23,10 @@ SEN2_PROMINENCE = 0.1
 SEN1_THRESHOLD = -5.0 # dB
 SEN1_SEN2_DIF = 30.0 # day
 POLARIZATION = 'VH'
+VINT = 100
+SHPNAM = os.path.join('New_Test_Sites','New_Test_Sites')
+OUTNAM = 'peak_data'
 NPYNAM = 'peak_data.npy'
-TIFNAM = 'peak_data.tif'
 INCIDENCE_ANGLE = 'incidence_angle.dat'
 
 # Read options
@@ -43,9 +47,12 @@ parser.add_option('--sen1_sen2_dif',default=SEN1_SEN2_DIF,type='float',help='Max
 parser.add_option('--polarization',default=POLARIZATION,help='Polarization (%default)')
 parser.add_option('-I','--incidence_angle',default=INCIDENCE_ANGLE,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
 parser.add_option('-i','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
-parser.add_option('-m','--mask',default=None,help='Mask file in GeoTIFF/npy format (%default)')
+parser.add_option('-s','--shpnam',default=SHPNAM,help='Input shapefile name (%default)')
+parser.add_option('-S','--sind',default=None,type='int',action='append',help='Selected indices (%default)')
 parser.add_option('-o','--npynam',default=NPYNAM,help='Output NPY name (%default)')
-parser.add_option('-O','--tifnam',default=TIFNAM,help='Output GeoTIFF name (%default)')
+parser.add_option('-O','--outnam',default=OUTNAM,help='Output shapefile name (%default)')
+parser.add_option('--vint',default=VINT,type='int',help='Verbose output interval (%default)')
+parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 2:
     parser.print_help()
@@ -54,8 +61,8 @@ sen1_fnam = args[0]
 sen2_fnam = args[1]
 if opts.npynam.upper() == 'NONE':
     opts.npynam = None
-if opts.tifnam.upper() == 'NONE':
-    opts.tifnam = None
+if opts.outnam.upper() == 'NONE':
+    opts.outnam = None
 
 xstp = 10.0
 ystp = -10.0
@@ -115,22 +122,8 @@ if opts.incidence_list is not None:
                 raise ValueError('Error, dif={}'.format(dif[indx]))
             incidence_indx.update({item[0]:indx})
 
-if opts.mask is not None:
-    if os.path.splitext(opts.mask)[1].lower() == '.npy':
-        mask = np.load(opts.mask)
-    else:
-        ds = gdal.Open(opts.mask)
-        mask = ds.ReadAsArray()
-        ds = None
-    if mask.shape != xg.shape:
-        raise ValueError('Error, mask.shape={}, xg.shape={}'.format(mask.shape,xg.shape))
-else:
-    mask = np.full(xg.shape,False)
-
 ibands = [4,8,17]
 nband = len(ibands)
-# Create output file
-peak_data = np.full((8,ny,nx),np.nan,dtype=np.float32)
 
 # Read Sentinel-1 data
 ds = gdal.Open(sen1_fnam)
@@ -220,21 +213,67 @@ b08_data = all_bands[ibands.index(8)]
 
 ndvi = (b08_data-b04_data)/(b08_data+b04_data)
 
+r = shapefile.Reader(opts.shpnam)
+nr = len(r)
+if opts.sind is not None:
+    indi = opts.sind
+else:
+    indi = range(nr)
+# Create output file
+peak_data = np.full((8,nr),np.nan,dtype=np.float32)
 xx = np.arange(np.floor(sen2_ntim.min()),np.ceil(sen2_ntim.max())+0.1,1.0)
-for iline in range(ny):
-#for iline in range(825, 826):
-#for iline in [928]:
-#for iline in [858]:
-#for iline in [34]:
-    for ipixel in range(nx):
-    #for ipixel in range(829, 830):
-    #for ipixel in [650]:
-    #for ipixel in [610]:
-    #for ipixel in [36]:
-        if not mask[iline,ipixel]:
-            continue
+for inum,ishp in enumerate(indi):
+    if opts.verbose and inum%opts.vint == 0:
+        sys.stderr.write('{} {}\n'.format(inum,len(indi)))
+    shp = r.shape(i)
+    p = Path(shp.points)
+    flags = p.contains_points(np.hstack((xp.flatten()[:,np.newaxis],yp.flatten()[:,np.newaxis]))).reshape(dset[0].shape)
+    ndat = flags.sum()
+    sen1_yi = None
+    sen2_yi = None
+    if ndat > 0:
+        dtmp = sen1_data[0][flags]
+        cnd = ~np.isnan(dtmp)
+        if cnd.sum() > 0:
+            sen1_yi = sen1_data[:,flags].reshape(sen1_dtim.size,-1).mean(axis=1)
+            sen2_yi = ndvi[:,flags].reshape(sen2_dtim.size,-1).mean(axis=1)
+    else:
+        pp = np.array(shp.points)
+        xc = pp[:,0].mean()
+        yc = pp[:,1].mean()
+        if p.contains_point((xc,yc)):
+            dp = np.square(xp-xc)+np.square(yp-yc)
+            indx_y,indx_x = np.unravel_index(np.argmin(dp),xp.shape)
+            dp_min = np.sqrt(dp[indx_y,indx_x])
+            if dp_min < opts.maxdis:
+                sen1_yi = sen1_data[:,indx_y,indx_x]
+                sen2_yi = ndvi[:,indx_y,indx_x]
+                ndat = -1
+            else:
+                sys.stderr.write('Case A, x={}, y={}, dp_min={}\n'.format(indx_x,indx_y,dp_min))
+        else:
+            dp_min = 1.0e10
+            indx_y = None
+            indx_x = None
+            for ip in range(len(pp)):
+                xc = pp[ip,0]
+                yc = pp[ip,1]
+                dp = np.square(xp-xc)+np.square(yp-yc)
+                iy,ix = np.unravel_index(np.argmin(dp),xp.shape)
+                dp_tmp = dp[iy,ix]
+                if dp_tmp < dp_min:
+                    indx_y = iy
+                    indx_x = ix
+                    dp_min = dp_tmp
+            dp_min = np.sqrt(dp_min)
+            if dp_min < opts.maxdis:
+                sen1_yi = sen1_data[:,indx_y,indx_x]
+                sen2_yi = ndvi[:,indx_y,indx_x]
+                ndat = -2
+            else:
+                sys.stderr.write('Case B, x={}, y={}, dp_min={}\n'.format(indx_x,indx_y,dp_min))
+    if sen1_yi is not None and sen2_yi is not None:
         # Smoothing
-        sen1_yi = sen1_data[:,iline,ipixel]
         cnd = ~np.isnan(sen1_yi)
         if cnd.sum() < 5:
             continue
@@ -254,7 +293,6 @@ for iline in range(ny):
         sen1_y1 = sen1_yy[min_peaks]
 
         # Smoothing
-        sen2_yi = ndvi[:,iline,ipixel]
         cnd = ~np.isnan(sen2_yi)
         if cnd.sum() < 5:
             continue
@@ -274,11 +312,11 @@ for iline in range(ny):
                 continue
         elif min_peaks.size < 1:
             if max_peaks.size > 1:
-                sys.stderr.write('Warning, more than one ({}) max peaks have been found, ipixel={}, iline={}.\n'.format(max_peaks.size,ipixel,iline))
+                sys.stderr.write('Warning, more than one ({}) max peaks have been found, ishp={}.\n'.format(max_peaks.size,ishp))
             min_peaks = np.append(0,min_peaks)
         elif max_peaks.size < 1:
             if min_peaks.size > 1:
-                sys.stderr.write('Warning, more than one ({}) min peaks have been found, ipixel={}, iline={}.\n'.format(min_peaks.size,ipixel,iline))
+                sys.stderr.write('Warning, more than one ({}) min peaks have been found, ishp={}.\n'.format(min_peaks.size,ishp))
             max_peaks = np.append(max_peaks,xx.size-1)
         else:
             if max_peaks[0] < min_peaks[0]: # upslope
@@ -286,7 +324,7 @@ for iline in range(ny):
             if min_peaks[-1] > max_peaks[-1]: # upslope
                 max_peaks = np.append(max_peaks,xx.size-1)
         if min_peaks.size != max_peaks.size:
-            sys.stderr.write('Warning, min_peaks.size={}, max_peaks.size={}, ipixel={}, iline={}\n'.format(min_peaks.size,max_peaks.size,ipixel,iline))
+            sys.stderr.write('Warning, min_peaks.size={}, max_peaks.size={}, ishp={}\n'.format(min_peaks.size,max_peaks.size,ishp))
             continue
         sen2_x1 = xx[min_peaks]
         sen2_x2 = xx[max_peaks]
@@ -299,47 +337,48 @@ for iline in range(ny):
         cnd = (sen2_x1 >= pmin) & (sen2_x1 <= pmax) & (sen2_width >= opts.wmin) & (sen2_width <= opts.wmax)
         if cnd.sum() >= 1:
             indx = np.argmax(sen2_height[cnd])
-            peak_data[0,iline,ipixel] = sen2_x1[cnd][indx]  # Put date of minNDVI (this is defined as planting stage)
-            peak_data[1,iline,ipixel] = sen2_y1[cnd][indx]  # Put minNDVI value
-            peak_data[2,iline,ipixel] = sen2_x2[cnd][indx]  # Put date of maxNDVI (this is defined as heading stage)
-            peak_data[3,iline,ipixel] = sen2_y2[cnd][indx]  # Put maxNDVI value
+            peak_data[0,ishp] = sen2_x1[cnd][indx]  # Put date of minNDVI (this is defined as planting stage)
+            peak_data[1,ishp] = sen2_y1[cnd][indx]  # Put minNDVI value
+            peak_data[2,ishp] = sen2_x2[cnd][indx]  # Put date of maxNDVI (this is defined as heading stage)
+            peak_data[3,ishp] = sen2_y2[cnd][indx]  # Put maxNDVI value
             x1 = sen2_x1[cnd][indx]
         else:
             cnd = (sen2_x1 >= pmin) & (sen2_x1 <= pmax)
             if cnd.sum() >= 1:
                 indx = np.argmax(sen2_height[cnd])
-                peak_data[0,iline,ipixel] = sen2_x1[cnd][indx]  # Put date of minNDVI (this is defined as planting stage)
-                peak_data[1,iline,ipixel] = sen2_y1[cnd][indx]  # Put minNDVI value
-                peak_data[2,iline,ipixel] = sen2_x2[cnd][indx]  # Put date of maxNDVI (this is defined as heading stage)
-                peak_data[3,iline,ipixel] = sen2_y2[cnd][indx]  # Put maxNDVI value
+                peak_data[0,ishp] = sen2_x1[cnd][indx]  # Put date of minNDVI (this is defined as planting stage)
+                peak_data[1,ishp] = sen2_y1[cnd][indx]  # Put minNDVI value
+                peak_data[2,ishp] = sen2_x2[cnd][indx]  # Put date of maxNDVI (this is defined as heading stage)
+                peak_data[3,ishp] = sen2_y2[cnd][indx]  # Put maxNDVI value
                 x1 = sen2_x1[cnd][indx]
         cnd = (sen1_y1 < opts.sen1_threshold) & (np.abs(sen1_x1-x1)<opts.sen1_sen2_dif)
         if cnd.sum() >= 1:
             indx = np.argmin(sen1_y1[cnd])
-            peak_data[4,iline,ipixel] = sen1_x1[cnd][indx]  # Put date of minVH (this is defined as planting stage)
-            peak_data[5,iline,ipixel] = sen1_y1[cnd][indx]  # Put minVH value
+            peak_data[4,ishp] = sen1_x1[cnd][indx]  # Put date of minVH (this is defined as planting stage)
+            peak_data[5,ishp] = sen1_y1[cnd][indx]  # Put minVH value
         cnd = (sen1_y1 < opts.sen1_threshold)
         if cnd.sum() >= 1:
             indx = np.argmin(np.abs(sen1_x1[cnd]-x1))
-            peak_data[6,iline,ipixel] = sen1_x1[cnd][indx]  # Put date of minVH (this is defined as planting stage)
-            peak_data[7,iline,ipixel] = sen1_y1[cnd][indx]  # Put minVH value
+            peak_data[6,ishp] = sen1_x1[cnd][indx]  # Put date of minVH (this is defined as planting stage)
+            peak_data[7,ishp] = sen1_y1[cnd][indx]  # Put minVH value
 
 if opts.npynam is not None:
     np.save(opts.npynam,peak_data)
 
 # Output results
-if opts.tifnam is not None:
-    drv = gdal.GetDriverByName('GTiff')
-    ds = drv.Create(opts.tifnam,nx,ny,8,gdal.GDT_Float32,['COMPRESS=LZW','TILED=YES'])
-    ds.SetGeoTransform((xmin,xstp,0.0,ymax,0.0,ystp))
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(32748)
-    ds.SetProjection(srs.ExportToWkt())
+if opts.outnam is not None:
+    w = shapefile.Writer(opts.outnam)
+    w.shapeType = shapefile.POLYGON
+    w.fields = r.fields[1:] # skip first deletion field
     band_name = ['planting_date','planting_ndvi','heading_date','heading_ndvi','sen1_min_date','sen1_min_peak','sen1_near_value','sen1_near_peak']
-    for i in range(4):
-        band = ds.GetRasterBand(i+1)
-        band.WriteArray(peak_data[i])
-        band.SetDescription(band_name[i])
-    band.SetNoDataValue(np.nan) # The TIFFTAG_GDAL_NODATA only support one value per dataset
-    ds.FlushCache()
-    ds = None # close dataset
+    for band in band_name:
+        w.field(band,'F',13,6)
+    for i,shaperec in enumerate(r.iterShapeRecords()):
+        rec = shaperec.record
+        shp = shaperec.shape
+        for j in range(len(band_name)):
+            rec.append(peak_data[j,i])
+        w.shape(shp)
+        w.record(*rec)
+    w.close()
+    shutil.copy2(opts.shpnam+'.prj',opts.outnam+'.prj')
