@@ -18,8 +18,8 @@ SEN1_DISTANCE = 30
 SEN2_DISTANCE = 30
 SEN1_PROMINENCE = 0.5
 SEN2_PROMINENCE = 0.1
-SEN1_THRESHOLD = -12.0 # dB
-SEN1_SEN2_DIF = 20.0 # day
+SEN1_THRESHOLD = -5.0 # dB
+SEN1_SEN2_DIF = 30.0 # day
 POLARIZATION = 'VH'
 NPYNAM = 'peak_data.npy'
 TIFNAM = 'peak_data.tif'
@@ -30,8 +30,8 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.set_usage('Usage: %prog sen1_collocated_geotiff_file sen2_collocated_geotiff_file [options]')
 parser.add_option('-w','--wmin',default=None,type='float',help='Minimum growing time in day (%default)')
 parser.add_option('-W','--wmax',default=None,type='float',help='Maximum growing time in day (%default)')
-parser.add_option('-d','--hmin',default=None,help='Minimum heading date in the format YYYYMMDD (%default)')
-parser.add_option('-D','--hmax',default=None,help='Maximum heading date in the format YYYYMMDD (%default)')
+parser.add_option('-p','--pmin',default=None,help='Minimum planting date in the format YYYYMMDD (%default)')
+parser.add_option('-P','--pmax',default=None,help='Maximum planting date in the format YYYYMMDD (%default)')
 parser.add_option('-l','--scl_min',default=SCL_MIN,type='float',help='Minimum scene classification value (%default)')
 parser.add_option('-L','--scl_max',default=SCL_MAX,type='float',help='Maximum scene classification value (%default)')
 parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minimum peak distance in day for Sentinel-1 (%default)')
@@ -130,7 +130,7 @@ else:
 ibands = [4,8,17]
 nband = len(ibands)
 # Create output file
-peak_data = np.full((6,ny,nx),np.nan,dtype=np.float32)
+peak_data = np.full((8,ny,nx),np.nan,dtype=np.float32)
 
 # Read Sentinel-1 data
 ds = gdal.Open(sen1_fnam)
@@ -193,16 +193,16 @@ for i in range(1,nband):
         raise ValueError('Error, different time {}'.format(i))
 sen2_dtim = sen2_dtim_list[0].copy()
 sen2_ntim = date2num(sen2_dtim)
-if opts.hmin is not None:
-    dmin = datetime.strptime(opts.hmin,'%Y%m%d')
+if opts.pmin is not None:
+    dmin = datetime.strptime(opts.pmin,'%Y%m%d')
 else:
     dmin = sen2_dtim.min()
-if opts.hmax is not None:
-    dmax = datetime.strptime(opts.hmax,'%Y%m%d')
+if opts.pmax is not None:
+    dmax = datetime.strptime(opts.pmax,'%Y%m%d')
 else:
     dmax = sen2_dtim.max()
-hmin = date2num(dmin)
-hmax = date2num(dmax)
+pmin = date2num(dmin)
+pmax = date2num(dmax)
 
 all_bands = []
 for i in range(nband):
@@ -221,7 +221,6 @@ b08_data = all_bands[ibands.index(8)]
 ndvi = (b08_data-b04_data)/(b08_data+b04_data)
 
 xx = np.arange(np.floor(sen2_ntim.min()),np.ceil(sen2_ntim.max())+0.1,1.0)
-cndh = (xx >= hmin) & (xx <= hmax)
 for iline in range(ny):
 #for iline in range(825, 826):
 #for iline in [928]:
@@ -297,22 +296,33 @@ for iline in range(ny):
         sen2_height = sen2_y2-sen2_y1
 
         # Find planting/heading stage based on peak points
-        cnd = (sen2_x2 >= hmin) & (sen2_x2 <= hmax) & (sen2_width >= opts.wmin) & (sen2_width <= opts.wmax)
-        if cnd.sum() < 1:
-            continue
-        indx = np.argmax(sen2_height[cnd])
-        peak_data[0,iline,ipixel] = sen2_x1[cnd][indx]  # Put date of minNDVI (this is defined as planting stage)
-        peak_data[1,iline,ipixel] = sen2_y1[cnd][indx]  # Put minNDVI value
-        peak_data[2,iline,ipixel] = sen2_x2[cnd][indx]  # Put date of maxNDVI (this is defined as heading stage)
-        peak_data[3,iline,ipixel] = sen2_y2[cnd][indx]  # Put maxNDVI value
-        x1 = sen2_x1[cnd][indx]
-
+        cnd = (sen2_x1 >= pmin) & (sen2_x1 <= pmax) & (sen2_width >= opts.wmin) & (sen2_width <= opts.wmax)
+        if cnd.sum() >= 1:
+            indx = np.argmax(sen2_height[cnd])
+            peak_data[0,iline,ipixel] = sen2_x1[cnd][indx]  # Put date of minNDVI (this is defined as planting stage)
+            peak_data[1,iline,ipixel] = sen2_y1[cnd][indx]  # Put minNDVI value
+            peak_data[2,iline,ipixel] = sen2_x2[cnd][indx]  # Put date of maxNDVI (this is defined as heading stage)
+            peak_data[3,iline,ipixel] = sen2_y2[cnd][indx]  # Put maxNDVI value
+            x1 = sen2_x1[cnd][indx]
+        else:
+            cnd = (sen2_x1 >= pmin) & (sen2_x1 <= pmax)
+            if cnd.sum() >= 1:
+                indx = np.argmax(sen2_height[cnd])
+                peak_data[0,iline,ipixel] = sen2_x1[cnd][indx]  # Put date of minNDVI (this is defined as planting stage)
+                peak_data[1,iline,ipixel] = sen2_y1[cnd][indx]  # Put minNDVI value
+                peak_data[2,iline,ipixel] = sen2_x2[cnd][indx]  # Put date of maxNDVI (this is defined as heading stage)
+                peak_data[3,iline,ipixel] = sen2_y2[cnd][indx]  # Put maxNDVI value
+                x1 = sen2_x1[cnd][indx]
         cnd = (sen1_y1 < opts.sen1_threshold) & (np.abs(sen1_x1-x1)<opts.sen1_sen2_dif)
-        if cnd.sum() < 1:
-            continue
-        indx = np.argmin(sen1_y1[cnd])
-        peak_data[4,iline,ipixel] = sen1_x1[cnd][indx]  # Put date of minVH (this is defined as planting stage)
-        peak_data[5,iline,ipixel] = sen1_y1[cnd][indx]  # Put minVH value
+        if cnd.sum() >= 1:
+            indx = np.argmin(sen1_y1[cnd])
+            peak_data[4,iline,ipixel] = sen1_x1[cnd][indx]  # Put date of minVH (this is defined as planting stage)
+            peak_data[5,iline,ipixel] = sen1_y1[cnd][indx]  # Put minVH value
+        cnd = (sen1_y1 < opts.sen1_threshold)
+        if cnd.sum() >= 1:
+            indx = np.argmin(np.abs(sen1_x1[cnd]-x1))
+            peak_data[6,iline,ipixel] = sen1_x1[cnd][indx]  # Put date of minVH (this is defined as planting stage)
+            peak_data[7,iline,ipixel] = sen1_y1[cnd][indx]  # Put minVH value
 
 if opts.npynam is not None:
     np.save(opts.npynam,peak_data)
@@ -320,12 +330,12 @@ if opts.npynam is not None:
 # Output results
 if opts.tifnam is not None:
     drv = gdal.GetDriverByName('GTiff')
-    ds = drv.Create(opts.tifnam,nx,ny,4,gdal.GDT_Float32,['COMPRESS=LZW','TILED=YES'])
+    ds = drv.Create(opts.tifnam,nx,ny,8,gdal.GDT_Float32,['COMPRESS=LZW','TILED=YES'])
     ds.SetGeoTransform((xmin,xstp,0.0,ymax,0.0,ystp))
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(32748)
     ds.SetProjection(srs.ExportToWkt())
-    band_name = ['planting_date','planting_ndvi','heading_date','heading_ndvi']
+    band_name = ['planting_date','planting_ndvi','heading_date','heading_ndvi','sen1_min_date','sen1_min_peak','sen1_near_value','sen1_near_peak']
     for i in range(4):
         band = ds.GetRasterBand(i+1)
         band.WriteArray(peak_data[i])
