@@ -11,6 +11,7 @@ import numpy as np
 from scipy.signal import find_peaks
 from csaps import UnivariateCubicSmoothingSpline
 from matplotlib.dates import date2num
+from matplotlib.path import Path
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
@@ -23,6 +24,7 @@ SEN2_PROMINENCE = 0.1
 SEN1_THRESHOLD = -5.0 # dB
 SEN1_SEN2_DIF = 30.0 # day
 POLARIZATION = 'VH'
+MAXDIS = 100.0 # m
 VINT = 100
 SHPNAM = os.path.join('New_Test_Sites','New_Test_Sites')
 OUTNAM = 'peak_data'
@@ -47,6 +49,7 @@ parser.add_option('--sen1_sen2_dif',default=SEN1_SEN2_DIF,type='float',help='Max
 parser.add_option('--polarization',default=POLARIZATION,help='Polarization (%default)')
 parser.add_option('-I','--incidence_angle',default=INCIDENCE_ANGLE,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
 parser.add_option('-i','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
+parser.add_option('-m','--maxdis',default=MAXDIS,type='float',help='Max distance in m (%default)')
 parser.add_option('-s','--shpnam',default=SHPNAM,help='Input shapefile name (%default)')
 parser.add_option('-S','--sind',default=None,type='int',action='append',help='Selected indices (%default)')
 parser.add_option('-o','--npynam',default=NPYNAM,help='Output NPY name (%default)')
@@ -225,9 +228,9 @@ xx = np.arange(np.floor(sen2_ntim.min()),np.ceil(sen2_ntim.max())+0.1,1.0)
 for inum,ishp in enumerate(indi):
     if opts.verbose and inum%opts.vint == 0:
         sys.stderr.write('{} {}\n'.format(inum,len(indi)))
-    shp = r.shape(i)
+    shp = r.shape(ishp)
     p = Path(shp.points)
-    flags = p.contains_points(np.hstack((xp.flatten()[:,np.newaxis],yp.flatten()[:,np.newaxis]))).reshape(dset[0].shape)
+    flags = p.contains_points(np.hstack((xg.flatten()[:,np.newaxis],yg.flatten()[:,np.newaxis]))).reshape(xg.shape)
     ndat = flags.sum()
     sen1_yi = None
     sen2_yi = None
@@ -242,8 +245,8 @@ for inum,ishp in enumerate(indi):
         xc = pp[:,0].mean()
         yc = pp[:,1].mean()
         if p.contains_point((xc,yc)):
-            dp = np.square(xp-xc)+np.square(yp-yc)
-            indx_y,indx_x = np.unravel_index(np.argmin(dp),xp.shape)
+            dp = np.square(xg-xc)+np.square(yg-yc)
+            indx_y,indx_x = np.unravel_index(np.argmin(dp),xg.shape)
             dp_min = np.sqrt(dp[indx_y,indx_x])
             if dp_min < opts.maxdis:
                 sen1_yi = sen1_data[:,indx_y,indx_x]
@@ -258,8 +261,8 @@ for inum,ishp in enumerate(indi):
             for ip in range(len(pp)):
                 xc = pp[ip,0]
                 yc = pp[ip,1]
-                dp = np.square(xp-xc)+np.square(yp-yc)
-                iy,ix = np.unravel_index(np.argmin(dp),xp.shape)
+                dp = np.square(xg-xc)+np.square(yg-yc)
+                iy,ix = np.unravel_index(np.argmin(dp),xg.shape)
                 dp_tmp = dp[iy,ix]
                 if dp_tmp < dp_min:
                     indx_y = iy
