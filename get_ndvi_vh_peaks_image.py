@@ -336,7 +336,7 @@ if opts.tifnam is not None:
     srs.ImportFromEPSG(32748)
     ds.SetProjection(srs.ExportToWkt())
     band_name = ['planting_date','planting_ndvi','heading_date','heading_ndvi','sen1_min_date','sen1_min_peak','sen1_near_value','sen1_near_peak']
-    for i in range(4):
+    for i in range(8):
         band = ds.GetRasterBand(i+1)
         band.WriteArray(peak_data[i])
         band.SetDescription(band_name[i])
