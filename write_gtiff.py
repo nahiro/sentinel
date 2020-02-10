@@ -42,7 +42,7 @@ ypek_sid = np.array(ypek_sid)
 
 drv = gdal.GetDriverByName('GTiff')
 ds = drv.Create(outnam,nx,ny,2,gdal.GDT_Float32)
-ds.SetGeoTransform((xmin,xstp,0.0,ymax,0.0,ystp))
+ds.SetGeoTransform((xmin-0.5*xstp,xstp,0.0,ymax-0.5*ystp,0.0,ystp))
 srs = osr.SpatialReference()
 srs.ImportFromEPSG(32748)
 ds.SetProjection(srs.ExportToWkt())
