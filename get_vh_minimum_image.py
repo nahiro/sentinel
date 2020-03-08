@@ -180,7 +180,6 @@ for i,value in enumerate(root.iter('BAND_NAME')):
     band = value.text
     if not opts.polarization in band.upper():
         continue
-    sys.stderr.write(band+'\n')
     m = re.search('_(\d+)$',band)
     if not m:
         raise ValueError('Error in finding date >>> '+band)
@@ -192,6 +191,7 @@ for i,value in enumerate(root.iter('BAND_NAME')):
         continue
     if dh > d1:
         break
+    sys.stderr.write(band+'\n')
     band_list.append(band)
     dtmp = griddata((xp.flatten(),yp.flatten()),data[i].flatten(),(xg.flatten(),yg.flatten()),method='nearest')
     if opts.incidence_list is not None:
