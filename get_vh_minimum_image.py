@@ -91,6 +91,7 @@ if opts.incidence_list is not None:
     incidence_flag = []
     incidence_angle = []
     incidence_fnam = []
+    incidence_select = []
     with open (opts.incidence_list,'r') as fp:
         for line in fp:
             item = line.split()
@@ -104,8 +105,16 @@ if opts.incidence_list is not None:
             incidence_flag.append(int(item[0]))
             incidence_angle.append(float(item[2]))
             incidence_fnam.append(item[3])
+            if len(item) > 4:
+                if item[4][0].lower() == 'f':
+                    incidence_select.append(False)
+                else:
+                    incidence_select.append(True)
+            else:
+                incidence_select.append(True)
     incidence_flag = np.array(incidence_flag)
     incidence_angle = np.array(incidence_angle)
+    incidence_select = np.array(incidence_select)
     nangle = incidence_angle.size
     cnd = (incidence_flag == 1)
     if cnd.sum() != 1:
@@ -164,7 +173,7 @@ with tifffile.TiffFile(input_fnam) as tif:
         tif_tags[name] = value
     #data = tif.pages[0].asarray()
 root = ET.fromstring(tif_tags['65000'])
-vh_list = []
+band_list = []
 dset = []
 dtim = []
 for i,value in enumerate(root.iter('BAND_NAME')):
@@ -176,12 +185,14 @@ for i,value in enumerate(root.iter('BAND_NAME')):
     if not m:
         raise ValueError('Error in finding date >>> '+band)
     dstr = m.group(1)
-    vh_list.append(band)
+    if not incidence_select[incidence_indx[dstr]]:
+        continue
     dh = datetime.strptime(dstr,'%Y%m%d')
     if dh < d0:
         continue
     if dh > d1:
         break
+    band_list.append(band)
     dtmp = griddata((xp.flatten(),yp.flatten()),data[i].flatten(),(xg.flatten(),yg.flatten()),method='nearest')
     if opts.incidence_list is not None:
         dtmp += signal_dif[incidence_indx[dstr]]
