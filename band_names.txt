@@ -1,0 +1,47 @@
+ 1 B1
+ 2 B2
+ 3 B3
+ 4 B4
+ 5 B5
+ 6 B6
+ 7 B7
+ 8 B8
+ 9 B8A
+10 B9
+11 B11
+12 B12
+13 quality_aot
+14 quality_wvp
+15 quality_cloud_confidence
+16 quality_snow_confidence
+17 quality_scene_classification
+18 view_zenith_mean
+19 view_azimuth_mean
+20 sun_zenith
+21 sun_azimuth
+22 view_zenith_B1
+23 view_azimuth_B1
+24 view_zenith_B2
+25 view_azimuth_B2
+26 view_zenith_B3
+27 view_azimuth_B3
+28 view_zenith_B4
+29 view_azimuth_B4
+30 view_zenith_B5
+31 view_azimuth_B5
+32 view_zenith_B6
+33 view_azimuth_B6
+34 view_zenith_B7
+35 view_azimuth_B7
+36 view_zenith_B8
+37 view_azimuth_B8
+38 view_zenith_B8A
+39 view_azimuth_B8A
+40 view_zenith_B9
+41 view_azimuth_B9
+42 view_zenith_B10
+43 view_azimuth_B10
+44 view_zenith_B11
+45 view_azimuth_B11
+46 view_zenith_B12
+47 view_azimuth_B12
