@@ -21,6 +21,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 END = datetime.now().strftime('%Y%m%d')
 PERIOD = 60 # day
 POLARIZATION = 'VH'
+SMOOTH = 0.05
 SIGWID = 15.0 # dB
 MAXDIS = 100.0 # m
 VINT = 100
@@ -35,6 +36,7 @@ parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
 parser.add_option('-e','--end',default=END,help='End date of the analysis in the format YYYYMMDD (%default)')
 parser.add_option('-p','--period',default=PERIOD,type='int',help='Observation period in day (%default)')
 parser.add_option('-P','--polarization',default=POLARIZATION,help='Polarization (%default)')
+parser.add_option('-s','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
 parser.add_option('-i','--ind',default=None,type='int',action='append',help='Selected indices (%default)')
 parser.add_option('-I','--incidence_angle',default=INCIDENCE_ANGLE,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
 parser.add_option('-l','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
@@ -263,7 +265,7 @@ with open(opts.datnam,'w') as fp:
         if cnd.sum() > 0:
             yi = dset[:,i]
         if yi is not None:
-            sp = UnivariateCubicSmoothingSpline(ntim,yi,smooth=0.05)
+            sp = UnivariateCubicSmoothingSpline(ntim,yi,smooth=opts.smooth)
             yy = sp(xx)
             y1 = sp(ntim)
             indx_tmin = np.argmin(yy)
