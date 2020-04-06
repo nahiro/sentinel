@@ -93,12 +93,13 @@ if nband != ndat:
 ds = None # close dataset
 
 if opts.output_band is None:
-    bands = np.arange(ndat)
+    indxs = np.arange(ndat)
 else:
     for band in opts.output_band:
-        bands.append(band_name.index(band))
+        indxs.append(band_name.index(band))
+nset = len(indxs)
 dset = []
-for i in band_inds:
+for i in indxs:
     sys.stderr.write('{}\n'.format(band_name[i]))
     dset.append(griddata((xp.flatten(),yp.flatten()),data[i].flatten(),(xg.flatten(),yg.flatten()),method='nearest').reshape(xg.shape))
 dset = np.array(dset)
@@ -112,7 +113,7 @@ ds.SetProjection(srs.ExportToWkt())
 for i in range(nset):
     band = ds.GetRasterBand(i+1)
     band.WriteArray(dset[i])
-    band.SetDescription(band_name[i])
+    band.SetDescription(band_name[indxs[i]])
 band.SetNoDataValue(np.nan) # The TIFFTAG_GDAL_NODATA only support one value per dataset
 ds.FlushCache()
 ds = None # close dataset
