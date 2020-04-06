@@ -10,6 +10,12 @@ from scipy.interpolate import griddata
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
+XMIN = 743800.0
+XMAX = 756800.0
+YMIN = 9236000.0
+YMAX = 9251800.0
+XSTP = 10.0
+YSTP = -10.0
 BAND_COL = 1
 
 # Read options
@@ -19,6 +25,12 @@ parser.add_option('-i','--input_fnam',default=None,help='Input file name (%defau
 parser.add_option('-o','--output_fnam',default=None,help='Output file name (%default)')
 parser.add_option('-b','--output_band',default=None,action='append',help='Output band name (%default)')
 parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
+parser.add_option('-x','--xmin',default=XMIN,type='float',help='Minimum X in m (%default)')
+parser.add_option('-X','--xmax',default=XMAX,type='float',help='Maximum X in m (%default)')
+parser.add_option('--xstp',default=XSTP,type='float',help='Step X in m (%default)')
+parser.add_option('-y','--ymin',default=YMIN,type='float',help='Minimum Y in m (%default)')
+parser.add_option('-Y','--ymax',default=YMAX,type='float',help='Maximum Y in m (%default)')
+parser.add_option('--ystp',default=YSTP,type='float',help='Step Y in m (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
 (opts,args) = parser.parse_args()
 if len(args) > 1:
@@ -34,10 +46,7 @@ else:
     output_fnam = f+'_resample'+e
 sys.stderr.write('input: '+input_fnam+', output: '+output_fnam+'\n')
 
-xstp = 10.0
-ystp = -10.0
-xmin,xmax,ymin,ymax = (743800.0,756800.0,9236000.0,9251800.0)
-xg,yg = np.meshgrid(np.arange(xmin,xmax+0.1*xstp,xstp),np.arange(ymax,ymin-0.1*ystp,ystp))
+xg,yg = np.meshgrid(np.arange(opts.xmin,opts.xmax+0.1*opts.xstp,opts.xstp),np.arange(opts.ymax,opts.ymin-0.1*opts.ystp,opts.ystp))
 ngrd = xg.size
 ny,nx = xg.shape
 
@@ -96,7 +105,7 @@ dset = np.array(dset)
 
 drv = gdal.GetDriverByName('GTiff')
 ds = drv.Create(output_fnam,nx,ny,nset,gdal.GDT_Float32)
-ds.SetGeoTransform((xmin,xstp,0.0,ymax,0.0,ystp))
+ds.SetGeoTransform((opts.xmin,opts.xstp,0.0,opts.ymax,0.0,opts.ystp))
 srs = osr.SpatialReference()
 srs.ImportFromEPSG(32748)
 ds.SetProjection(srs.ExportToWkt())
