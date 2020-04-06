@@ -33,11 +33,11 @@ parser.add_option('-Y','--ymax',default=YMAX,type='float',help='Maximum Y in m (
 parser.add_option('--ystp',default=YSTP,type='float',help='Step Y in m (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
 (opts,args) = parser.parse_args()
-if len(args) > 1:
+if len(args) > 0:
     input_fnam = args[0]
 else:
     input_fnam = opts.input_fnam
-if len(args) > 2:
+if len(args) > 1:
     output_fnam = args[1]
 elif opts.output_fnam is not None:
     output_fnam = opts.output_fnam
@@ -65,7 +65,7 @@ band_name = []
 if opts.band_fnam is not None:
     with open(opts.band_fnam,'r') as fp:
         for line in fp:
-            item = line.split(line)
+            item = line.split()
             if len(item) <= opts.band_col or item[0][0]=='#':
                 continue
             band_name.append(item[opts.band_col])
