@@ -24,6 +24,8 @@ parser.set_usage('Usage: %prog (input_fnam) (output_fnam) [options]')
 parser.add_option('-i','--input_fnam',default=None,help='Input file name (%default)')
 parser.add_option('-o','--output_fnam',default=None,help='Output file name (%default)')
 parser.add_option('-b','--output_band',default=None,action='append',help='Output band name (%default)')
+parser.add_option('--output_bmin',default=None,type='int',help='Minimum output band index (%default)')
+parser.add_option('--output_bmax',default=None,type='int',help='Maximum output band index (%default)')
 parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
 parser.add_option('-x','--xmin',default=XMIN,type='float',help='Minimum X in m (%default)')
 parser.add_option('-X','--xmax',default=XMAX,type='float',help='Maximum X in m (%default)')
@@ -92,15 +94,25 @@ if nband != ndat:
     raise ValueError('Error, nband={}, ndat={}'.format(nband,ndat))
 ds = None # close dataset
 
-if opts.output_band is None:
-    indxs = np.arange(ndat)
+if opts.output_bmin is not None:
+    if opts.output_bmax is not None:
+        indxs = list(range(opts.output_bmin,opts.output_bmax+1))
+    else:
+        indxs = list(range(opts.output_bmin,ndat))
+elif opts.output_bmax is not None:
+    indxs = list(range(0,opts.output_bmax+1))
+elif opts.output_band is None:
+    indxs = list(range(0,ndat))
 else:
+    indxs = []
+if opts.output_band is not None:
     for band in opts.output_band:
         indxs.append(band_name.index(band))
 nset = len(indxs)
-dset = []
 for i in indxs:
     sys.stderr.write('{}\n'.format(band_name[i]))
+dset = []
+for i in indxs:
     dset.append(griddata((xp.flatten(),yp.flatten()),data[i].flatten(),(xg.flatten(),yg.flatten()),method='nearest').reshape(xg.shape))
 dset = np.array(dset)
 
