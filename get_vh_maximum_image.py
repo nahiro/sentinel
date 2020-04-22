@@ -25,9 +25,8 @@ SMOOTH = 0.05
 SIGWID = 15.0 # dB
 MAXDIS = 100.0 # m
 VINT = 100
-SHPNAM = os.path.join('New_Test_Sites','New_Test_Sites.shp')
-DATNAM = 'transplanting_date.dat'
-FIGNAM = 'transplanting_date.pdf'
+DATNAM = 'heading_date.dat'
+FIGNAM = 'heading_date.pdf'
 INCIDENCE_ANGLE = 'incidence_angle.dat'
 
 # Read options
@@ -220,10 +219,10 @@ else:
 with open(opts.datnam,'w') as fp:
     fp.write('# {:.5f} {:.5f} {:4d}\n'.format(t0,t1,nt))
     fp.write('# {:>5s} {:>4s} '.format('i','ndat'))
-    fp.write('{:>11s} {:>11s} {:>4s} '.format('tmin','vmin','fmin'))
+    fp.write('{:>11s} {:>11s} {:>4s} '.format('tmax','vmax','fmax'))
     fp.write('{:>11s} {:>11s} {:>4s} '.format('tlft','vlft','flft'))
     fp.write('{:>11s} {:>11s} {:>4s} '.format('trgt','vrgt','frgt'))
-    fp.write('{:>13s} {:>13s} '.format('dmin','dstd'))
+    fp.write('{:>13s} {:>13s} '.format('dmax','dstd'))
     fp.write('{:>9s} {:>4s} '.format('tleg','fleg'))
     fp.write('{:>9s} {:>4s} '.format('treg','freg'))
     fp.write('{:>13s} {:>13s} '.format('sstd','scor'))
@@ -234,16 +233,16 @@ with open(opts.datnam,'w') as fp:
         if opts.verbose and i%opts.vint == 0:
             sys.stderr.write('{:8d} {:8d}\n'.format(i,ngrd))
         ndat = 1
-        tmin = np.nan
-        vmin = np.nan
-        fmin = -1
+        tmax = np.nan
+        vmax = np.nan
+        fmax = -1
         tlft = np.nan
         vlft = np.nan
         flft = -1
         trgt = np.nan
         vrgt = np.nan
         frgt = -1
-        dmin = np.nan
+        dmax = np.nan
         dstd = np.nan
         tleg = np.nan
         fleg = -1
@@ -268,26 +267,26 @@ with open(opts.datnam,'w') as fp:
             sp = UnivariateCubicSmoothingSpline(ntim,yi,smooth=opts.smooth)
             yy = sp(xx)
             y1 = sp(ntim)
-            indx_tmin = np.argmin(yy)
-            tmin = xx[indx_tmin]
-            vmin = yy[indx_tmin]
-            fmin = (1 if indx_tmin == 0 else (2 if indx_tmin == nx-1 else 0))
+            indx_tmax = np.argmax(yy)
+            tmax = xx[indx_tmax]
+            vmax = yy[indx_tmax]
+            fmax = (1 if indx_tmax == 0 else (2 if indx_tmax == nx-1 else 0))
             yt = yy.copy()
-            yt[xx > tmin] = -1.0e10
-            indx_tlft = np.argmax(yt)
+            yt[xx > tmax] = 1.0e10
+            indx_tlft = np.argmin(yt)
             tlft = xx[indx_tlft]
             vlft = yy[indx_tlft]
             flft = (1 if indx_tlft == 0 else (2 if indx_tlft == nx-1 else 0))
             yt = yy.copy()
-            yt[xx < tmin] = -1.0e10
-            indx_trgt = np.argmax(yt)
+            yt[xx < tmax] = 1.0e10
+            indx_trgt = np.argmin(yt)
             trgt = xx[indx_trgt]
             vrgt = yy[indx_trgt]
             frgt = (1 if indx_trgt == 0 else (2 if indx_trgt == nx-1 else 0))
-            dmin = vmin-splev([tmin],splrep(ntim,yi,k=1))[0]
+            dmax = vmax-splev([tmax],splrep(ntim,yi,k=1))[0]
             dstd = np.sqrt(np.square(y1-yi).sum()/yi.size)
-            cnd0 = (yy >= vmin+dstd)
-            cnd = cnd0 & (xx < tmin)
+            cnd0 = (yy <= vmax-dstd)
+            cnd = cnd0 & (xx < tmax)
             if cnd.sum() > 0:
                 indx_tleg = inds[cnd][-1]
                 tleg = xx[indx_tleg]
@@ -298,7 +297,7 @@ with open(opts.datnam,'w') as fp:
                 tleg = xx[indx_tleg]
                 vleg = yy[indx_tleg]
                 fleg = 1
-            cnd = cnd0 & (xx > tmin)
+            cnd = cnd0 & (xx > tmax)
             if cnd.sum() > 0:
                 indx_treg = inds[cnd][0]
                 treg = xx[indx_treg]
@@ -311,36 +310,36 @@ with open(opts.datnam,'w') as fp:
                 freg = 2
             sstd = np.std(yy)
             scor = np.corrcoef(xx,yy)[0,1]
-            indx_traw = np.argmin(yi)
+            indx_traw = np.argmax(yi)
             traw = ntim[indx_traw]
             vraw = yi[indx_traw]
             fraw = (1 if indx_traw == 0 else (2 if indx_traw == nt-1 else 0))
             draw = y1[indx_traw]-vraw
             rstd = np.std(yi)
             rcor = np.corrcoef(ntim,yi)[0,1]
-            cnd = np.abs(ntim-tmin) > opts.sigwid
+            cnd = np.abs(ntim-tmax) > opts.sigwid
             bavg = np.mean(yi[cnd])
             bstd = np.std(yi[cnd])
         fp.write('{:8d} {:3d} '.format(i,ndat))
-        fp.write('{:11.3f} {:13.6e} {:2d} '.format(tmin,vmin,fmin))
+        fp.write('{:11.3f} {:13.6e} {:2d} '.format(tmax,vmax,fmax))
         fp.write('{:11.3f} {:13.6e} {:2d} '.format(tlft,vlft,flft))
         fp.write('{:11.3f} {:13.6e} {:2d} '.format(trgt,vrgt,frgt))
-        fp.write('{:13.6e} {:13.6e} '.format(dmin,dstd))
+        fp.write('{:13.6e} {:13.6e} '.format(dmax,dstd))
         fp.write('{:11.3f} {:2d} '.format(tleg,fleg))
         fp.write('{:11.3f} {:2d} '.format(treg,freg))
         fp.write('{:13.6e} {:13.6e} '.format(sstd,scor))
         fp.write('{:11.3f} {:13.6e} {:2d} '.format(traw,vraw,fraw))
         fp.write('{:13.6e} {:13.6e} {:13.6e} '.format(draw,rstd,rcor))
         fp.write('{:13.6e} {:13.6e}\n'.format(bavg,bstd))
-        if opts.debug and not np.isnan(tmin):
+        if opts.debug and not np.isnan(tmax):
             fig.clear()
             ax1 = plt.subplot(111)
             ax1.plot(ntim,yi,'b-')
             ax1.plot(xx,yy,'r-')
             ax1.axhline(bavg,color='c')
-            ax1.plot(tmin,vmin-dmin,'g^')
+            ax1.plot(tmax,vmax-dmax,'g^')
             ax1.plot(traw,vraw+draw,'gv')
-            ax1.plot(tmin,vmin,'bo')
+            ax1.plot(tmax,vmax,'bo')
             ax1.plot(tlft,vlft,'m<')
             ax1.plot(trgt,vrgt,'m>')
             ax1.plot(tleg,vleg,'c<')
