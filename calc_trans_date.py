@@ -131,7 +131,7 @@ for i in range(ngrd):
     xpek_sid[i] = np.array(xpek_sid[i])
     ypek_sid[i] = np.array(ypek_sid[i])
 
-nb = 4
+nb = 2
 output_data = np.full((nb,ny,nx),np.nan)
 for i in range(ngrd):
     if i != sid_0[i]:
@@ -150,9 +150,6 @@ for i in range(ngrd):
     k = np.argmax(yy)
     output_data[0,indy,indx] = xx[k]
     output_data[1,indy,indx] = yy[k]
-    #k = np.argmax(zz)
-    #output_data[2,indy,indx] = xx[k]
-    #output_data[3,indy,indx] = zz[k]
 np.save('output_data.npy',output_data)
 
 drv = gdal.GetDriverByName('GTiff')
@@ -161,7 +158,7 @@ ds.SetGeoTransform(trans)
 srs = osr.SpatialReference()
 srs.ImportFromEPSG(32748)
 ds.SetProjection(srs.ExportToWkt())
-band_name = ['xmin','ymin','vmin','xmax','ymax','vmax']
+band_name = ['xpek','ypek']
 for i in range(nb):
     band = ds.GetRasterBand(i+1)
     band.WriteArray(output_data[i])
