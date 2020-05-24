@@ -69,6 +69,7 @@ band_list = np.array(band_list)
 ds = None
 nx = data.shape[2]
 ny = data.shape[1]
+ngrd = nx*ny
 dtim = []
 vh_indx = []
 vv_indx = []
@@ -100,8 +101,8 @@ vh_ntim = ntim[vh_indx]
 #vv_ntim = ntim[vv_indx]
 
 xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+1.0,0.1)
-xpek = np.full((ny,nx),np.nan)
-ypek = np.full((ny,nx),np.nan)
+xpek_sid = [[] for i in range(ngrd)]
+ypek_sid = [[] for i in range(ngrd)]
 for i in range(ny):
 #for i in range(810,871):
     if i%100 == 0:
@@ -113,8 +114,7 @@ for i in range(ny):
         yy = sp(xx)
         min_peaks,properties = find_peaks(-yy,distance=opts.sen1_distance,prominence=opts.sen1_prominence)
         if len(min_peaks) > 0:
-            xpek_list = []
-            ypek_list = []
+            sid = np.ravel_multi_index((i,j),(ny,nx))
             for k in min_peaks:
                 if xx[k] < nmin or xx[k] > nmax:
                     continue
@@ -124,12 +124,12 @@ for i in range(ny):
                 k1 = min(k+500,xx.size-1)
                 k2 = min(k+701,xx.size)
                 vmax = yy[k1:k2].mean()
-                xpek_list.append(xx[k])
-                ypek_list.append(vmax-vmin)
-            if len(xpek_list) > 0:
-                indx = np.argmax(ypek_list)
-                xpek[i,j] = xpek_list[indx]
-                ypek[i,j] = ypek_list[indx]
+                if vmax > vmin:
+                    xpek_sid[sid].append(xx[k])
+                    ypek_sid[sid].append(vmax-vmin)
+for i in range(ngrd):
+    xpek_sid[i] = np.array(xpek_sid[i])
+    ypek_sid[i] = np.array(ypek_sid[i])
 
 nb = 6
 output_data = np.full((nb,ny,nx),np.nan)
@@ -139,6 +139,7 @@ for i in range(ny):
         print(i)
     for j in range(nx):
 #    for j in range(810,841):
+        sid = np.ravel_multi_index((i,j),(ny,nx))
         yi = vh_data[:,i,j] # VH
         sp = UnivariateCubicSmoothingSpline(vh_ntim,yi,smooth=opts.smooth)
         yy = sp(xx)
