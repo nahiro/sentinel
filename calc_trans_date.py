@@ -15,6 +15,8 @@ TMAX = '20190615'
 SMOOTH = 0.01
 SEN1_DISTANCE = 10
 SEN1_PROMINENCE = 0.1
+XSGM = 4.0 # day
+LSGM = 30.0 # m
 OUTNAM = 'output.tif'
 
 # Read options
@@ -24,6 +26,8 @@ parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMM
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
 parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minimum peak distance in day for Sentinel-1 (%default)')
 parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help='Minimum prominence in dB for Sentinel-1 (%default)')
+parser.add_option('-w','--xsgm',default=XSGM,type='float',help='Standard deviation of gaussian in day (%default)')
+parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviation of gaussian in m (%default)')
 parser.add_option('-o','--outnam',default=OUTNAM,help='Output GeoTIFF name (%default)')
 (opts,args) = parser.parse_args()
 
@@ -148,6 +152,7 @@ for i in range(ngrd):
             ytmp = yj*fact*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
             yy += ytmp
     k = np.argmax(yy)
+    indy,indx = np.unravel_index(i,(ny,nx))
     output_data[0,indy,indx] = xx[k]
     output_data[1,indy,indx] = yy[k]
 np.save('output_data.npy',output_data)
