@@ -131,51 +131,28 @@ for i in range(ngrd):
     xpek_sid[i] = np.array(xpek_sid[i])
     ypek_sid[i] = np.array(ypek_sid[i])
 
-nb = 6
+nb = 4
 output_data = np.full((nb,ny,nx),np.nan)
-for i in range(ny):
-#for i in range(810,871):
-    if i%100 == 0:
-        print(i)
-    for j in range(nx):
-#    for j in range(810,841):
-        sid = np.ravel_multi_index((i,j),(ny,nx))
-        yi = vh_data[:,i,j] # VH
-        sp = UnivariateCubicSmoothingSpline(vh_ntim,yi,smooth=opts.smooth)
-        yy = sp(xx)
-        min_peaks,properties = find_peaks(-yy,distance=opts.sen1_distance,prominence=opts.sen1_prominence)
-        if len(min_peaks) > 0:
-            xmin_list = []
-            ymin_list = []
-            vmin_list = []
-            xmax_list = []
-            ymax_list = []
-            vmax_list = []
-            for k in min_peaks:
-                if xx[k] < nmin or xx[k] > nmax:
-                    continue
-                xmin_list.append(xx[k])
-                ymin_list.append(yy[k])
-                k1 = max(k-100,0)
-                k2 = min(k+101,xx.size)
-                vmin_list.append(yy[k1:k2].mean())
-                k1 = min(k+500,xx.size-1)
-                k2 = min(k+701,xx.size)
-                xk = xx[k1:k2]
-                yk = yy[k1:k2]
-                indx = np.argmax(yk)
-                xmax_list.append(xk[indx])
-                ymax_list.append(yk[indx])
-                vmax_list.append(yk.mean())
-            if len(xmin_list) > 0:
-                indx = np.argmax(np.array(vmax_list)-np.array(vmin_list))
-                output_data[0,i,j] = xmin_list[indx]
-                output_data[1,i,j] = ymin_list[indx]
-                output_data[2,i,j] = vmin_list[indx]
-                output_data[3,i,j] = xmax_list[indx]
-                output_data[4,i,j] = ymax_list[indx]
-                output_data[5,i,j] = vmax_list[indx]
-                #print(xmin_list[indx],xmax_list[indx])
+for i in range(ngrd):
+    if i != sid_0[i]:
+        raise ValueError('Error, i={}, sid_0={}'.format(i,sid_0[i]))
+    indx = np.array([sid_1[i],sid_2[i],sid_3[i],sid_4[i],sid_5[i],sid_6[i],sid_7[i],sid_8[i],sid_9[i],sid_a[i],sid_b[i],sid_c[i]])
+    lengs = np.array([leng_1[i],leng_2[i],leng_3[i],leng_4[i],leng_5[i],leng_6[i],leng_7[i],leng_8[i],leng_9[i],leng_a[i],leng_b[i],leng_c[i]])
+    yy = np.zeros_like(xx)
+    for xi,yi in zip(xpek_sid[i],ypek_sid[i]):
+        ytmp = yi*np.exp(-0.5*np.square((xx-xi)/opts.xsgm))
+        yy += ytmp
+    for j,leng in zip(indx,lengs):
+        fact = np.exp(-0.5*np.square(leng/opts.lsgm))
+        for xj,yj in zip(xpek_sid[j],ypek_sid[j]):
+            ytmp = yj*fact*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+            yy += ytmp
+    k = np.argmax(yy)
+    output_data[0,indy,indx] = xx[k]
+    output_data[1,indy,indx] = yy[k]
+    #k = np.argmax(zz)
+    #output_data[2,indy,indx] = xx[k]
+    #output_data[3,indy,indx] = zz[k]
 np.save('output_data.npy',output_data)
 
 drv = gdal.GetDriverByName('GTiff')
