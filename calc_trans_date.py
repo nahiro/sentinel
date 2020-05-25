@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
+POLARIZATION = 'VH'
 TMIN = '20190315'
 TMAX = '20190615'
 SMOOTH = 0.01
@@ -18,12 +19,15 @@ SEN1_DISTANCE = 10
 SEN1_PROMINENCE = 0.1
 XSGM = 4.0 # day
 LSGM = 30.0 # m
+INCIDENCE_ANGLE = 'incidence_angle.dat'
 OUTNAM = 'output.tif'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
+parser.add_option('-I','--incidence_angle',default=INCIDENCE_ANGLE,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
+parser.add_option('-l','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
 parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minimum peak distance in day for Sentinel-1 (%default)')
 parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help='Minimum prominence in dB for Sentinel-1 (%default)')
@@ -72,9 +76,71 @@ for i in range(len(data)):
     band_list.append(ds.GetRasterBand(i+1).GetDescription())
 band_list = np.array(band_list)
 ds = None
-nx = data.shape[2]
-ny = data.shape[1]
+data_shape = data[0].shape
+nx = data_shape[1]
+ny = data_shape[0]
 ngrd = nx*ny
+
+if opts.incidence_list is not None:
+    incidence_flag = []
+    incidence_angle = []
+    incidence_fnam = []
+    incidence_select = []
+    with open (opts.incidence_list,'r') as fp:
+        for line in fp:
+            item = line.split()
+            if len(item) < 4:
+                continue
+            if item[0][0] == '#':
+                continue
+            pol = item[1].upper()
+            if pol != POLARIZATION.upper():
+                continue
+            incidence_flag.append(int(item[0]))
+            incidence_angle.append(float(item[2]))
+            incidence_fnam.append(item[3])
+            if len(item) > 4:
+                if item[4][0].lower() == 'f':
+                    incidence_select.append(False)
+                else:
+                    incidence_select.append(True)
+            else:
+                incidence_select.append(True)
+    incidence_flag = np.array(incidence_flag)
+    incidence_angle = np.array(incidence_angle)
+    incidence_select = np.array(incidence_select)
+    nangle = incidence_angle.size
+    cnd = (incidence_flag == 1)
+    if cnd.sum() != 1:
+        raise ValueError('Error in incidence_flag, cnd.sum()={}'.format(cnd.sum()))
+    baseline_indx = np.arange(nangle)[cnd][0]
+    signal_avg = []
+    for fnam in incidence_fnam:
+        avg = np.load(fnam)
+        if avg.shape != data_shape:
+            raise ValueError('Error, avg.shape={}, data_shape={}, fnam={}'.format(avg.shape,data_shape,fnam))
+        signal_avg.append(avg.flatten())
+    signal_dif = []
+    for i in range(nangle):
+        if i == baseline_indx:
+            signal_dif.append(0.0)
+        else:
+            signal_dif.append(signal_avg[baseline_indx]-signal_avg[i])
+    incidence_indx = {}
+    with open(opts.incidence_angle,'r') as fp:
+        for line in fp:
+            item = line.split()
+            if len(item) < 2:
+                continue
+            if item[0][0] == '#':
+                continue
+            ang = float(item[1])
+            dif = np.abs(incidence_angle-ang)
+            indx = np.argmin(dif)
+            if dif[indx] > 0.1:
+                raise ValueError('Error, dif={}'.format(dif[indx]))
+            incidence_indx.update({item[0]:indx})
+
 dtim = []
 vh_indx = []
 vv_indx = []
@@ -119,7 +185,7 @@ for i in range(ny):
         yy = sp(xx)
         min_peaks,properties = find_peaks(-yy,distance=opts.sen1_distance,prominence=opts.sen1_prominence)
         if len(min_peaks) > 0:
-            sid = np.ravel_multi_index((i,j),(ny,nx))
+            sid = np.ravel_multi_index((i,j),data_shape)
             for k in min_peaks:
                 if xx[k] < nmin or xx[k] > nmax:
                     continue
@@ -153,7 +219,7 @@ for i in range(ngrd):
             ytmp = yj*fact*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
             yy += ytmp
     k = np.argmax(yy)
-    indy,indx = np.unravel_index(i,(ny,nx))
+    indy,indx = np.unravel_index(i,data_shape)
     output_data[0,indy,indx] = xx[k]
     output_data[1,indy,indx] = yy[k]
 np.save('output_data.npy',output_data)
