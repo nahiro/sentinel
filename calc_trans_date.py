@@ -19,7 +19,8 @@ SEN1_PROMINENCE = 0.1
 XSGM = 4.0 # day
 LSGM = 30.0 # m
 INCIDENCE_ANGLE = 'incidence_angle.dat'
-OUTNAM = 'output.tif'
+INP_FNAM = 'collocate_all_resample.tif'
+OUT_FNAM = 'output.tif'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -32,7 +33,8 @@ parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minim
 parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help='Minimum prominence in dB for Sentinel-1 (%default)')
 parser.add_option('-w','--xsgm',default=XSGM,type='float',help='Standard deviation of gaussian in day (%default)')
 parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviation of gaussian in m (%default)')
-parser.add_option('-o','--outnam',default=OUTNAM,help='Output GeoTIFF name (%default)')
+parser.add_option('-i','--inp_fnam',default=INP_FNAM,help='Input GeoTIFF name (%default)')
+parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output GeoTIFF name (%default)')
 (opts,args) = parser.parse_args()
 
 nmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
@@ -66,8 +68,7 @@ leng_a = data['leng_a']
 leng_b = data['leng_b']
 leng_c = data['leng_c']
 
-fnam = 'collocate_all_resample.tif'
-ds = gdal.Open(fnam)
+ds = gdal.Open(opts.inp_fnam)
 data = ds.ReadAsArray()
 trans = ds.GetGeoTransform()
 band_list = []
@@ -214,7 +215,7 @@ for i in range(ngrd):
 np.save('output_data.npy',output_data)
 
 drv = gdal.GetDriverByName('GTiff')
-ds = drv.Create(opts.outnam,nx,ny,nb,gdal.GDT_Float32)
+ds = drv.Create(opts.out_fnam,nx,ny,nb,gdal.GDT_Float32)
 ds.SetGeoTransform(trans)
 srs = osr.SpatialReference()
 srs.ImportFromEPSG(32748)
