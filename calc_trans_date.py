@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
-POLARIZATION = 'VH'
 TMIN = '20190315'
 TMAX = '20190615'
 SMOOTH = 0.01
@@ -94,7 +93,7 @@ if opts.incidence_list is not None:
             if item[0][0] == '#':
                 continue
             pol = item[1].upper()
-            if pol != POLARIZATION.upper():
+            if pol != 'VH':
                 continue
             incidence_flag.append(int(item[0]))
             incidence_angle.append(float(item[2]))
@@ -141,35 +140,25 @@ if opts.incidence_list is not None:
                 raise ValueError('Error, dif={}'.format(dif[indx]))
             incidence_indx.update({item[0]:indx})
 
-dtim = []
-vh_indx = []
-vv_indx = []
+vh_dtim = []
+vh_data = []
 for i,band in enumerate(band_list):
+    if not re.search('VH',band):
+        continue
     m = re.search('_('+'\d'*8+')$',band)
-    if m:
-        dtim.append(datetime.strptime(m.group(1),'%Y%m%d'))
-    else:
+    if not m:
         raise ValueError('Error in finding date >>> '+band)
-    if re.search('VH',band):
-        vh_indx.append(i)
-    elif re.search('VV',band):
-        vv_indx.append(i)
+    dstr = m.group(1)
+    if opts.incidence_list is not None:
+        if not incidence_select[incidence_indx[dstr]]:
+            continue
+        vh_data.append(data[i]+signal_dif[incidence_indx[dstr]])
     else:
-        raise ValueError('Error in band >>> '+band)
-dtim = np.array(dtim)
-ntim = date2num(dtim)
-vh_indx = np.array(vh_indx)
-vv_indx = np.array(vv_indx)
-
-vh_data = data[vh_indx]
-vh_band_list = band_list[vh_indx]
-vh_dtim = dtim[vh_indx]
-vh_ntim = ntim[vh_indx]
-
-#vv_data = data[vv_indx]
-#vv_band_list = band_list[vv_indx]
-#vv_dtim = dtim[vv_indx]
-#vv_ntim = ntim[vv_indx]
+        vh_data.append(data[i])
+    vh_dtim.append(datetime.strptime(dstr,'%Y%m%d'))
+vh_dtim = np.array(vh_dtim)
+vh_data = np.array(vh_data)
+vh_ntim = date2num(vh_dtim)
 
 xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+1.0,0.1)
 xpek_sid = [[] for i in range(ngrd)]
