@@ -126,8 +126,8 @@ for i in range(ny):
                 k1 = max(k-100,0)
                 k2 = min(k+101,xx.size)
                 vmin = yy[k1:k2].mean()
-                k1 = min(k+500,xx.size-1)
-                k2 = min(k+701,xx.size)
+                k1 = min(k+200,xx.size-1)
+                k2 = min(k+801,xx.size)
                 vmax = yy[k1:k2].mean()
                 if vmax > vmin:
                     xpek_sid[sid].append(xx[k])
