@@ -119,7 +119,7 @@ if opts.incidence_list is not None:
         avg = np.load(fnam)
         if avg.shape != data_shape:
             raise ValueError('Error, avg.shape={}, data_shape={}, fnam={}'.format(avg.shape,data_shape,fnam))
-        signal_avg.append(avg.flatten())
+        signal_avg.append(avg)
     signal_dif = []
     for i in range(nangle):
         if i == baseline_indx:
