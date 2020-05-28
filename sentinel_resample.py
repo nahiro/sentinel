@@ -118,7 +118,7 @@ dset = np.array(dset)
 
 drv = gdal.GetDriverByName('GTiff')
 ds = drv.Create(output_fnam,nx,ny,nset,gdal.GDT_Float32)
-ds.SetGeoTransform((opts.xmin,opts.xstp,0.0,opts.ymax,0.0,opts.ystp))
+ds.SetGeoTransform((opts.xmin-0.5*opts.xstp,opts.xstp,0.0,opts.ymax-0.5*opts.ystp,0.0,opts.ystp))
 srs = osr.SpatialReference()
 srs.ImportFromEPSG(32748)
 ds.SetProjection(srs.ExportToWkt())
