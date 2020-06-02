@@ -11,10 +11,12 @@ from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
 XMIN = 743800.0
-XMAX = 756800.0
+#XMAX = 756800.0
 YMIN = 9236000.0
-YMAX = 9251800.0
-XSTP = 10.0
+#YMAX = 9251800.0
+XY_STEP = 10.0
+ORIGIN_X = XMIN-0.5*XY_STEP
+ORIGIN_Y = YMIN-0.5*XY_STEP
 EPSG = 32748 # UTM zone 48S
 
 # Read options
@@ -23,8 +25,12 @@ parser.set_usage('Usage: %prog input_fnam [options]')
 parser.add_option('-g','--gamma0',default=False,action='store_true',help='Output gamma0 instead of sigma0 (%default)')
 parser.add_option('--skip_orbit',default=False,action='store_true',help='Do not apply orbit file (%default)')
 parser.add_option('--speckle',default=False,action='store_true',help='Apply speckle filter (%default)')
-parser.add_option('-e','--epsg',default=EPSG,help='Output EPSG (%default)')
-parser.add_option('-t','--tiff',default=False,action='store_true',help='GeoTiff mode (%default)')
+parser.add_option('-x','--origin_x',default=ORIGIN_X,type='float',help='X origin of standard grid (%default)')
+parser.add_option('-y','--origin_y',default=ORIGIN_Y,type='float',help='Y origin of standard grid (%default)')
+parser.add_option('-s','--xy_step',default=XY_STEP,type='float',help='XY step of standard grid (%default)')
+parser.add_option('-E','--epsg',default=EPSG,help='Output EPSG (%default)')
+parser.add_option('-S','--std_grid',default=False,action='store_true',help='Use standard grid (%default)')
+parser.add_option('-T','--tiff',default=False,action='store_true',help='GeoTiff mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
     parser.print_help()
@@ -89,9 +95,13 @@ params = HashMap()
 params.put('demName','SRTM 3Sec')
 params.put('demResamplingMethod','BILINEAR_INTERPOLATION')
 params.put('imgResamplingMethod','BILINEAR_INTERPOLATION')
-params.put('pixelSpacingInMeter',10.0)
+params.put('pixelSpacingInMeter',opts.xy_step)
 params.put('mapProjection','EPSG:{}'.format(opts.epsg))
 #params.put('mapProjection','AUTO:42001') # WGS84/AutoUTM
+if opts.std_grid:
+    params.put('alignToStandardGrid',True)
+    params.put('standardGridOriginX',opts.origin_x)
+    params.put('standardGridOriginY',opts.origin_y)
 data_tmp = GPF.createProduct("Terrain-Correction",params,data)
 data = data_tmp
 # Convert to dB (LinearTodBOp.java)
