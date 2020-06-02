@@ -47,7 +47,7 @@ if os.path.exists(output_fnam):
 GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
 # Read original product
 data = ProductIO.readProduct(input_fnam)
-# Apply orbit file
+# Apply orbit file (ApplyOrbitFileOp.java)
 if not opts.skip_orbit:
     params = HashMap()
     try:
@@ -56,7 +56,7 @@ if not opts.skip_orbit:
         sys.stderr.write('Warning, error in applying orbit file >>> '+dstr+'\n')
         data_tmp = data
     data = data_tmp
-# Subset
+# Subset (SubsetOp.java)
 WKTReader = jpy.get_type('com.vividsolutions.jts.io.WKTReader')
 wkt = "POLYGON((107.201 -6.898,107.367 -6.898,107.367 -6.767,107.201 -6.767,107.201 -6.898))"
 geom = WKTReader().read(wkt)
@@ -65,7 +65,7 @@ params.put('copyMetadata',True)
 params.put('geoRegion',geom)
 data_tmp = GPF.createProduct('Subset',params,data)
 data = data_tmp
-# Calibration
+# Calibration (CalibrationOp.java)
 params = HashMap()
 if opts.gamma0:
     params.put('outputSigmaBand',False)
@@ -74,12 +74,12 @@ else:
     params.put('outputSigmaBand',True)
 data_tmp = GPF.createProduct('Calibration',params,data)
 data = data_tmp
-# Terrain flattening
+# Terrain flattening (TerrainFlatteningOp.java)
 if opts.gamma0:
     params = HashMap()
     data_tmp = GPF.createProduct('Terrain-Flattening',params,data)
     data = data_tmp
-# Speckle reduction
+# Speckle reduction (SpeckleFilterOp.java)
 if opts.speckle:
     params = HashMap()
     data_tmp = GPF.createProduct('Speckle-Filter',params,data)
@@ -94,11 +94,11 @@ params.put('mapProjection','EPSG:{}'.format(opts.epsg))
 #params.put('mapProjection','AUTO:42001') # WGS84/AutoUTM
 data_tmp = GPF.createProduct("Terrain-Correction",params,data)
 data = data_tmp
-# Convert to dB
+# Convert to dB (LinearTodBOp.java)
 params = HashMap()
 data_tmp = GPF.createProduct('linearToFromdB',params,data)
 data = data_tmp
-# Attach bandname
+# Attach bandname (BandSelectOp.java)
 band_list = list(data.getBandNames())
 bands = []
 for band in band_list:
