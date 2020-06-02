@@ -2,19 +2,29 @@
 import os
 import psutil
 mem_size = int(psutil.virtual_memory().available*0.8e-6)
-os.environ['_JAVA_OPTIONS'] = '-Xmx{}m'.format(mem_size)     # Save memory for JAVA
-os.system('export _JAVA_OPTIONS=-Xmx{}m'.format(mem_size))   # Save memory for JAVA
+os.environ['_JAVA_OPTIONS'] = '-Xmx{}m'.format(mem_size)     # Set memory for JAVA
+os.system('export _JAVA_OPTIONS=-Xmx{}m'.format(mem_size))   # Set memory for JAVA
 import sys
 import re
 from snappy import Product,ProductIO,ProductUtils,GPF,HashMap,WKTReader,jpy
 from optparse import OptionParser,IndentedHelpFormatter
 
+# Defaults
+XMIN = 743800.0
+XMAX = 756800.0
+YMIN = 9236000.0
+YMAX = 9251800.0
+XSTP = 10.0
+EPSG = 32748 # UTM zone 48S
+
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.set_usage('Usage: %prog input_fnam [options]')
 parser.add_option('-g','--gamma0',default=False,action='store_true',help='Output gamma0 instead of sigma0 (%default)')
 parser.add_option('--skip_orbit',default=False,action='store_true',help='Do not apply orbit file (%default)')
 parser.add_option('--speckle',default=False,action='store_true',help='Apply speckle filter (%default)')
-parser.set_usage('Usage: %prog input_fnam [options]')
+parser.add_option('-e','--epsg',default=EPSG,help='Output EPSG (%default)')
+parser.add_option('-t','--tiff',default=False,action='store_true',help='GeoTiff mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
     parser.print_help()
@@ -26,7 +36,10 @@ if not m:
     if not m:
         raise ValueError('Error in file name >>> '+input_fnam)
 dstr = m.group(1)[:8]
-output_fnam = '{}.dim'.format(dstr)
+if opts.tiff:
+    output_fnam = '{}.tif'.format(dstr)
+else:
+    output_fnam = '{}.dim'.format(dstr)
 if os.path.exists(output_fnam):
     sys.exit()
 
@@ -71,13 +84,13 @@ if opts.speckle:
     params = HashMap()
     data_tmp = GPF.createProduct('Speckle-Filter',params,data)
     data = data_tmp
-# Terrain correction
+# Terrain correction (RangeDopplerGeocodingOp.java)
 params = HashMap()
 params.put('demName','SRTM 3Sec')
 params.put('demResamplingMethod','BILINEAR_INTERPOLATION')
 params.put('imgResamplingMethod','BILINEAR_INTERPOLATION')
 params.put('pixelSpacingInMeter',10.0)
-params.put('mapProjection','EPSG:32748') # UTM zone 48S
+params.put('mapProjection','EPSG:{}'.format(opts.epsg))
 #params.put('mapProjection','AUTO:42001') # WGS84/AutoUTM
 data_tmp = GPF.createProduct("Terrain-Correction",params,data)
 data = data_tmp
@@ -96,4 +109,7 @@ params = HashMap()
 params.put('sourceBands',','.join(bands))
 data_tmp = GPF.createProduct('BandSelect',params,data)
 data = data_tmp
-ProductIO.writeProduct(data,output_fnam,'BEAM-DIMAP')
+if opts.tiff:
+    ProductIO.writeProduct(data,output_fnam,'GeoTiff')
+else:
+    ProductIO.writeProduct(data,output_fnam,'BEAM-DIMAP')
