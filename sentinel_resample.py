@@ -25,7 +25,7 @@ parser.add_option('-b','--output_band',default=None,action='append',help='Output
 parser.add_option('--output_bmin',default=None,type='int',help='Minimum output band index (%default)')
 parser.add_option('--output_bmax',default=None,type='int',help='Maximum output band index (%default)')
 parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
-parser.add_option('-e','--output_epsg',default=None,help='Output EPSG (guessed from input data)')
+parser.add_option('-e','--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
 parser.add_option('-x','--xmin',default=XMIN,type='float',help='Minimum X in m (%default)')
 parser.add_option('-X','--xmax',default=XMAX,type='float',help='Maximum X in m (%default)')
 parser.add_option('--xstp',default=XSTP,type='float',help='Step X in m (%default)')
@@ -33,6 +33,7 @@ parser.add_option('-y','--ymin',default=YMIN,type='float',help='Minimum Y in m (
 parser.add_option('-Y','--ymax',default=YMAX,type='float',help='Maximum Y in m (%default)')
 parser.add_option('--ystp',default=YSTP,type='float',help='Step Y in m (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
+parser.add_option('--check_grid',default=False,action='store_true',help='Check grid (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
     parser.print_help()
@@ -51,7 +52,7 @@ for input_fnam in fnams:
     prj = ds.GetProjection()
     srs = osr.SpatialReference(wkt=prj)
     if opts.output_epsg is None:
-        output_epsg = srs.GetAttrValue('AUTHORITY',1)
+        output_epsg = int(srs.GetAttrValue('AUTHORITY',1))
     else:
         output_epsg = opts.output_epsg
     data = ds.ReadAsArray()
@@ -60,6 +61,17 @@ for input_fnam in fnams:
     xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
     yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
     ndat = len(data)
+    if opts.check_grid:
+        indx1 = np.argmin(np.abs(xp[0,:]-xg[0,0]))
+        indx2 = np.argmin(np.abs(xp[0,:]-xg[0,-1]))+1
+        indy1 = np.argmin(np.abs(yp[:,0]-yg[0,0]))
+        indy2 = np.argmin(np.abs(yp[:,0]-yg[-1,0]))+1
+        if np.all(xg[0,:] == xp[0,indx1:indx2]) and np.all(yg[:,0] == yp[indy1:indy2,0]):
+            flag_grid = True
+        else:
+            flag_grid = False
+    else:
+        flag_grid = False
 
     # Get band name
     band_name = []
@@ -110,10 +122,13 @@ for input_fnam in fnams:
     nset = len(indxs)
     for i in indxs:
         sys.stderr.write('{}\n'.format(band_name[i]))
-    dset = []
-    for i in indxs:
-        dset.append(griddata((xp.flatten(),yp.flatten()),data[i].flatten(),(xg.flatten(),yg.flatten()),method='nearest').reshape(xg.shape))
-    dset = np.array(dset)
+    if flag_grid:
+        dset = data[indxs,indy1:indy2,indx1:indx2]
+    else:
+        dset = []
+        for i in indxs:
+            dset.append(griddata((xp.flatten(),yp.flatten()),data[i].flatten(),(xg.flatten(),yg.flatten()),method='nearest').reshape(xg.shape))
+        dset = np.array(dset)
 
     drv = gdal.GetDriverByName('GTiff')
     ds = drv.Create(output_fnam,nx,ny,nset,gdal.GDT_Float32)

@@ -10,13 +10,9 @@ from snappy import Product,ProductIO,ProductUtils,GPF,HashMap,WKTReader,jpy
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
-XMIN = 743800.0
-#XMAX = 756800.0
-YMIN = 9236000.0
-#YMAX = 9251800.0
+ORIGIN_X = 743800.0
+ORIGIN_Y = 9236000.0
 XY_STEP = 10.0
-ORIGIN_X = XMIN-0.5*XY_STEP
-ORIGIN_Y = YMIN-0.5*XY_STEP
 EPSG = 32748 # UTM zone 48S
 
 # Read options
