@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
+import re
 import numpy as np
 import tifffile
 import xml.etree.ElementTree as ET
@@ -52,7 +53,10 @@ for input_fnam in fnams:
     prj = ds.GetProjection()
     srs = osr.SpatialReference(wkt=prj)
     if opts.output_epsg is None:
-        output_epsg = int(srs.GetAttrValue('AUTHORITY',1))
+        epsg = srs.GetAttrValue('AUTHORITY',1)
+        if re.search('\D',epsg):
+            raise ValueError('Error in EPSG >>> '+epsg)
+        output_epsg = int(epsg)
     else:
         output_epsg = opts.output_epsg
     data = ds.ReadAsArray()
