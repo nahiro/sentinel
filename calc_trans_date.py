@@ -1,11 +1,13 @@
 #!/usr/bin/env python
+import os
+import sys
 import re
 from glob import glob
 from datetime import datetime
 import gdal
 import osr
 import numpy as np
-from matplotlib.dates import date2num
+from matplotlib.dates import date2num,num2date
 from csaps import UnivariateCubicSmoothingSpline
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
@@ -48,13 +50,16 @@ parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviati
 parser.add_option('--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
 parser.add_option('--near_fnam',default=NEAR_FNAM,help='Nearby index file name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
-parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
+parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory, not used if input_fnam is given (%default)')
+parser.add_option('--search_key',default=None,help='Search key for input data, not used if input_fnam is given (%default)')
 parser.add_option('-i','--inp_fnam',default=None,help='Input GeoTIFF name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output GeoTIFF name (%default)')
 (opts,args) = parser.parse_args()
 
 nmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 nmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
+dmin = num2date(nmin+opts.tstr_1-15.0).replace(tzinfo=None)
+dmax = num2date(nmax+opts.tend_2+15.0).replace(tzinfo=None)
 
 # read nearby indices
 data = np.load(opts.near_fnam)
@@ -86,9 +91,9 @@ leng_c = data['leng_c']
 
 if opts.inp_fnam is not None:
     ds = gdal.Open(opts.inp_fnam)
-    prj = ds.GetProjection()
-    srs = osr.SpatialReference(wkt=prj)
     if opts.output_epsg is None:
+        prj = ds.GetProjection()
+        srs = osr.SpatialReference(wkt=prj)
         epsg = srs.GetAttrValue('AUTHORITY',1)
         if re.search('\D',epsg):
             raise ValueError('Error in EPSG >>> '+epsg)
@@ -96,15 +101,61 @@ if opts.inp_fnam is not None:
     else:
         output_epsg = opts.output_epsg
     data = ds.ReadAsArray()
-    trans = ds.GetGeoTransform()
+    data_shape = data[0].shape
+    data_trans = ds.GetGeoTransform()
     band_list = []
     for i in range(len(data)):
         band_list.append(ds.GetRasterBand(i+1).GetDescription())
     band_list = np.array(band_list)
     ds = None
 else:
-
-data_shape = data[0].shape
+    output_epsg = None
+    data_shape = None
+    data_trans = None
+    data = []
+    band_list = []
+    fs = sorted(glob(os.path.join(opts.datdir,'*'+'[0-9]'*8+'*.tif')))
+    for fnam in fs:
+        f = os.path.basename(fnam)
+        if opts.search_key is not None and not re.search(opts.search_key,f):
+            continue
+        m = re.search('\D('+'\d'*8+')\D',f)
+        if not m:
+            m = re.search('^('+'\d'*8+')\D',f)
+            if not m:
+                raise ValueError('Error in finding date >>> '+f)
+        dstr = m.group(1)
+        d = datetime.strptime(dstr,'%Y%m%d')
+        if d < dmin or d > dmax:
+            continue
+        sys.stderr.write(f+' '+dstr+'\n')
+        ds = gdal.Open(fnam)
+        if output_epsg is None:
+            if opts.output_epsg is None:
+                prj = ds.GetProjection()
+                srs = osr.SpatialReference(wkt=prj)
+                epsg = srs.GetAttrValue('AUTHORITY',1)
+                if re.search('\D',epsg):
+                    raise ValueError('Error in EPSG >>> '+epsg)
+                output_epsg = int(epsg)
+            else:
+                output_epsg = opts.output_epsg
+        dtmp = ds.ReadAsArray()
+        if data_shape is None:
+            data_shape = dtmp[0].shape
+        elif dtmp[0].shape != data_shape:
+            raise ValueError('Error, dtmp[0].shape={}, data_shape={}'.format(dtmp[0].shape,data_shape))
+        trans = ds.GetGeoTransform()
+        if data_trans is None:
+            data_trans = trans
+        elif trans != data_trans:
+            raise ValueError('Error, trans={}, data_trans={}'.format(trans,data_trans))
+        for i in range(len(dtmp)):
+            data.append(dtmp[i])
+            band_list.append(ds.GetRasterBand(i+1).GetDescription())
+        ds = None
+    data = np.array(data)
+    band_list = np.array(band_list)
 nx = data_shape[1]
 ny = data_shape[0]
 ngrd = nx*ny
@@ -199,7 +250,7 @@ ypek_sid = [[] for i in range(ngrd)]
 for i in range(ny):
 #for i in range(810,871):
     if i%100 == 0:
-        print(i)
+        sys.stderr.write('{}\n'.format(i))
     for j in range(nx):
 #    for j in range(810,841):
         yi = vh_data[:,i,j] # VH
@@ -249,7 +300,7 @@ if opts.npy_fnam is not None:
 
 drv = gdal.GetDriverByName('GTiff')
 ds = drv.Create(opts.out_fnam,nx,ny,nb,gdal.GDT_Float32)
-ds.SetGeoTransform(trans)
+ds.SetGeoTransform(data_trans)
 srs = osr.SpatialReference()
 srs.ImportFromEPSG(output_epsg)
 ds.SetProjection(srs.ExportToWkt())
