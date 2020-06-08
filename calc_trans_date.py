@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import re
+from glob import glob
 from datetime import datetime
 import gdal
 import osr
@@ -13,20 +14,30 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 TMIN = '20190315'
 TMAX = '20190615'
+TSTP = 0.1
+TSTR_1 = -10.0
+TEND_1 = 10.0
+TSTR_2 = 20.0
+TEND_2 = 80.0
 SMOOTH = 0.01
 SEN1_DISTANCE = 10
 SEN1_PROMINENCE = 0.1
 XSGM = 4.0 # day
 LSGM = 30.0 # m
+DATDIR = '.'
 INCIDENCE_ANGLE = 'incidence_angle.dat'
 NEAR_FNAM = 'find_nearest.npz'
-INP_FNAM = 'collocate_all_resample.tif'
 OUT_FNAM = 'output.tif'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
+parser.add_option('--tstp',default=TSTP,type='float',help='Precision of transplanting date in day (%default)')
+parser.add_option('--tstr_1',default=TSTR_1,type='float',help='Start day of transplanting period seen from the min. peak (%default)')
+parser.add_option('--tend_1',default=TEND_1,type='float',help='End day of transplanting period seen from the min. peak (%default)')
+parser.add_option('--tstr_2',default=TSTR_2,type='float',help='Start day of heading period seen from the min. peak (%default)')
+parser.add_option('--tend_2',default=TEND_2,type='float',help='End day of heading period seen from the min. peak (%default)')
 parser.add_option('-I','--incidence_angle',default=INCIDENCE_ANGLE,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
 parser.add_option('-l','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
@@ -37,7 +48,8 @@ parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviati
 parser.add_option('--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
 parser.add_option('--near_fnam',default=NEAR_FNAM,help='Nearby index file name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
-parser.add_option('-i','--inp_fnam',default=INP_FNAM,help='Input GeoTIFF name (%default)')
+parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
+parser.add_option('-i','--inp_fnam',default=None,help='Input GeoTIFF name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output GeoTIFF name (%default)')
 (opts,args) = parser.parse_args()
 
@@ -72,23 +84,26 @@ leng_a = data['leng_a']
 leng_b = data['leng_b']
 leng_c = data['leng_c']
 
-ds = gdal.Open(opts.inp_fnam)
-prj = ds.GetProjection()
-srs = osr.SpatialReference(wkt=prj)
-if opts.output_epsg is None:
-    epsg = srs.GetAttrValue('AUTHORITY',1)
-    if re.search('\D',epsg):
-        raise ValueError('Error in EPSG >>> '+epsg)
-    output_epsg = int(epsg)
+if opts.inp_fnam is not None:
+    ds = gdal.Open(opts.inp_fnam)
+    prj = ds.GetProjection()
+    srs = osr.SpatialReference(wkt=prj)
+    if opts.output_epsg is None:
+        epsg = srs.GetAttrValue('AUTHORITY',1)
+        if re.search('\D',epsg):
+            raise ValueError('Error in EPSG >>> '+epsg)
+        output_epsg = int(epsg)
+    else:
+        output_epsg = opts.output_epsg
+    data = ds.ReadAsArray()
+    trans = ds.GetGeoTransform()
+    band_list = []
+    for i in range(len(data)):
+        band_list.append(ds.GetRasterBand(i+1).GetDescription())
+    band_list = np.array(band_list)
+    ds = None
 else:
-    output_epsg = opts.output_epsg
-data = ds.ReadAsArray()
-trans = ds.GetGeoTransform()
-band_list = []
-for i in range(len(data)):
-    band_list.append(ds.GetRasterBand(i+1).GetDescription())
-band_list = np.array(band_list)
-ds = None
+
 data_shape = data[0].shape
 nx = data_shape[1]
 ny = data_shape[0]
@@ -174,7 +189,11 @@ vh_dtim = np.array(vh_dtim)
 vh_data = np.array(vh_data)
 vh_ntim = date2num(vh_dtim)
 
-xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+1.0,0.1)
+k1_offset = int(opts.tstr_1/opts.tstp-0.1) # assuming negative value
+k2_offset = int(opts.tend_1/opts.tstp+0.1)+1
+k3_offset = int(opts.tstr_2/opts.tstp+0.1)
+k4_offset = int(opts.tend_2/opts.tstp+0.1)+1
+xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+1.0,opts.tstp)
 xpek_sid = [[] for i in range(ngrd)]
 ypek_sid = [[] for i in range(ngrd)]
 for i in range(ny):
@@ -192,12 +211,12 @@ for i in range(ny):
             for k in min_peaks:
                 if xx[k] < nmin or xx[k] > nmax:
                     continue
-                k1 = max(k-100,0)
-                k2 = min(k+101,xx.size)
+                k1 = max(k+k1_offset,0)
+                k2 = min(k+k2_offset,xx.size)
                 vmin = yy[k1:k2].mean()
-                k1 = min(k+200,xx.size-1)
-                k2 = min(k+801,xx.size)
-                vmax = yy[k1:k2].mean()
+                k3 = min(k+k3_offset,xx.size-1)
+                k4 = min(k+k4_offset,xx.size)
+                vmax = yy[k3:k4].mean()
                 if vmax > vmin:
                     xpek_sid[sid].append(xx[k])
                     ypek_sid[sid].append(vmax-vmin)
