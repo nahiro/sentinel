@@ -19,6 +19,7 @@ SEN1_PROMINENCE = 0.1
 XSGM = 4.0 # day
 LSGM = 30.0 # m
 INCIDENCE_ANGLE = 'incidence_angle.dat'
+NEAR_FNAM = 'find_nearest.npz'
 INP_FNAM = 'collocate_all_resample.tif'
 OUT_FNAM = 'output.tif'
 
@@ -33,6 +34,9 @@ parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minim
 parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help='Minimum prominence in dB for Sentinel-1 (%default)')
 parser.add_option('-w','--xsgm',default=XSGM,type='float',help='Standard deviation of gaussian in day (%default)')
 parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviation of gaussian in m (%default)')
+parser.add_option('--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
+parser.add_option('--near_fnam',default=NEAR_FNAM,help='Nearby index file name (%default)')
+parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
 parser.add_option('-i','--inp_fnam',default=INP_FNAM,help='Input GeoTIFF name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output GeoTIFF name (%default)')
 (opts,args) = parser.parse_args()
@@ -41,7 +45,7 @@ nmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 nmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
 
 # read nearby indices
-data = np.load('find_nearest.npz')
+data = np.load(opts.near_fnam)
 sid_0 = data['sid_0']
 sid_1 = data['sid_1']
 sid_2 = data['sid_2']
@@ -69,6 +73,15 @@ leng_b = data['leng_b']
 leng_c = data['leng_c']
 
 ds = gdal.Open(opts.inp_fnam)
+prj = ds.GetProjection()
+srs = osr.SpatialReference(wkt=prj)
+if opts.output_epsg is None:
+    epsg = srs.GetAttrValue('AUTHORITY',1)
+    if re.search('\D',epsg):
+        raise ValueError('Error in EPSG >>> '+epsg)
+    output_epsg = int(epsg)
+else:
+    output_epsg = opts.output_epsg
 data = ds.ReadAsArray()
 trans = ds.GetGeoTransform()
 band_list = []
@@ -212,13 +225,14 @@ for i in range(ngrd):
     indy,indx = np.unravel_index(i,data_shape)
     output_data[0,indy,indx] = xx[k]
     output_data[1,indy,indx] = yy[k]
-np.save('output_data.npy',output_data)
+if opts.npy_fnam is not None:
+    np.save(opts.npy_fnam,output_data)
 
 drv = gdal.GetDriverByName('GTiff')
 ds = drv.Create(opts.out_fnam,nx,ny,nb,gdal.GDT_Float32)
 ds.SetGeoTransform(trans)
 srs = osr.SpatialReference()
-srs.ImportFromEPSG(32748)
+srs.ImportFromEPSG(output_epsg)
 ds.SetProjection(srs.ExportToWkt())
 band_name = ['xpek','ypek']
 for i in range(nb):
