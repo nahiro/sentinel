@@ -59,7 +59,10 @@ for input_fnam in fnams:
         output_epsg = int(epsg)
     else:
         output_epsg = opts.output_epsg
-    data = ds.ReadAsArray()
+    if ds.RasterCount < 2:
+        data = ds.ReadAsArray()[np.newaxis,...]
+    else:
+        data = ds.ReadAsArray()
     trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
     indy,indx = np.indices(data[0].shape)
     xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
