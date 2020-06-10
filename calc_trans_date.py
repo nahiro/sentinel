@@ -16,6 +16,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 TMIN = '20190315'
 TMAX = '20190615'
+TMGN = 15.0
 TSTP = 0.1
 TSTR_1 = -10.0
 TEND_1 = 10.0
@@ -33,8 +34,11 @@ OUT_FNAM = 'output.tif'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMMDD (%default)')
-parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
+parser.add_option('-s','--tmin',default=TMIN,help='Min date of transplanting in the format YYYYMMDD (%default)')
+parser.add_option('-e','--tmax',default=TMAX,help='Max date of transplanting in the format YYYYMMDD (%default)')
+parser.add_option('--data_tmin',default=None,help='Min date of input data in the format YYYYMMDD (%default)')
+parser.add_option('--data_tmax',default=None,help='Max date of input data in the format YYYYMMDD (%default)')
+parser.add_option('--tmgn',default=TMGN,type='float',help='Margin of input data in day (%default)')
 parser.add_option('--tstp',default=TSTP,type='float',help='Precision of transplanting date in day (%default)')
 parser.add_option('--tstr_1',default=TSTR_1,type='float',help='Start day of transplanting period seen from the min. peak (%default)')
 parser.add_option('--tend_1',default=TEND_1,type='float',help='End day of transplanting period seen from the min. peak (%default)')
@@ -58,8 +62,14 @@ parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output GeoTIFF name (
 
 nmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 nmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
-dmin = num2date(nmin+opts.tstr_1-15.0).replace(tzinfo=None)
-dmax = num2date(nmax+opts.tend_2+15.0).replace(tzinfo=None)
+if opts.data_tmin is not None:
+    dmin = datetime.strptime(opts.data_tmin,'%Y%m%d')
+else:
+    dmin = num2date(nmin+opts.tstr_1-opts.tmgn).replace(tzinfo=None)
+if opts.data_tmax is not None:
+    dmax = datetime.strptime(opts.data_tmax,'%Y%m%d')
+else:
+    dmax = num2date(nmax+opts.tend_2+opts.tmgn).replace(tzinfo=None)
 
 # read nearby indices
 data = np.load(opts.near_fnam)
