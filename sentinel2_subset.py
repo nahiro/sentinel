@@ -54,7 +54,7 @@ data_tmp = GPF.createProduct('Resample',params,data)
 data = data_tmp
 # Subset
 WKTReader = jpy.get_type('com.vividsolutions.jts.io.WKTReader')
-wkt = "POLYGON((107.201 -6.910,107.367 -6.910,107.367 -6.760,107.201 -6.760,107.201 -6.910))"
+wkt = "POLYGON((107.201 -6.910,107.367 -6.910,107.367 -6.750,107.201 -6.750,107.201 -6.910))"
 geom = WKTReader().read(wkt)
 params = HashMap()
 params.put('copyMetadata',True)
