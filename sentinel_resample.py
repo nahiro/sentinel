@@ -34,7 +34,7 @@ parser.add_option('-y','--ymin',default=YMIN,type='float',help='Minimum Y in m (
 parser.add_option('-Y','--ymax',default=YMAX,type='float',help='Maximum Y in m (%default)')
 parser.add_option('--ystp',default=YSTP,type='float',help='Step Y in m (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
-parser.add_option('--check_grid',default=False,action='store_true',help='Check grid (%default)')
+parser.add_option('--no_check_grid',default=False,action='store_true',help='Do not check grid (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
     parser.print_help()
@@ -68,7 +68,7 @@ for input_fnam in fnams:
     xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
     yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
     ndat = len(data)
-    if opts.check_grid:
+    if not opts.no_check_grid:
         indx1 = np.argmin(np.abs(xp[0,:]-xg[0,0]))
         indx2 = np.argmin(np.abs(xp[0,:]-xg[0,-1]))+1
         indy1 = np.argmin(np.abs(yp[:,0]-yg[0,0]))
