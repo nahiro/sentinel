@@ -11,10 +11,10 @@ from scipy.interpolate import griddata
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
-XMIN = 743800.0
-XMAX = 756800.0
-YMIN = 9236000.0
-YMAX = 9251800.0
+XMIN = 743805.0 # pixel center
+XMAX = 757305.0 # pixel center
+YMIN = 9235805.0 # pixel center
+YMAX = 9251805.0 # pixel center
 XSTP = 10.0
 YSTP = -10.0
 BAND_COL = 1
