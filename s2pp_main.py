@@ -70,6 +70,19 @@ for year in range(dmin.year,dmax.year+1):
             filelist.append(f)
             datalist.append(os.path.abspath(g))
             datelist.append(dtim)
+    for f in glob(os.path.join(opts.datdir,str(year),'*.SAFE')):
+        fnam = os.path.basename(f)
+        m = re.search('^[^_]+_[^_]+_([^_]+)_.*.SAFE$',fnam)
+        if m:
+            dtim = datetime.strptime(m.group(1),'%Y%m%dT%H%M%S')
+            if dtim < dmin or dtim > dmax:
+                continue
+            flaglist.append(False)
+            filelist.append(f)
+            datalist.append(f)
+            datelist.append(dtim)
+        else:
+            raise ValueError('Error in file name >>> '+f)
     flaglist = np.array(flaglist)
     filelist = np.array(filelist)
     datalist = np.array(datalist)
