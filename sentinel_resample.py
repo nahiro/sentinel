@@ -106,7 +106,7 @@ for input_fnam in fnams:
                     band_name.append(value.text)
             else:
                 for i in range(ndat):
-                    band_name.append('band_{}'.format(i))
+                    band_name.append('band_{}'.format(i+1))
     nband = len(band_name)
     if nband != ndat:
         raise ValueError('Error, nband={}, ndat={}'.format(nband,ndat))
