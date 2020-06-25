@@ -56,6 +56,7 @@ parser.add_option('--minimum_gcps',default=None,type='int',help='Minimum number 
 parser.add_option('--minimum_ratio',default=MINIMUM_RATIO,type='float',help='Minimum ratio of GCPs to be left after refine_gcps (%default)')
 parser.add_option('--discard_number',default=None,type='int',help='Maximum number of GCPs to be discarded by refine_gcps (%default)')
 parser.add_option('--refine_number',default=REFINE_NUMBER,type='int',help='Minimum number of GCPs to perform refine_gcps (%default)')
+parser.add_option('--tr',default=None,type='float',help='Output resolution in output georeferenced units (%default)')
 parser.add_option('--tps',default=False,action='store_true',help='Use thin plate spline transformer (%default)')
 parser.add_option('--exp',default=False,action='store_true',help='Output in exp format (%default)')
 parser.add_option('-u','--use_edge',default=False,action='store_true',help='Use GCPs near the edge of the correction range (%default)')
@@ -159,6 +160,9 @@ if trg_fnam is not None:
     command = 'gdalwarp'
     command += ' -t_srs EPSG:{}'.format(opts.trg_epsg)
     command += ' -overwrite'
+    if opts.tr is not None:
+        command += ' -tr {} {}'.format(opts.tr,opts.tr)
+        command += ' -tap'
     if opts.tps:
         command += ' -tps'
     elif opts.npoly is not None:
