@@ -250,10 +250,10 @@ vh_dtim = np.array(vh_dtim)
 vh_data = np.array(vh_data)
 vh_ntim = date2num(vh_dtim)
 
-k1_offset = int(opts.tstr_1/opts.tstp-0.1) # assuming negative value
-k2_offset = int(opts.tend_1/opts.tstp+0.1)+1
-k3_offset = int(opts.tstr_2/opts.tstp+0.1)
-k4_offset = int(opts.tend_2/opts.tstp+0.1)+1
+k1_offset = int(opts.tstr_1/opts.tstp+(-0.1 if opts.tstr_1 < 0.0 else 0.1))
+k2_offset = int(opts.tend_1/opts.tstp+(-0.1 if opts.tend_1 < 0.0 else 0.1))+1
+k3_offset = int(opts.tstr_2/opts.tstp+(-0.1 if opts.tstr_2 < 0.0 else 0.1))
+k4_offset = int(opts.tend_2/opts.tstp+(-0.1 if opts.tend_2 < 0.0 else 0.1))+1
 xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+1.0,opts.tstp)
 xpek_sid = [[] for i in range(ngrd)]
 ypek_sid = [[] for i in range(ngrd)]
