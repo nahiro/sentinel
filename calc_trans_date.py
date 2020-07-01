@@ -303,6 +303,8 @@ for i in range(ngrd):
             yy += ytmp
     k = np.argmax(yy)
     indy,indx = np.unravel_index(i,data_shape)
+    if xx[k] < nmin or xx[k] > nmax:
+        continue
     output_data[0,indy,indx] = xx[k]
     output_data[1,indy,indx] = yy[k]
 if opts.npy_fnam is not None:
