@@ -32,7 +32,7 @@ if opts.debug:
     plt.interactive(True)
     fig = plt.figure(1,facecolor='w',figsize=(6,3.5))
     plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.95)
-    pdf = PdfPages('calc_intersec_area.pdf')
+    pdf = PdfPages('pixel_area.pdf')
 
 for ii,shaperec in enumerate(r.iterShapeRecords()):
     if ii%100 == 0:
@@ -67,10 +67,13 @@ for ii,shaperec in enumerate(r.iterShapeRecords()):
             p4 = Path([(xc-5.0,yc-5.0),(xc-5.0,yc+5.0),(xc+5.0,yc+5.0),(xc+5.0,yc-5.0),(xc-5.0,yc-5.0)])
             patch = patches.PathPatch(p4,facecolor='none',lw=1)
             ax1.add_patch(patch)
+    inds = np.array(inds)
+    rats = np.array(rats)
     # output results ###
     sys.stdout.write('{} {}'.format(rec[0],len(inds)))
-    for ind,rat in zip(inds,rats):
-        sys.stdout.write(' {:d} {:.6f}'.format(ind,rat))
+    isort = np.argsort(rats)[::-1]
+    for ind,rat in zip(inds[isort],rats[isort]):
+        sys.stdout.write(' {:d} {:.6e}'.format(ind,rat))
     sys.stdout.write('\n')
     ####################
     if opts.debug:
@@ -93,15 +96,11 @@ for ii,shaperec in enumerate(r.iterShapeRecords()):
             xmax = max(xmax,pp[0])
             ymin = min(ymin,pp[1])
             ymax = max(ymax,pp[1])
-        #ax1.set_xlim(xmin-20.0,xmax+20.0)
-        #ax1.set_ylim(ymin-20.0,ymax+20.0)
         ax1.set_xlim(xmin-60.0,xmax+60.0)
         ax1.set_ylim(ymin-60.0,ymax+60.0)
         ax1.ticklabel_format(useOffset=False,style='plain')
         plt.draw()
         plt.savefig(pdf,format='pdf')
 #       plt.pause(0.1)
-#   if ii > 10:
-#       break
 if opts.debug:
     pdf.close()
