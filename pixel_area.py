@@ -14,6 +14,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-f','--img_fnam',default=None,help='Image file name (%default)')
 parser.add_option('-s','--shp_fnam',default=None,help='Shape file name (%default)')
+parser.add_option('-b','--blk_fnam',default=None,help='Block file name (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 
@@ -28,6 +29,15 @@ ds = None
 
 r = shapefile.Reader(opts.shp_fnam)
 
+if opts.blk_fnam is not None:
+    block = {}
+    with open(opts.blk_fnam,'r') as fp:
+        for line in fp:
+            item = line.split()
+            block.update({int(item[0]):item[1]})
+    if len(block) != len(r):
+        raise ValueError('Error, len(block)={}, len(r)={}'.format(len(block),len(r)))
+
 if opts.debug:
     plt.interactive(True)
     fig = plt.figure(1,facecolor='w',figsize=(6,3.5))
@@ -40,13 +50,14 @@ for ii,shaperec in enumerate(r.iterShapeRecords()):
         sys.stderr.flush()
     rec = shaperec.record
     shp = shaperec.shape
+    object_id = rec[0]
     p = Path(shp.points)
     p1 = Polygon(shp.points)
     flags = p.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=-30.0).reshape(data_shape)
     if opts.debug:
         fig.clear()
         ax1 = plt.subplot(111)
-        ax1.set_title('OBJECTID: {}'.format(rec[0]))
+        ax1.set_title('OBJECTID: {}'.format(object_id))
         flags_inside = []
         flags_near = []
     inds = []
@@ -70,7 +81,10 @@ for ii,shaperec in enumerate(r.iterShapeRecords()):
     inds = np.array(inds)
     rats = np.array(rats)
     # output results ###
-    sys.stdout.write('{} {}'.format(rec[0],len(inds)))
+    if opts.blk_fnam is not None:
+        sys.stdout.write('{} {} {}'.format(object_id,block[object_id],len(inds)))
+    else:
+        sys.stdout.write('{} {}'.format(object_id,len(inds)))
     isort = np.argsort(rats)[::-1]
     for ind,rat in zip(inds[isort],rats[isort]):
         sys.stdout.write(' {:d} {:.6e}'.format(ind,rat))
