@@ -27,6 +27,7 @@ SEN1_DISTANCE = 10
 SEN1_PROMINENCE = 0.1
 XSGM = 4.0 # day
 LSGM = 30.0 # m
+N_NEAREST = 120
 DATDIR = '.'
 INCIDENCE_ANGLE = 'incidence_angle.dat'
 NEAR_FNAM = 'find_nearest.npz'
@@ -51,6 +52,7 @@ parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minim
 parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help='Minimum prominence in dB for Sentinel-1 (%default)')
 parser.add_option('-w','--xsgm',default=XSGM,type='float',help='Standard deviation of gaussian in day (%default)')
 parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviation of gaussian in m (%default)')
+parser.add_option('--n_nearest',default=N_NEAREST,type='int',help='Number of nearest pixels to be considered (%default)')
 parser.add_option('--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
 parser.add_option('--near_fnam',default=NEAR_FNAM,help='Nearby index file name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
@@ -74,30 +76,9 @@ else:
 # read nearby indices
 data = np.load(opts.near_fnam)
 sid_0 = data['sid_0']
-sid_1 = data['sid_1']
-sid_2 = data['sid_2']
-sid_3 = data['sid_3']
-sid_4 = data['sid_4']
-sid_5 = data['sid_5']
-sid_6 = data['sid_6']
-sid_7 = data['sid_7']
-sid_8 = data['sid_8']
-sid_9 = data['sid_9']
-sid_a = data['sid_a']
-sid_b = data['sid_b']
-sid_c = data['sid_c']
-leng_1 = data['leng_1']
-leng_2 = data['leng_2']
-leng_3 = data['leng_3']
-leng_4 = data['leng_4']
-leng_5 = data['leng_5']
-leng_6 = data['leng_6']
-leng_7 = data['leng_7']
-leng_8 = data['leng_8']
-leng_9 = data['leng_9']
-leng_a = data['leng_a']
-leng_b = data['leng_b']
-leng_c = data['leng_c']
+for nn in range(1,opts.n_nearest+1):
+    exec('sid_{} = data["sid_{}"]'.format(nn,nn))
+    exec('leng_{} = data["leng_{}"]'.format(nn,nn))
 
 if opts.inp_fnam is not None:
     ds = gdal.Open(opts.inp_fnam)
@@ -290,8 +271,13 @@ output_data = np.full((nb,ny,nx),np.nan)
 for i in range(ngrd):
     if i != sid_0[i]:
         raise ValueError('Error, i={}, sid_0={}'.format(i,sid_0[i]))
-    indx = np.array([sid_1[i],sid_2[i],sid_3[i],sid_4[i],sid_5[i],sid_6[i],sid_7[i],sid_8[i],sid_9[i],sid_a[i],sid_b[i],sid_c[i]])
-    lengs = np.array([leng_1[i],leng_2[i],leng_3[i],leng_4[i],leng_5[i],leng_6[i],leng_7[i],leng_8[i],leng_9[i],leng_a[i],leng_b[i],leng_c[i]])
+    indx = []
+    lengs = []
+    for nn in range(1,opts.n_nearest+1):
+        exec('indx.append(sid_{}[i])'.format(nn))
+        exec('lengs.append(leng_{}[i])'.format(nn))
+    indx = np.array(indx)
+    lengs = np.array(lengs)
     yy = np.zeros_like(xx)
     for xi,yi in zip(xpek_sid[i],ypek_sid[i]):
         ytmp = yi*np.exp(-0.5*np.square((xx-xi)/opts.xsgm))
