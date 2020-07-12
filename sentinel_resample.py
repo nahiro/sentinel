@@ -35,6 +35,7 @@ parser.add_option('-Y','--ymax',default=YMAX,type='float',help='Maximum Y in m (
 parser.add_option('--ystp',default=YSTP,type='float',help='Step Y in m (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
 parser.add_option('--no_check_grid',default=False,action='store_true',help='Do not check grid (%default)')
+parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
     parser.print_help()
@@ -48,7 +49,11 @@ ny,nx = xg.shape
 for input_fnam in fnams:
     f,e = os.path.splitext(os.path.basename(input_fnam))
     output_fnam = f+'_resample'+e
-    sys.stderr.write('input: '+input_fnam+', output: '+output_fnam+'\n')
+    if os.path.exists(output_fnam) and not opts.overwrite:
+        sys.stderr.write('input: '+input_fnam+', output: '+output_fnam+' ... exists, skip!\n')
+        continue
+    else:
+        sys.stderr.write('input: '+input_fnam+', output: '+output_fnam+'\n')
     ds = gdal.Open(input_fnam)
     prj = ds.GetProjection()
     srs = osr.SpatialReference(wkt=prj)
