@@ -100,9 +100,8 @@ for year in range(dmin.year,dmax.year+1):
         call(command,shell=True)
         if flag:
             call('rm '+gnam,shell=True)
-        call('rm -rf /tmp/snap-naohiro',shell=True)
-        call('rm -rf /tmp/jffi*.tmp',shell=True)
-        call('rm -rf /tmp/imageio*.tmp',shell=True)
-        call('rm -rf /home/naohiro/.snap/var/cache/temp/imageio*.tmp',shell=True)
+        # Remove cache
+        command = 'remove_snap_cache.py'
+        call(command,shell=True)
         #break
     #break
