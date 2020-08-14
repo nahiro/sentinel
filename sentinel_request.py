@@ -9,7 +9,7 @@ import atexit
 import numpy as np
 from datetime import datetime
 from glob import glob
-from subprocess import Popen,check_output,PIPE
+from subprocess import Popen,check_output,PIPE,TimeoutExpired
 from sentinelsat import SentinelAPI
 from optparse import OptionParser,IndentedHelpFormatter
 
