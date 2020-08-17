@@ -28,6 +28,10 @@ parser.set_usage('Usage: %prog target_georeferenced_image reference_georeference
 parser.add_option('--scrdir',default=SCRDIR,help='Script directory where find_gcps.py exists (%default)')
 parser.add_option('-b','--ref_band',default=None,type='int',help='Reference band# (%default)')
 parser.add_option('-B','--trg_band',default=None,type='int',help='Target band# (%default)')
+parser.add_option('--ref_multi_band',default=None,type='int',action='append',help='Reference multi-band number (%default)')
+parser.add_option('--ref_multi_ratio',default=None,type='float',action='append',help='Reference multi-band ratio (%default)')
+parser.add_option('--trg_multi_band',default=None,type='int',action='append',help='Target multi-band number (%default)')
+parser.add_option('--trg_multi_ratio',default=None,type='float',action='append',help='Target multi-band ratio (%default)')
 parser.add_option('-x','--trg_indx_start',default=None,type='int',help='Target start x index (0)')
 parser.add_option('-X','--trg_indx_stop',default=None,type='int',help='Target stop x index (target width)')
 parser.add_option('-s','--trg_indx_step',default=None,type='int',help='Target step x index (half of subset_width)')
@@ -101,6 +105,18 @@ else:
         command += ' --ref_band {}'.format(opts.ref_band)
     if opts.trg_band is not None:
         command += ' --trg_band {}'.format(opts.trg_band)
+    if opts.ref_multi_band is not None:
+        for band in opts.ref_multi_band:
+            command += ' --ref_multi_band {}'.format(band)
+    if opts.ref_multi_ratio is not None:
+        for ratio in opts.ref_multi_ratio:
+            command += ' --ref_multi_ratio {}'.format(ratio)
+    if opts.trg_multi_band is not None:
+        for band in opts.trg_multi_band:
+            command += ' --trg_multi_band {}'.format(band)
+    if opts.trg_multi_ratio is not None:
+        for ratio in opts.trg_multi_ratio:
+            command += ' --trg_multi_ratio {}'.format(ratio)
     if opts.trg_indx_start is not None:
         command += ' --trg_indx_start {}'.format(opts.trg_indx_start)
     if opts.trg_indx_stop is not None:
@@ -144,9 +160,11 @@ else:
     if opts.save_gcps is not None:
         with open(opts.save_gcps,'w') as fp:
             fp.write(out)
-xi,yi,xp,yp,dx,dy,r = np.loadtxt(fnam,unpack=True)
-if len(xi) < opts.minimum_number:
-    sys.stderr.write('Not enough GCP points.\n')
+try:
+    xi,yi,xp,yp,dx,dy,r = np.loadtxt(fnam,unpack=True)
+    if xi.size < opts.minimum_number:
+        raise ValueError('Error, not enough GCP points.')
+except Exception:
     sys.exit()
 
 if trg_fnam is not None:

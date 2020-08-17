@@ -26,6 +26,10 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.set_usage('Usage: %prog reference_georeferenced_image target_georeferenced_image [options]')
 parser.add_option('-b','--ref_band',default=REF_BAND,type='int',help='Reference band# (%default)')
 parser.add_option('-B','--trg_band',default=TRG_BAND,type='int',help='Target band# (%default)')
+parser.add_option('--ref_multi_band',default=None,type='int',action='append',help='Reference multi-band number (%default)')
+parser.add_option('--ref_multi_ratio',default=None,type='float',action='append',help='Reference multi-band ratio (%default)')
+parser.add_option('--trg_multi_band',default=None,type='int',action='append',help='Target multi-band number (%default)')
+parser.add_option('--trg_multi_ratio',default=None,type='float',action='append',help='Target multi-band ratio (%default)')
 parser.add_option('-x','--trg_indx_start',default=None,type='int',help='Target start x index (0)')
 parser.add_option('-X','--trg_indx_stop',default=None,type='int',help='Target stop x index (target width)')
 parser.add_option('-s','--trg_indx_step',default=None,type='int',help='Target step x index (half of subset_width)')
@@ -67,7 +71,16 @@ def residuals(p,refx,refy,refz,trgx,trgy,trgz,pmax):
 ds = gdal.Open(ref_fnam)
 prj = ds.GetProjection()
 srs = osr.SpatialReference(wkt=prj)
-ref_data = ds.ReadAsArray()[opts.ref_band]
+if opts.ref_multi_band is not None:
+    if len(opts.ref_multi_band) != len(opts.ref_multi_ratio):
+        raise ValueError('Error, len(opts.ref_multi_band)={}, len(opts.ref_multi_ratio)={}'.format(len(opts.ref_multi_band),len(opts.ref_multi_ratio)))
+    ref_data = 0.0
+    for band,ratio in zip(opts.ref_multi_band,opts.ref_multi_ratio):
+        ref_data += ds.GetRasterBand(band+1).ReadAsArray()*ratio
+elif opts.ref_band < 0:
+    ref_data = ds.ReadAsArray()
+else:
+    ref_data = ds.GetRasterBand(opts.ref_band+1).ReadAsArray()
 trans = ds.GetGeoTransform()
 indy,indx = np.indices(ref_data.shape)
 ref_xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
@@ -90,7 +103,16 @@ if ref_yp_stp >= 0.0:
 ds = gdal.Open(trg_fnam)
 prj = ds.GetProjection()
 srs = osr.SpatialReference(wkt=prj)
-trg_data = ds.ReadAsArray()[opts.trg_band]
+if opts.trg_multi_band is not None:
+    if len(opts.trg_multi_band) != len(opts.trg_multi_ratio):
+        raise ValueError('Error, len(opts.trg_multi_band)={}, len(opts.trg_multi_ratio)={}'.format(len(opts.trg_multi_band),len(opts.trg_multi_ratio)))
+    trg_data = 0.0
+    for band,ratio in zip(opts.trg_multi_band,opts.trg_multi_ratio):
+        trg_data += ds.GetRasterBand(band+1).ReadAsArray()*ratio
+elif opts.trg_band < 0:
+    trg_data = ds.ReadAsArray()
+else:
+    trg_data = ds.GetRasterBand(opts.trg_band+1).ReadAsArray()
 trans = ds.GetGeoTransform()
 indy,indx = np.indices(trg_data.shape)
 trg_xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
