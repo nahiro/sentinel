@@ -11,10 +11,10 @@ from scipy.interpolate import griddata
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
-XMIN = 743805.0 # pixel center
-XMAX = 757305.0 # pixel center
-YMIN = 9235805.0 # pixel center
-YMAX = 9251805.0 # pixel center
+XMIN = 743805.0 # Cihea, pixel center
+XMAX = 757305.0 # Cihea, pixel center
+YMIN = 9235805.0 # Cihea, pixel center
+YMAX = 9251805.0 # Cihea, pixel center
 XSTP = 10.0
 YSTP = -10.0
 BAND_COL = 1
@@ -135,6 +135,7 @@ for input_fnam in fnams:
     for i in indxs:
         sys.stderr.write('{}\n'.format(band_name[i]))
     if flag_grid:
+        sys.stderr.write('############ No need to interpolate.\n')
         dset = data[indxs,indy1:indy2,indx1:indx2]
     else:
         dset = []
