@@ -10,8 +10,8 @@ from snappy import Product,ProductIO,ProductUtils,GPF,HashMap,WKTReader,jpy
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
-ORIGIN_X = 743800.0
-ORIGIN_Y = 9236000.0
+ORIGIN_X = 743805.0 # pixel center
+ORIGIN_Y = 9236005.0 # pixel center
 XY_STEP = 10.0
 EPSG = 32748 # UTM zone 48S
 
