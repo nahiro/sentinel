@@ -2,7 +2,7 @@
 import sys
 import numpy as np
 
-n_nearest = 36
+n_nearest = 120
 
 sid,xc,yc,ndat,leng,area = np.loadtxt('get_center.dat',unpack=True)
 sid = (sid+0.1).astype(np.int64)
@@ -26,7 +26,7 @@ sid_0 = np.array(sid_0)
 for nn in range(1,n_nearest+1):
     exec('sid_{} = np.array(sid_{})'.format(nn,nn))
     exec('leng_{} = np.array(leng_{})'.format(nn,nn))
-command = 'np.savez("find_nearest.npz",'
+command = 'np.savez("find_nearest_field.npz",'
 command += 'sid_0=sid_0,'
 for nn in range(1,n_nearest+1):
     command += 'sid_{}=sid_{},leng_{}=leng_{},'.format(nn,nn,nn,nn)
