@@ -20,6 +20,7 @@ parser.add_option('-f','--img_fnam',default=None,help='Image file name (%default
 parser.add_option('-s','--shp_fnam',default=None,help='Shape file name (%default)')
 parser.add_option('-b','--blk_fnam',default=None,help='Block file name (%default)')
 parser.add_option('-B','--block',default=None,help='Block name (%default)')
+parser.add_option('--buffer',default=None,type='float',help='Buffer distance (%default)')
 parser.add_option('--use_index',default=False,action='store_true',help='Use index instead of OBJECTID (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('-c','--check',default=False,action='store_true',help='Check mode (%default)')
@@ -64,7 +65,10 @@ with open(opts.datnam,'w') as fp:
         else:
             object_id = rec[0]
         p = Path(shp.points)
-        p1 = Polygon(shp.points)
+        if opts.buffer is not None:
+            p1 = Polygon(shp.points).buffer(opts.buffer)
+        else:
+            p1 = Polygon(shp.points)
         flags = p.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=-30.0).reshape(data_shape)
         if opts.debug or opts.check:
             flags_inside = []
