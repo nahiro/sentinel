@@ -22,6 +22,7 @@ parser.add_option('-b','--blk_fnam',default=None,help='Block file name (%default
 parser.add_option('-B','--block',default=None,help='Block name (%default)')
 parser.add_option('--buffer',default=None,type='float',help='Buffer distance (%default)')
 parser.add_option('--use_index',default=False,action='store_true',help='Use index instead of OBJECTID (%default)')
+parser.add_option('--use_objectid',default=False,action='store_true',help='Use OBJECTID instead of Block (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('-c','--check',default=False,action='store_true',help='Check mode (%default)')
 parser.add_option('-o','--datnam',default=DATNAM,help='Output data name (%default)')
@@ -63,7 +64,7 @@ with open(opts.datnam,'w') as fp:
         if opts.use_index:
             object_id = ii+1
         else:
-            object_id = rec[0]
+            object_id = rec.OBJECTID
         p = Path(shp.points)
         if opts.buffer is not None:
             p1 = Polygon(shp.points).buffer(opts.buffer)
@@ -108,7 +109,9 @@ with open(opts.datnam,'w') as fp:
         if not ictr in inds:
             sys.stderr.write('Warning, center pixel is not included >>> FID: {}, OBJECTID: {}\n'.format(ii,object_id))
         # output results ###
-        if opts.blk_fnam is not None:
+        if opts.use_objectid:
+            fp.write('{} {} {}'.format(object_id,object_id,len(inds)))
+        elif opts.blk_fnam is not None:
             fp.write('{} {} {}'.format(object_id,block[object_id],len(inds)))
         elif opts.block is not None:
             fp.write('{} {} {}'.format(object_id,opts.block,len(inds)))
