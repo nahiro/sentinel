@@ -105,7 +105,18 @@ data_tmp = GPF.createProduct("Terrain-Correction",params,data)
 data = data_tmp
 # Convert to dB (LinearTodBOp.java)
 params = HashMap()
+if opts.iangle:
+    band_list = list(data.getBandNames())
+    bands = []
+    for band in band_list:
+        if not re.search('angle',band.lower()):
+            bands.append(band)
+    params.put('sourceBands',','.join(bands))
 data_tmp = GPF.createProduct('linearToFromdB',params,data)
+if opts.iangle:
+    for band in band_list:
+        if re.search('angle',band.lower()):
+            ProductUtils.copyBand(band,data,band,data_tmp,True)
 data = data_tmp
 # Attach bandname (BandSelectOp.java)
 band_list = list(data.getBandNames())
