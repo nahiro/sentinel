@@ -36,6 +36,7 @@ parser.add_option('--ystp',default=YSTP,type='float',help='Step Y in m (%default
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
 parser.add_option('--no_check_grid',default=False,action='store_true',help='Do not check grid (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
+parser.add_option('--read_comments',default=False,action='store_true',help='Read comments from input_file (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
     parser.print_help()
@@ -115,6 +116,20 @@ for input_fnam in fnams:
     nband = len(band_name)
     if nband != ndat:
         raise ValueError('Error, nband={}, ndat={}'.format(nband,ndat))
+    if opts.read_comments:
+        comments = {}
+        tif_tags = {}
+        with tifffile.TiffFile(input_fnam) as tif:
+            for tag in tif.pages[0].tags.values():
+                name,value = tag.name,tag.value
+                tif_tags[name] = value
+        if '65000' in tif_tags:
+            root = ET.fromstring(tif_tags['65000'])
+            for value in root.iter('DATASET_COMMENTS'):
+                for line in value.text.split('\n'):
+                    m = re.search('([^=]+)=([^=]+)',value.text)
+                    if m:
+                        comments.update({m.group(1).strip():m.group(2).strip()})
     ds = None # close dataset
 
     if opts.output_bmin is not None:
@@ -149,6 +164,8 @@ for input_fnam in fnams:
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(output_epsg)
     ds.SetProjection(srs.ExportToWkt())
+    if opts.read_comments:
+        ds.SetMetadata(comments)
     for i in range(nset):
         band = ds.GetRasterBand(i+1)
         band.WriteArray(dset[i])

@@ -6,6 +6,7 @@ os.environ['_JAVA_OPTIONS'] = '-Xmx{}m'.format(mem_size)     # Set memory for JA
 os.system('export _JAVA_OPTIONS=-Xmx{}m'.format(mem_size))   # Set memory for JAVA
 import sys
 import re
+import numpy as np
 from snappy import Product,ProductIO,ProductUtils,GPF,HashMap,WKTReader,jpy
 from optparse import OptionParser,IndentedHelpFormatter
 
@@ -21,7 +22,8 @@ parser.set_usage('Usage: %prog input_fnam [options]')
 parser.add_option('-g','--gamma0',default=False,action='store_true',help='Output gamma0 instead of sigma0 (%default)')
 parser.add_option('--skip_orbit',default=False,action='store_true',help='Do not apply orbit file (%default)')
 parser.add_option('--speckle',default=False,action='store_true',help='Apply speckle filter (%default)')
-parser.add_option('--iangle',default=False,action='store_true',help='Output incidence angle (%default)')
+parser.add_option('--iangle_value',default=False,action='store_true',help='Output incidence angle value (%default)')
+parser.add_option('--iangle_image',default=False,action='store_true',help='Output incidence angle image (%default)')
 parser.add_option('-x','--origin_x',default=ORIGIN_X,type='float',help='X origin of standard grid (%default)')
 parser.add_option('-y','--origin_y',default=ORIGIN_Y,type='float',help='Y origin of standard grid (%default)')
 parser.add_option('-s','--xy_step',default=XY_STEP,type='float',help='XY step of standard grid (%default)')
@@ -89,7 +91,7 @@ if opts.speckle:
     data = data_tmp
 # Terrain correction (RangeDopplerGeocodingOp.java)
 params = HashMap()
-if opts.iangle:
+if opts.iangle_value or opts.iangle_image:
     params.put('saveIncidenceAngleFromEllipsoid',True)
 params.put('demName','SRTM 3Sec')
 params.put('demResamplingMethod','BILINEAR_INTERPOLATION')
@@ -105,7 +107,7 @@ data_tmp = GPF.createProduct("Terrain-Correction",params,data)
 data = data_tmp
 # Convert to dB (LinearTodBOp.java)
 params = HashMap()
-if opts.iangle:
+if opts.iangle_value or opts.iangle_image:
     band_list = list(data.getBandNames())
     bands = []
     for band in band_list:
@@ -113,10 +115,20 @@ if opts.iangle:
             bands.append(band)
     params.put('sourceBands',','.join(bands))
 data_tmp = GPF.createProduct('linearToFromdB',params,data)
-if opts.iangle:
+if opts.iangle_image:
     for band in band_list:
         if re.search('angle',band.lower()):
             ProductUtils.copyBand(band,data,band,data_tmp,True)
+elif opts.iangle_value:
+    iangle = np.nan
+    for band in band_list:
+        if re.search('angle',band.lower()):
+            band_data = data.getBand(band)
+            w = band_data.getRasterWidth()
+            h = band_data.getRasterHeight()
+            band_value = np.full((h,w),np.nan,dtype=np.float32)
+            band_data.readPixels(0,0,w,h,band_value)
+            iangle = np.nanmean(band_value[band_value > 0.1])
 data = data_tmp
 # Attach bandname (BandSelectOp.java)
 band_list = list(data.getBandNames())
@@ -129,6 +141,8 @@ params = HashMap()
 params.put('sourceBands',','.join(bands))
 data_tmp = GPF.createProduct('BandSelect',params,data)
 data = data_tmp
+if opts.iangle_value:
+    data.setDescription('iangle = {}'.format(iangle))
 if opts.tiff:
     ProductIO.writeProduct(data,output_fnam,'GeoTiff')
 else:
