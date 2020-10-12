@@ -21,7 +21,8 @@ parser.add_option('-e','--end',default=None,help='End date of the query in the f
 parser.add_option('-g','--gamma0',default=False,action='store_true',help='Output gamma0 instead of sigma0 (%default)')
 parser.add_option('--skip_orbit',default=False,action='store_true',help='Do not apply orbit file (%default)')
 parser.add_option('--speckle',default=False,action='store_true',help='Apply speckle filter (%default)')
-parser.add_option('--iangle',default=False,action='store_true',help='Output incidence angle (%default)')
+parser.add_option('--iangle_value',default=False,action='store_true',help='Output incidence angle value (%default)')
+parser.add_option('--iangle_image',default=False,action='store_true',help='Output incidence angle image (%default)')
 parser.add_option('-S','--std_grid',default=False,action='store_true',help='Use standard grid (%default)')
 parser.add_option('-T','--tiff',default=False,action='store_true',help='GeoTiff mode (%default)')
 (opts,args) = parser.parse_args()
@@ -92,8 +93,10 @@ for year in range(dmin.year,dmax.year+1):
             command += ' --skip_orbit'
         if opts.speckle:
             command += ' --speckle'
-        if opts.iangle:
-            command += ' --iangle'
+        if opts.iangle_value:
+            command += ' --iangle_value'
+        if opts.iangle_image:
+            command += ' --iangle_image'
         if opts.std_grid:
             command += ' --std_grid'
         if opts.tiff:
