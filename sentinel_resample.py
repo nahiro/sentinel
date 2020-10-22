@@ -13,7 +13,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Defaults
 XMIN = 743805.0 # Cihea, pixel center
 XMAX = 757305.0 # Cihea, pixel center
-YMIN = 9235805.0 # Cihea, pixel center
+YMIN = 9235815.0 # Cihea, pixel center
 YMAX = 9251805.0 # Cihea, pixel center
 XSTP = 10.0
 YSTP = -10.0
@@ -43,7 +43,7 @@ if len(args) < 1:
     sys.exit(0)
 fnams = args
 
-xg,yg = np.meshgrid(np.arange(opts.xmin,opts.xmax+0.1*opts.xstp,opts.xstp),np.arange(opts.ymax,opts.ymin-0.1*opts.ystp,opts.ystp))
+xg,yg = np.meshgrid(np.arange(opts.xmin,opts.xmax+0.1*opts.xstp,opts.xstp),np.arange(opts.ymax,opts.ymin+0.1*opts.ystp,opts.ystp))
 ngrd = xg.size
 ny,nx = xg.shape
 
