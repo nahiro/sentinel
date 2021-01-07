@@ -37,6 +37,11 @@ indy,indx = np.indices(data_shape)
 xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
 yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
 ds = None
+xstp = abs(xp[0,1]-xp[0,0])
+ystp = abs(yp[1,0]-yp[0,0])
+xhlf = 0.5*xstp
+yhlf = 0.5*ystp
+rstp = max(xstp,ystp)
 
 r = shapefile.Reader(opts.shp_fnam)
 
@@ -70,7 +75,7 @@ with open(opts.datnam,'w') as fp:
             p1 = Polygon(shp.points).buffer(opts.buffer)
         else:
             p1 = Polygon(shp.points)
-        flags = p.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=-30.0).reshape(data_shape)
+        flags = p.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=-3.0*rstp).reshape(data_shape)
         if opts.debug or opts.check:
             flags_inside = []
             flags_near = []
@@ -82,7 +87,7 @@ with open(opts.datnam,'w') as fp:
             xc = xp[iy,ix]
             yc = yp[iy,ix]
             pc = Point(xc,yc)
-            p2 = Polygon([(xc-5.0,yc-5.0),(xc-5.0,yc+5.0),(xc+5.0,yc+5.0),(xc+5.0,yc-5.0),(xc-5.0,yc-5.0)])
+            p2 = Polygon([(xc-xhlf,yc-yhlf),(xc-xhlf,yc+yhlf),(xc+xhlf,yc+yhlf),(xc+xhlf,yc-yhlf),(xc-xhlf,yc-yhlf)])
             try:
                 p3 = p1.intersection(p2)
             except Exception:
@@ -96,7 +101,7 @@ with open(opts.datnam,'w') as fp:
             if opts.debug or opts.check:
                 flags_inside.append(pc.within(p1))
                 flags_near.append(rat > 1.0e-10)
-                p4 = Path([(xc-5.0,yc-5.0),(xc-5.0,yc+5.0),(xc+5.0,yc+5.0),(xc+5.0,yc-5.0),(xc-5.0,yc-5.0)])
+                p4 = Path([(xc-xhlf,yc-yhlf),(xc-xhlf,yc+yhlf),(xc+xhlf,yc+yhlf),(xc+xhlf,yc-yhlf),(xc-xhlf,yc-yhlf)])
                 p4_paths.append(p4)
         if err:
             continue
@@ -150,8 +155,8 @@ with open(opts.datnam,'w') as fp:
                 xmax = max(xmax,pp[0])
                 ymin = min(ymin,pp[1])
                 ymax = max(ymax,pp[1])
-            ax1.set_xlim(xmin-60.0,xmax+60.0)
-            ax1.set_ylim(ymin-60.0,ymax+60.0)
+            ax1.set_xlim(xmin-6.0*xstp,xmax+6.0*xstp)
+            ax1.set_ylim(ymin-6.0*ystp,ymax+6.0*ystp)
             ax1.ticklabel_format(useOffset=False,style='plain')
             plt.savefig(pdf,format='pdf')
             plt.draw()
