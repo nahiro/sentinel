@@ -16,16 +16,15 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 TMIN = '20190315'
 TMAX = '20190615'
-TMGN = 15.0
-TSTP = 0.1
-TSTR_1 = -20.0
-TEND_1 = 20.0
-TSTR_2 = 20.0
-TEND_2 = 80.0
+TMGN = 30.0 # day
+TSTP = 0.1 # day
+TSTR = -20.0 # day
+TEND = 20.0 # day
 SMOOTH = 0.01
 SEN1_DISTANCE = 10
 SEN1_PROMINENCE = 0.1
-XSGM = 4.0 # day
+VTHR = -13.0 # dB
+XSGM = 6.0 # day
 LSGM = 30.0 # m
 N_NEAREST = 120
 DATDIR = '.'
@@ -41,20 +40,20 @@ parser.add_option('--data_tmin',default=None,help='Min date of input data in the
 parser.add_option('--data_tmax',default=None,help='Max date of input data in the format YYYYMMDD (%default)')
 parser.add_option('--tmgn',default=TMGN,type='float',help='Margin of input data in day (%default)')
 parser.add_option('--tstp',default=TSTP,type='float',help='Precision of transplanting date in day (%default)')
-parser.add_option('--tstr_1',default=TSTR_1,type='float',help='Start day of transplanting period seen from the min. peak (%default)')
-parser.add_option('--tend_1',default=TEND_1,type='float',help='End day of transplanting period seen from the min. peak (%default)')
-parser.add_option('--tstr_2',default=TSTR_2,type='float',help='Start day of heading period seen from the min. peak (%default)')
-parser.add_option('--tend_2',default=TEND_2,type='float',help='End day of heading period seen from the min. peak (%default)')
+parser.add_option('--tstr',default=TSTR,type='float',help='Start day of transplanting period seen from the min. peak (%default)')
+parser.add_option('--tend',default=TEND,type='float',help='End day of transplanting period seen from the min. peak (%default)')
 parser.add_option('-I','--incidence_angle',default=INCIDENCE_ANGLE,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
 parser.add_option('-l','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
 parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minimum peak distance in day for Sentinel-1 (%default)')
 parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help='Minimum prominence in dB for Sentinel-1 (%default)')
+parser.add_option('-v','--vthr',default=VTHR,type='float',help='Threshold (max value) of minimum VH in dB (%default)')
 parser.add_option('-w','--xsgm',default=XSGM,type='float',help='Standard deviation of gaussian in day (%default)')
 parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviation of gaussian in m (%default)')
 parser.add_option('--n_nearest',default=N_NEAREST,type='int',help='Number of nearest pixels to be considered (%default)')
 parser.add_option('--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
 parser.add_option('--near_fnam',default=NEAR_FNAM,help='Nearby index file name (%default)')
+parser.add_option('--mask_fnam',default=None,help='Mask file name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory, not used if input_fnam is given (%default)')
 parser.add_option('--search_key',default=None,help='Search key for input data, not used if input_fnam is given (%default)')
@@ -67,11 +66,11 @@ nmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
 if opts.data_tmin is not None:
     dmin = datetime.strptime(opts.data_tmin,'%Y%m%d')
 else:
-    dmin = num2date(nmin+opts.tstr_1-opts.tmgn).replace(tzinfo=None)
+    dmin = num2date(nmin+opts.tstr-opts.tmgn).replace(tzinfo=None)
 if opts.data_tmax is not None:
     dmax = datetime.strptime(opts.data_tmax,'%Y%m%d')
 else:
-    dmax = num2date(nmax+opts.tend_2+opts.tmgn).replace(tzinfo=None)
+    dmax = num2date(nmax+opts.tend+opts.tmgn).replace(tzinfo=None)
 
 # read nearby indices
 data = np.load(opts.near_fnam)
@@ -151,6 +150,13 @@ nx = data_shape[1]
 ny = data_shape[0]
 ngrd = nx*ny
 
+if opts.mask_fnam is not None:
+    ds = gdal.Open(opts.mask_fnam)
+    mask = (ds.ReadAsArray() != 1)
+    ds = None
+    if mask.shape != data_shape:
+        raise ValueError('Error, mask.shape={}, data_shape={}'.format(mask.shape,data_shape))
+
 if opts.incidence_list is not None:
     incidence_flag = []
     incidence_angle = []
@@ -223,31 +229,42 @@ for i,band in enumerate(band_list):
     if opts.incidence_list is not None:
         if not incidence_select[incidence_indx[dstr]]:
             continue
-        vh_data.append(data[i]+signal_dif[incidence_indx[dstr]])
+        dtmp = data[i]+signal_dif[incidence_indx[dstr]]
     else:
-        vh_data.append(data[i])
+        dtmp = data[i]
+    if opts.mask_fnam is not None:
+        dtmp[mask] = np.nan
+    vh_data.append(dtmp)
     vh_dtim.append(datetime.strptime(dstr,'%Y%m%d'))
 vh_dtim = np.array(vh_dtim)
 vh_data = np.array(vh_data)
 vh_ntim = date2num(vh_dtim)
 
-k1_offset = int(opts.tstr_1/opts.tstp+(-0.1 if opts.tstr_1 < 0.0 else 0.1))
-k2_offset = int(opts.tend_1/opts.tstp+(-0.1 if opts.tend_1 < 0.0 else 0.1))+1
-k3_offset = int(opts.tstr_2/opts.tstp+(-0.1 if opts.tstr_2 < 0.0 else 0.1))
-k4_offset = int(opts.tend_2/opts.tstp+(-0.1 if opts.tend_2 < 0.0 else 0.1))+1
-xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+1.0,opts.tstp)
+k1_offset = int(opts.tstr/opts.tstp+(-0.1 if opts.tstr < 0.0 else 0.1))
+k2_offset = int(opts.tend/opts.tstp+(-0.1 if opts.tend < 0.0 else 0.1))+1
+xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+0.1*opts.tstp,opts.tstp)
+cnd = (xx >= nmin) & (xx <= nmax)
+xc_indx = np.where(cnd)[0]
+if xc_indx.size < 3:
+    raise ValueError('Error, not enough data, xc_indx.size={}'.format(xc_indx.size))
+xc_indx0 = xc_indx[0]
+xc_indx1 = xc_indx[1]
+xc_indx_1 = xc_indx[-1]
+xc_indx_2 = xc_indx[-2]
 xpek_sid = [[] for i in range(ngrd)]
 ypek_sid = [[] for i in range(ngrd)]
+
 for i in range(ny):
-#for i in range(810,871):
     if i%100 == 0:
         sys.stderr.write('{}\n'.format(i))
     for j in range(nx):
-#    for j in range(810,841):
         yi = vh_data[:,i,j] # VH
         sp = UnivariateCubicSmoothingSpline(vh_ntim,yi,smooth=opts.smooth)
         yy = sp(xx)
         min_peaks,properties = find_peaks(-yy,distance=opts.sen1_distance,prominence=opts.sen1_prominence)
+        #if not xc_indx_1 in min_peaks:
+        #    if (yy[xc_indx_1] < opts.vthr) & (yy[xc_indx_1] < yy[xc_indx_2]):
+        #        min_peaks = np.append(min_peaks,xc_indx_1)
         if len(min_peaks) > 0:
             sid = np.ravel_multi_index((i,j),data_shape)
             for k in min_peaks:
@@ -256,12 +273,9 @@ for i in range(ny):
                 k1 = max(k+k1_offset,0)
                 k2 = min(k+k2_offset,xx.size)
                 vmin = yy[k1:k2].mean()
-                k3 = min(k+k3_offset,xx.size-1)
-                k4 = min(k+k4_offset,xx.size)
-                vmax = yy[k3:k4].mean()
-                if vmax > vmin:
+                if vmin < opts.vthr:
                     xpek_sid[sid].append(xx[k])
-                    ypek_sid[sid].append(vmax-vmin)
+                    ypek_sid[sid].append(opts.vthr-vmin)
 for i in range(ngrd):
     xpek_sid[i] = np.array(xpek_sid[i])
     ypek_sid[i] = np.array(ypek_sid[i])
@@ -271,6 +285,7 @@ output_data = np.full((nb,ny,nx),np.nan)
 for i in range(ngrd):
     if i != sid_0[i]:
         raise ValueError('Error, i={}, sid_0={}'.format(i,sid_0[i]))
+    indy,indx = np.unravel_index(i,data_shape)
     indx = []
     lengs = []
     for nn in range(1,opts.n_nearest+1):
