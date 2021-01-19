@@ -62,6 +62,7 @@ parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory, not
 parser.add_option('--search_key',default=None,help='Search key for input data, not used if input_fnam is given (%default)')
 parser.add_option('-i','--inp_fnam',default=None,help='Input GeoTIFF name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output GeoTIFF name (%default)')
+parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 (opts,args) = parser.parse_args()
 
 nmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
@@ -287,13 +288,12 @@ for i in range(opts.ymin,opts.ymax):
         yi = vh_data[:,i,j] # VH
         yy = csaps(vh_ntim,yi,xx,smooth=opts.smooth)
         min_peaks,properties = find_peaks(-yy,distance=opts.sen1_distance,prominence=opts.sen1_prominence)
-        #if not xc_indx_1 in min_peaks:
-        #    if (yy[xc_indx_1] < opts.vthr) & (yy[xc_indx_1] < yy[xc_indx_2]):
-        #        min_peaks = np.append(min_peaks,xc_indx_1)
+        if opts.early:
+            if not xc_indx_1 in min_peaks:
+                if (yy[xc_indx_1] < opts.vthr) & (yy[xc_indx_1] < yy[xc_indx_2]):
+                    min_peaks = np.append(min_peaks,xc_indx_1)
         if len(min_peaks) > 0:
             sid = np.ravel_multi_index((i,j),data_shape)
-
-
             for k in min_peaks:
                 if xx[k] < nmin or xx[k] > nmax:
                     continue
