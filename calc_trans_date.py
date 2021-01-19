@@ -8,7 +8,7 @@ import gdal
 import osr
 import numpy as np
 from matplotlib.dates import date2num,num2date
-from csaps import UnivariateCubicSmoothingSpline
+from csaps import csaps
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 from optparse import OptionParser,IndentedHelpFormatter
@@ -28,7 +28,6 @@ XSGM = 6.0 # day
 LSGM = 30.0 # m
 N_NEAREST = 120
 DATDIR = '.'
-INCIDENCE_ANGLE = 'incidence_angle.dat'
 NEAR_FNAM = 'find_nearest.npz'
 OUT_FNAM = 'output.tif'
 
@@ -42,7 +41,11 @@ parser.add_option('--tmgn',default=TMGN,type='float',help='Margin of input data 
 parser.add_option('--tstp',default=TSTP,type='float',help='Precision of transplanting date in day (%default)')
 parser.add_option('--tstr',default=TSTR,type='float',help='Start day of transplanting period seen from the min. peak (%default)')
 parser.add_option('--tend',default=TEND,type='float',help='End day of transplanting period seen from the min. peak (%default)')
-parser.add_option('-I','--incidence_angle',default=INCIDENCE_ANGLE,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
+parser.add_option('-x','--xmin',default=None,type='int',help='Min X index (inclusive, %default)')
+parser.add_option('-X','--xmax',default=None,type='int',help='Max X index (exclusive, %default)')
+parser.add_option('-y','--ymin',default=None,type='int',help='Min Y index (inclusive, %default)')
+parser.add_option('-Y','--ymax',default=None,type='int',help='Max Y index (exclusive, %default)')
+parser.add_option('-I','--incidence_angle',default=None,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
 parser.add_option('-l','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
 parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minimum peak distance in day for Sentinel-1 (%default)')
@@ -103,6 +106,7 @@ else:
     data_shape = None
     data_trans = None
     data = []
+    iangle = {}
     band_list = []
     fs = sorted(glob(os.path.join(opts.datdir,'*'+'[0-9]'*8+'*.tif')))
     for fnam in fs:
@@ -130,6 +134,9 @@ else:
                 output_epsg = int(epsg)
             else:
                 output_epsg = opts.output_epsg
+        meta = ds.GetMetadata()
+        if 'iangle' in meta:
+            iangle.update({dstr:float(meta['iangle'])})
         dtmp = ds.ReadAsArray()
         if data_shape is None:
             data_shape = dtmp[0].shape
@@ -203,19 +210,28 @@ if opts.incidence_list is not None:
         else:
             signal_dif.append(signal_avg[baseline_indx]-signal_avg[i])
     incidence_indx = {}
-    with open(opts.incidence_angle,'r') as fp:
-        for line in fp:
-            item = line.split()
-            if len(item) < 2:
-                continue
-            if item[0][0] == '#':
-                continue
-            ang = float(item[1])
+    if opts.incidence_angle is not None:
+        with open(opts.incidence_angle,'r') as fp:
+            for line in fp:
+                item = line.split()
+                if len(item) < 2:
+                    continue
+                if item[0][0] == '#':
+                    continue
+                ang = float(item[1])
+                dif = np.abs(incidence_angle-ang)
+                indx = np.argmin(dif)
+                if dif[indx] > 0.1:
+                    raise ValueError('Error, dif={} ()'.format(dif[indx],item[0]))
+                incidence_indx.update({item[0]:indx})
+    else:
+        for dstr in iangle:
+            ang = iangle[dstr]
             dif = np.abs(incidence_angle-ang)
             indx = np.argmin(dif)
             if dif[indx] > 0.1:
-                raise ValueError('Error, dif={}'.format(dif[indx]))
-            incidence_indx.update({item[0]:indx})
+                raise ValueError('Error, dif={} ({})'.format(dif[indx],dstr))
+            incidence_indx.update({dstr:indx})
 
 vh_dtim = []
 vh_data = []
@@ -227,7 +243,9 @@ for i,band in enumerate(band_list):
         raise ValueError('Error in finding date >>> '+band)
     dstr = m.group(1)
     if opts.incidence_list is not None:
-        if not incidence_select[incidence_indx[dstr]]:
+        if not dstr in incidence_indx:
+            raise ValueError('Error, no incidence angle for '+dstr)
+        elif not incidence_select[incidence_indx[dstr]]:
             continue
         dtmp = data[i]+signal_dif[incidence_indx[dstr]]
     else:
@@ -254,13 +272,20 @@ xc_indx_2 = xc_indx[-2]
 xpek_sid = [[] for i in range(ngrd)]
 ypek_sid = [[] for i in range(ngrd)]
 
-for i in range(ny):
+if opts.xmin is None:
+    opts.xmin = 0
+if opts.xmax is None:
+    opts.xmax = nx
+if opts.ymin is None:
+    opts.ymin = 0
+if opts.ymax is None:
+    opts.ymax = ny
+for i in range(opts.ymin,opts.ymax):
     if i%100 == 0:
         sys.stderr.write('{}\n'.format(i))
-    for j in range(nx):
+    for j in range(opts.xmin,opts.xmax):
         yi = vh_data[:,i,j] # VH
-        sp = UnivariateCubicSmoothingSpline(vh_ntim,yi,smooth=opts.smooth)
-        yy = sp(xx)
+        yy = csaps(vh_ntim,yi,xx,smooth=opts.smooth)
         min_peaks,properties = find_peaks(-yy,distance=opts.sen1_distance,prominence=opts.sen1_prominence)
         #if not xc_indx_1 in min_peaks:
         #    if (yy[xc_indx_1] < opts.vthr) & (yy[xc_indx_1] < yy[xc_indx_2]):
@@ -286,24 +311,27 @@ for i in range(ngrd):
     if i != sid_0[i]:
         raise ValueError('Error, i={}, sid_0={}'.format(i,sid_0[i]))
     indy,indx = np.unravel_index(i,data_shape)
-    indx = []
+    if indy < opts.ymin or indy >= opts.ymax:
+        continue
+    if indx < opts.xmin or indx >= opts.xmax:
+        continue
+    inds = []
     lengs = []
     for nn in range(1,opts.n_nearest+1):
-        exec('indx.append(sid_{}[i])'.format(nn))
+        exec('inds.append(sid_{}[i])'.format(nn))
         exec('lengs.append(leng_{}[i])'.format(nn))
-    indx = np.array(indx)
+    inds = np.array(inds)
     lengs = np.array(lengs)
     yy = np.zeros_like(xx)
     for xi,yi in zip(xpek_sid[i],ypek_sid[i]):
         ytmp = yi*np.exp(-0.5*np.square((xx-xi)/opts.xsgm))
         yy += ytmp
-    for j,leng in zip(indx,lengs):
+    for j,leng in zip(inds,lengs):
         fact = np.exp(-0.5*np.square(leng/opts.lsgm))
         for xj,yj in zip(xpek_sid[j],ypek_sid[j]):
             ytmp = yj*fact*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
             yy += ytmp
     k = np.argmax(yy)
-    indy,indx = np.unravel_index(i,data_shape)
     if xx[k] < nmin or xx[k] > nmax:
         continue
     output_data[0,indy,indx] = xx[k]
