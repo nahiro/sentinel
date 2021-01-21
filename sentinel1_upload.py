@@ -3,7 +3,6 @@ import os
 import sys
 import re
 from datetime import datetime
-import numpy as np
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from optparse import OptionParser,IndentedHelpFormatter
