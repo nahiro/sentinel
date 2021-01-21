@@ -13,11 +13,6 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog list_of_input_file [options]')
-parser.add_option('-b','--output_band',default=None,action='append',help='Output band name (%default)')
-parser.add_option('--output_bmin',default=None,type='int',help='Minimum output band index (%default)')
-parser.add_option('--output_bmax',default=None,type='int',help='Maximum output band index (%default)')
-parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
-parser.add_option('-e','--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -49,11 +44,6 @@ l = drive.ListFile({'q': '"{}" in parents and mimeType = "application/vnd.google
 if len(l) != 1:
     raise ValueError('Error in finding Cihea folder')
 folder_cihea = l[0]
-
-#file1 = drive.CreateFile({'title': 'Hello.txt'})
-#file1.SetContentString('Hello')
-#file1.Upload() # Files.insert()
-
 
 for input_fnam in fnams:
     # S1A_IW_GRDH_1SDV_20200102T111446_20200102T111515_030620_038227_6964.zip
@@ -88,9 +78,13 @@ for input_fnam in fnams:
     flag = True
     for f in l:
         if f['title'].upper() == unam:
-            sys.stderr.write('File exists, skip     >>> '+f['title']+'\n')
-            flag = False # no need to upload
-            break
+            if opts.overwrite:
+                sys.stderr.write('File exists, delete   >>> '+f['title']+'\n')
+                f.Delete()
+            else:
+                sys.stderr.write('File exists, skip     >>> '+f['title']+'\n')
+                flag = False # no need to upload
+                break
         else:
             sys.stderr.write('Warning, different file for the same date >>> '+f['title']+'\n')
     if flag: # upload file
