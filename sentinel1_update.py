@@ -79,7 +79,7 @@ for site,start in zip(opts.sites,dmaxs):
     command += ' -s '+start
     command += ' -e '+opts.end
     command += ' -d'
-    print(command)
+    sys.stderr.write(command+'\n')
     call(command,shell=True)
     os.chdir(topdir)
     for f in sorted(os.listdir(datdir)):
@@ -102,8 +102,9 @@ for site,start in zip(opts.sites,dmaxs):
 # Upload data
 if not opts.skip_upload:
     os.chdir(opts.drvdir)
-    command = 'python'
-    command += ' '+os.path.join(opts.scrdir,'sentinel1_upload.py')
-    comamnd += ' '+','.join(gnams)
-    call(command,shell=True)
+    for gnam in gnams:
+        command = 'python'
+        command += ' '+os.path.join(opts.scrdir,'sentinel1_upload.py')
+        comamnd += ' '+gnams
+        call(command,shell=True)
     os.chdir(topdir)
