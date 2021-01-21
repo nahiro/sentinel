@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
+import re
 from datetime import datetime,timedelta
 from dateutil.relativedelta import relativedelta
 from subprocess import call
@@ -28,41 +29,54 @@ parser.add_option('-S','--sites',default=None,action='append',help='Target sites
 parser.add_option('--test',default=False,action='store_true',help='Test mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
-if opts.str is None:
-    opts.str = opts.end
 if opts.sites is None:
     opts.sites = SITES
 
-d1 = datetime.strptime(opts.str,'%Y%m%d')
-d2 = datetime.strptime(opts.end,'%Y%m%d')
-d3 = d2+relativedelta(months=1)
-if (d2+timedelta(days=1)).month != d3.month: # not the end of month
-    d2 = datetime(d2.year,d2.month,1)-timedelta(days=1)
-if d1 > d2:
-    d1 = d2
+dtims = {}
+for site in opts.sites:
+    dtim_list = []
+    for f in sorted(os.listdir(os.path.join(opts.datdir,site,'sigma0_speckle'))):
+        m = re.search('('+'\d'*8+')_resample.tif',f)
+        if not m:
+            continue
+        dtim_list.append(datetime.strptime(m.group(1),'%Y%m%d'))
+    dtims.update({site:dtim_list})
 
 topdir = os.getcwd()
 for site in opts.sites:
-    d = d1
-    while d <= d2:
+    d3 = datetime.strptime(opts.end,'%Y%m%d')
+    for d2 in dtims[site][::-1]:
+        if d2 < d3:
+            break
+    if opts.str is None:
+        d1 = d2
+    else:
+        d3 = datetime.strptime(opts.str,'%Y%m%d')
+        for d1 in dtims[site][::-1]:
+            if d1 > d3:
+                break
+    for d in dtims[site]:
+        if d < d1:
+            continue
+        if d > d2:
+            break
         dstr = d.strftime('%Y%m%d')
-        t1 = datetime(d.year,d.month,1) # the first day of the month
-        tmin = (t1-relativedelta(months=3)).strftime('%Y%m%d')
-        tmax = (t1-timedelta(days=1)).strftime('%Y%m%d')
-        data_tmin = (t1-relativedelta(months=5)).strftime('%Y%m%d')
+        tmin = (d-timedelta(days=90)).strftime('%Y%m%d')
+        tmax = dstr
+        data_tmin = (d-timedelta(days=150)).strftime('%Y%m%d')
         data_tmax = dstr
         #sys.stderr.write(dstr+'\n')
-        wrkdir = os.path.join(opts.wrkdir,site,'final',dstr)
+        wrkdir = os.path.join(opts.wrkdir,site,'preliminary',dstr)
         if not os.path.exists(wrkdir):
             os.makedirs(wrkdir)
         if not os.path.isdir(wrkdir):
             raise IOError('Error, no such directory >>> '+wrkdir)
         os.chdir(wrkdir)
-        tif_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.tif'.format(site,dstr))
-        shp_bnam = os.path.join(wrkdir,'trans_date_{}_{}_final'.format(site,dstr))
+        tif_fnam = os.path.join(wrkdir,'trans_date_{}_{}_preliminary.tif'.format(site,dstr))
+        shp_bnam = os.path.join(wrkdir,'trans_date_{}_{}_preliminary'.format(site,dstr))
         shp_fnam = shp_bnam+'.shp'
-        trans_pixel_image = os.path.join(wrkdir,'trans_pixel_{}_{}_final.pdf'.format(site,dstr))
-        trans_field_image = os.path.join(wrkdir,'trans_field_{}_{}_final.pdf'.format(site,dstr))
+        trans_pixel_image = os.path.join(wrkdir,'trans_pixel_{}_{}_preliminary.pdf'.format(site,dstr))
+        trans_field_image = os.path.join(wrkdir,'trans_field_{}_{}_preliminary.pdf'.format(site,dstr))
         file_list = []
         try:
             command = 'python'
@@ -77,9 +91,10 @@ for site in opts.sites:
             command += ' --near_fnam '+os.path.join(opts.wrkdir,site,'find_nearest.npz')
             command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
             command += ' --out_fnam '+tif_fnam
+            command += ' --early'
             command += ' 2>'+os.path.join(wrkdir,'err')
             sys.stderr.write(command+'\n')
-            #call(command,shell=True)
+            call(command,shell=True)
             if os.path.exists(tif_fnam):
                 file_list.append(tif_fnam)
                 command = 'python'
