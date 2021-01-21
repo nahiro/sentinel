@@ -67,7 +67,7 @@ for site in opts.sites:
         try:
             command = 'python'
             command += ' '+os.path.join(opts.scrdir,'calc_trans_date.py')
-            command += ' -x 600 -X 900 -y 680 -Y 1030'
+            #command += ' -x 600 -X 900 -y 680 -Y 1030'
             command += ' --tmin '+tmin
             command += ' --tmax '+tmax
             command += ' --data_tmin '+data_tmin
@@ -79,7 +79,7 @@ for site in opts.sites:
             command += ' --out_fnam '+tif_fnam
             command += ' 2>'+os.path.join(wrkdir,'err')
             sys.stderr.write(command+'\n')
-            #call(command,shell=True)
+            call(command,shell=True)
             if os.path.exists(tif_fnam):
                 file_list.append(tif_fnam)
                 command = 'python'
@@ -129,6 +129,7 @@ for site in opts.sites:
                     command += ' --level test'
                 else:
                     command += ' --level final'
+                command += ' --overwrite'
                 command += ' '+' '.join(file_list)
                 call(command,shell=True)
         except Exception:

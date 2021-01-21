@@ -81,7 +81,7 @@ for site in opts.sites:
         try:
             command = 'python'
             command += ' '+os.path.join(opts.scrdir,'calc_trans_date.py')
-            command += ' -x 600 -X 900 -y 680 -Y 1030'
+            #command += ' -x 600 -X 900 -y 680 -Y 1030'
             command += ' --tmin '+tmin
             command += ' --tmax '+tmax
             command += ' --data_tmin '+data_tmin
@@ -143,7 +143,8 @@ for site in opts.sites:
                 if opts.test:
                     command += ' --level test'
                 else:
-                    command += ' --level final'
+                    command += ' --level preliminary'
+                command += ' --overwrite'
                 command += ' '+' '.join(file_list)
                 call(command,shell=True)
         except Exception:
