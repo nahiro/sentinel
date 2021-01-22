@@ -26,6 +26,7 @@ SEN1_PROMINENCE = 0.1
 VTHR = -13.0 # dB
 XSGM = 6.0 # day
 LSGM = 30.0 # m
+OFFSET = 0.0 # day
 N_NEAREST = 120
 DATDIR = '.'
 NEAR_FNAM = 'find_nearest.npz'
@@ -53,6 +54,7 @@ parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help=
 parser.add_option('-v','--vthr',default=VTHR,type='float',help='Threshold (max value) of minimum VH in dB (%default)')
 parser.add_option('-w','--xsgm',default=XSGM,type='float',help='Standard deviation of gaussian in day (%default)')
 parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviation of gaussian in m (%default)')
+parser.add_option('--offset',default=OFFSET,type='float',help='Offset of transplanting date in day (%default)')
 parser.add_option('--n_nearest',default=N_NEAREST,type='int',help='Number of nearest pixels to be considered (%default)')
 parser.add_option('--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
 parser.add_option('--near_fnam',default=NEAR_FNAM,help='Nearby index file name (%default)')
@@ -339,7 +341,7 @@ for i in range(ngrd):
     k = np.argmax(yy)
     if xx[k] < nmin or xx[k] > nmax:
         continue
-    output_data[0,indy,indx] = xx[k]
+    output_data[0,indy,indx] = xx[k]+opts.offset
     output_data[1,indy,indx] = yy[k]
 if opts.npy_fnam is not None:
     np.save(opts.npy_fnam,output_data)
@@ -350,6 +352,7 @@ ds.SetGeoTransform(data_trans)
 srs = osr.SpatialReference()
 srs.ImportFromEPSG(output_epsg)
 ds.SetProjection(srs.ExportToWkt())
+ds.SetMetadata({'offset':'{:.4f}'.format(opts.offset)})
 band_name = ['xpek','ypek']
 for i in range(nb):
     band = ds.GetRasterBand(i+1)

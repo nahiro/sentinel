@@ -93,7 +93,7 @@ data_shape = data[0].shape
 if data_shape != xg.shape:
     raise ValueError('Error, data_shape={}, xg.shape={}'.format(data_shape,xg.shape))
 data[:,mask==0] = np.nan
-data[0] -= 9.0 # offset corrected
+#data[0] -= 9.0 # offset corrected
 #data[0] += date2num(np.datetime64('0000-12-31')) # Matplotlib>3.3
 
 sys.stderr.write('tmin: {}\n'.format(num2date(np.nanmin(data[0])).strftime('%Y%m%d')))

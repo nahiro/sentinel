@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
+import re
 from datetime import datetime,timedelta
 from dateutil.relativedelta import relativedelta
 from subprocess import call
@@ -15,6 +16,7 @@ DATDIR = os.path.join(HOME,'Work','Sentinel-1')
 WRKDIR = os.path.join(HOME,'Work','SATREPS','Transplanting_date')
 END = datetime.now().strftime('%Y%m%d')
 SITES = ['Cihea','Bojongsoang']
+OFFSETS = ['Cihea:-9.0','Bojongsoang:0.0']
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -25,6 +27,7 @@ parser.add_option('--wrkdir',default=WRKDIR,help='Work directory (%default)')
 parser.add_option('-s','--str',default=None,help='Start date of download in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=END,help='End date of download in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
+parser.add_option('--offsets',default=None,action='append',help='Offset of transplanting date, for example, Cihea:-9.0 ({})'.format(OFFSETS))
 parser.add_option('--test',default=False,action='store_true',help='Test mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
@@ -32,6 +35,14 @@ if opts.str is None:
     opts.str = opts.end
 if opts.sites is None:
     opts.sites = SITES
+if opts.offsets is None:
+    opts.offsets = OFFSETS
+offset = {}
+for s in opts.offsets:
+    m = re.search('([^:]+):([^:]+)',s)
+    if not m:
+        raise ValueError('Error in offset >>> '+s)
+    offset.update({m.group(1):float(m.group(2))})
 
 d1 = datetime.strptime(opts.str,'%Y%m%d')
 d2 = datetime.strptime(opts.end,'%Y%m%d')
@@ -72,6 +83,7 @@ for site in opts.sites:
             command += ' --tmax '+tmax
             command += ' --data_tmin '+data_tmin
             command += ' --data_tmax '+data_tmax
+            command += ' --offset {:.4f}'.format(offset[site])
             command += ' -D '+os.path.join(opts.datdir,site,'sigma0_speckle')
             command += ' --search_key resample'
             command += ' --near_fnam '+os.path.join(opts.wrkdir,site,'find_nearest.npz')

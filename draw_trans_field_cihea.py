@@ -169,7 +169,7 @@ plt.subplots_adjust(top=0.93,bottom=0.03,left=0.015,right=0.95,wspace=0.08,hspac
 ax1 = plt.subplot(121,projection=prj)
 ax2 = plt.subplot(122,projection=prj)
 for shp,rec in zip(shapes,records):
-    t = rec.attributes['trans_date']-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
+    t = rec.attributes['trans_date']#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
     p = rec.attributes['peak_value']
     s = rec.attributes['TANAM']
     d = t-s
