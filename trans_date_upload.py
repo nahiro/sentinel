@@ -86,7 +86,7 @@ for input_fnam in fnams:
                 flag = False # no need to upload
                 break
         else:
-            sys.stderr.write('Warning, different file for the same date >>> '+f['title']+'\n')
+            sys.stderr.write('Warning, different file for the same title >>> '+f['title']+'\n')
     if flag: # upload file
         f = drive.CreateFile({'parents':[{'id':folder_year['id']}]})
         f.SetContentFile(input_fnam)
