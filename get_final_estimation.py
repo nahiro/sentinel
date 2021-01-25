@@ -69,6 +69,7 @@ for site in opts.sites:
         if not os.path.isdir(wrkdir):
             raise IOError('Error, no such directory >>> '+wrkdir)
         os.chdir(wrkdir)
+        jsn_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.json'.format(site,dstr))
         tif_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.tif'.format(site,dstr))
         shp_bnam = os.path.join(wrkdir,'trans_date_{}_{}_final'.format(site,dstr))
         shp_fnam = shp_bnam+'.shp'
@@ -84,15 +85,17 @@ for site in opts.sites:
             command += ' --data_tmin '+data_tmin
             command += ' --data_tmax '+data_tmax
             command += ' --offset {:.4f}'.format(offset[site])
-            command += ' -D '+os.path.join(opts.datdir,site,'sigma0_speckle')
+            command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
+            command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0_speckle')
             command += ' --search_key resample'
             command += ' --near_fnam '+os.path.join(opts.wrkdir,site,'find_nearest.npz')
-            command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
+            command += ' --json_fnam '+jsn_fnam
             command += ' --out_fnam '+tif_fnam
             command += ' 2>'+os.path.join(wrkdir,'err')
             sys.stderr.write(command+'\n')
             call(command,shell=True)
             if os.path.exists(tif_fnam):
+                file_list.append(jsn_fnam)
                 file_list.append(tif_fnam)
                 command = 'python'
                 command += ' '+os.path.join(opts.scrdir,'field_mean_shapefile.py')

@@ -6,6 +6,8 @@ from glob import glob
 from datetime import datetime
 import gdal
 import osr
+import json
+from collections import OrderedDict
 import numpy as np
 from matplotlib.dates import date2num,num2date
 from csaps import csaps
@@ -26,10 +28,11 @@ SEN1_PROMINENCE = 0.1
 VTHR = -13.0 # dB
 XSGM = 6.0 # day
 LSGM = 30.0 # m
+N_NEAREST = 120 # pixel
 OFFSET = 0.0 # day
-N_NEAREST = 120
 DATDIR = '.'
 NEAR_FNAM = 'find_nearest.npz'
+JSON_FNAM = 'output.json'
 OUT_FNAM = 'output.tif'
 
 # Read options
@@ -46,26 +49,54 @@ parser.add_option('-x','--xmin',default=None,type='int',help='Min X index (inclu
 parser.add_option('-X','--xmax',default=None,type='int',help='Max X index (exclusive, %default)')
 parser.add_option('-y','--ymin',default=None,type='int',help='Min Y index (inclusive, %default)')
 parser.add_option('-Y','--ymax',default=None,type='int',help='Max Y index (exclusive, %default)')
-parser.add_option('-I','--incidence_angle',default=None,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
-parser.add_option('-l','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
 parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minimum peak distance in day for Sentinel-1 (%default)')
 parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help='Minimum prominence in dB for Sentinel-1 (%default)')
 parser.add_option('-v','--vthr',default=VTHR,type='float',help='Threshold (max value) of minimum VH in dB (%default)')
 parser.add_option('-w','--xsgm',default=XSGM,type='float',help='Standard deviation of gaussian in day (%default)')
 parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviation of gaussian in m (%default)')
-parser.add_option('--offset',default=OFFSET,type='float',help='Offset of transplanting date in day (%default)')
 parser.add_option('--n_nearest',default=N_NEAREST,type='int',help='Number of nearest pixels to be considered (%default)')
+parser.add_option('--offset',default=OFFSET,type='float',help='Offset of transplanting date in day (%default)')
 parser.add_option('--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
-parser.add_option('--near_fnam',default=NEAR_FNAM,help='Nearby index file name (%default)')
-parser.add_option('--mask_fnam',default=None,help='Mask file name (%default)')
-parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
+parser.add_option('-I','--incidence_angle',default=None,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
+parser.add_option('-l','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory, not used if input_fnam is given (%default)')
 parser.add_option('--search_key',default=None,help='Search key for input data, not used if input_fnam is given (%default)')
+parser.add_option('--near_fnam',default=NEAR_FNAM,help='Nearby index file name (%default)')
+parser.add_option('--mask_fnam',default=None,help='Mask file name (%default)')
 parser.add_option('-i','--inp_fnam',default=None,help='Input GeoTIFF name (%default)')
+parser.add_option('-j','--json_fnam',default=JSON_FNAM,help='Output JSON name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output GeoTIFF name (%default)')
+parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
 parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 (opts,args) = parser.parse_args()
+
+data_info = OrderedDict()
+data_info['tmin'] = opts.tmin
+data_info['tmax'] = opts.tmax
+data_info['data_tmin'] = opts.data_tmin
+data_info['data_tmax'] = opts.data_tmax
+data_info['tmgn'] = opts.tmgn
+data_info['tstp'] = opts.tstp
+data_info['tstr'] = opts.tstr
+data_info['tend'] = opts.tend
+data_info['xmin'] = opts.xmin
+data_info['xmax'] = opts.xmax
+data_info['ymin'] = opts.ymin
+data_info['ymax'] = opts.ymax
+data_info['smooth'] = opts.smooth
+data_info['sen1_distance'] = opts.sen1_distance
+data_info['sen1_prominence'] = opts.sen1_prominence
+data_info['vthr'] = opts.vthr
+data_info['xsgm'] = opts.xsgm
+data_info['lsgm'] = opts.lsgm
+data_info['n_nearest'] = opts.n_nearest
+data_info['offset'] = opts.offset
+data_info['early'] = opts.early
+data_info['incidence_angle'] = opts.incidence_angle if opts.incidence_angle is None else os.path.basename(opts.incidence_angle)
+data_info['incidence_list'] = opts.incidence_list if opts.incidence_list is None else os.path.basename(opts.incidence_list)
+data_info['near_fnam'] = opts.near_fnam if opts.near_fnam is None else os.path.basename(opts.near_fnam)
+data_info['mask_fnam'] = opts.mask_fnam if opts.mask_fnam is None else os.path.basename(opts.mask_fnam)
 
 nmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 nmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
@@ -260,6 +291,9 @@ for i,band in enumerate(band_list):
 vh_dtim = np.array(vh_dtim)
 vh_data = np.array(vh_data)
 vh_ntim = date2num(vh_dtim)
+data_info['dtim'] = ','.join([d.strftime('%Y%m%d') for d in vh_dtim])
+with open(opts.json_fnam,'w') as json_file:
+    json.dump(data_info,json_file,indent=4)
 
 k1_offset = int(opts.tstr/opts.tstp+(-0.1 if opts.tstr < 0.0 else 0.1))
 k2_offset = int(opts.tend/opts.tstp+(-0.1 if opts.tend < 0.0 else 0.1))+1
