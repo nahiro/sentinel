@@ -294,6 +294,7 @@ vh_ntim = date2num(vh_dtim)
 data_info['dtim'] = ','.join([d.strftime('%Y%m%d') for d in vh_dtim])
 with open(opts.json_fnam,'w') as json_file:
     json.dump(data_info,json_file,indent=4)
+    json_file.write('\n') # Add newline cause PyJSON does not
 
 k1_offset = int(opts.tstr/opts.tstp+(-0.1 if opts.tstr < 0.0 else 0.1))
 k2_offset = int(opts.tend/opts.tstp+(-0.1 if opts.tend < 0.0 else 0.1))+1
