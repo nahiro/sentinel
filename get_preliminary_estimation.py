@@ -62,7 +62,7 @@ for site in opts.sites:
         d1 = d2
     else:
         d3 = datetime.strptime(opts.str,'%Y%m%d')
-        for d1 in dtims[site][::-1]:
+        for d1 in dtims[site]:
             if d1 > d3:
                 break
     for d in dtims[site]:

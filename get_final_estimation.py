@@ -46,6 +46,9 @@ for s in opts.offsets:
 
 d1 = datetime.strptime(opts.str,'%Y%m%d')
 d2 = datetime.strptime(opts.end,'%Y%m%d')
+d3 = d1+relativedelta(months=1)
+if (d1+timedelta(days=1)).month != d3.month: # not the end of month
+    d1 = datetime(d3.year,d3.month,1)-timedelta(days=1)
 d3 = d2+relativedelta(months=1)
 if (d2+timedelta(days=1)).month != d3.month: # not the end of month
     d2 = datetime(d2.year,d2.month,1)-timedelta(days=1)
