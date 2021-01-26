@@ -14,6 +14,7 @@ import cartopy.feature as cfeature
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from matplotlib.colors import ListedColormap,LinearSegmentedColormap,to_rgba
 from matplotlib.dates import date2num,num2date
 from matplotlib.path import Path
 from optparse import OptionParser,IndentedHelpFormatter
@@ -71,30 +72,36 @@ y_labels = ['{:.0f}'.format(int(y))+'$^{\circ}$'+'{:.0f}'.format((y-int(y))*60.0
 x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$E' for x in lon]
 y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$S' for y in -lat]
 
-xstp = 10.0
-ystp = -10.0
-xmin,xmax,ymin,ymax = (743805.0,757305.0,9235805.0,9251805.0)
-xg,yg = np.meshgrid(np.arange(xmin,xmax+0.1*xstp,xstp),np.arange(ymax,ymin-0.1*ystp,ystp))
-ngrd = xg.size
+color = cm.hsv(np.linspace(0.0,1.0,365))
+colors = np.vstack((color,color,color,color,color,color))
+mymap = LinearSegmentedColormap.from_list('my_colormap',colors,N=len(colors)*2)
 
 prj = ccrs.UTM(zone=48,southern_hemisphere=True)
 
 ds = gdal.Open(opts.mask_fnam)
 mask = ds.ReadAsArray()
+mask_shape = mask.shape
 ds = None
-
-block_shp = list(shpreader.Reader(opts.block_fnam).geometries())
-block_rec = list(shpreader.Reader(opts.block_fnam).records())
 
 ds = gdal.Open(opts.trans_fnam)
 data = ds.ReadAsArray()
-ds = None
+data_trans = ds.GetGeoTransform()
 data_shape = data[0].shape
-if data_shape != xg.shape:
-    raise ValueError('Error, data_shape={}, xg.shape={}'.format(data_shape,xg.shape))
+ds = None
+if data_shape != mask_shape:
+    raise ValueError('Error, data_shape={}, mask_shape={}'.format(data_shape,mask_shape))
 data[:,mask==0] = np.nan
 #data[0] -= 9.0 # offset corrected
 #data[0] += date2num(np.datetime64('0000-12-31')) # Matplotlib>3.3
+xmin = data_trans[0]
+xstp = data_trans[1]
+xmax = xmin+xstp*data_shape[1]
+ymax = data_trans[3]
+ystp = data_trans[5]
+ymin = ymax+ystp*data_shape[0]
+
+block_shp = list(shpreader.Reader(opts.block_fnam).geometries())
+block_rec = list(shpreader.Reader(opts.block_fnam).records())
 
 sys.stderr.write('tmin: {}\n'.format(num2date(np.nanmin(data[0])).strftime('%Y%m%d')))
 sys.stderr.write('tmax: {}\n'.format(num2date(np.nanmax(data[0])).strftime('%Y%m%d')))
@@ -110,9 +117,6 @@ if opts.pmax is not None:
     pmax = opts.pmax
 tdif = tmax-tmin
 pdif = pmax-pmin
-dmin = -30.0
-dmax = 30.0
-ddif = dmax-dmin
 
 values = []
 labels = []
@@ -154,12 +158,18 @@ plt.subplots_adjust(top=0.90,bottom=0.05,left=0.02,right=0.92,wspace=0.08,hspace
 ax1 = plt.subplot(121,projection=prj)
 ax2 = plt.subplot(122,projection=prj)
 
-im1 = ax1.imshow(data[0],extent=(xmin,xmax,ymax,ymin),vmin=tmin,vmax=tmax,cmap=cm.jet)
+dmin = num2date(tmin)
+torg = date2num(datetime(dmin.year,1,1))
+twid = 365.0*1.5
+newcolors = mymap(np.linspace((tmin-torg)/twid,(tmax-torg)/twid,mymap.N))
+#newcolors[indx:,:] = to_rgba('maroon')
+mymap2 = ListedColormap(newcolors)
+
+im1 = ax1.imshow(data[0],extent=(xmin,xmax,ymax,ymin),vmin=tmin,vmax=tmax,cmap=mymap2)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=0.965,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))
 ax12.xaxis.set_major_formatter(plt.FixedFormatter(labels))
 ax12.xaxis.set_minor_locator(plt.FixedLocator(ticks))
-#ax12.set_xlabel('Transplanting date')
 #ax1.set_title('(a) Transplanting date')
 for l in ax12.xaxis.get_ticklabels():
     l.set_rotation(30)
