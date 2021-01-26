@@ -43,6 +43,7 @@ parser.add_option('--block_fnam',default=BLOCK_FNAM,help='Block shape file (%def
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting tiff file (%default)')
 parser.add_option('--mask_fnam',default=MASK_FNAM,help='Mask file (%default)')
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
+parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
 (opts,args) = parser.parse_args()
 
@@ -78,6 +79,9 @@ mymap = LinearSegmentedColormap.from_list('my_colormap',colors,N=len(colors)*2)
 
 prj = ccrs.UTM(zone=48,southern_hemisphere=True)
 
+block_shp = list(shpreader.Reader(opts.block_fnam).geometries())
+block_rec = list(shpreader.Reader(opts.block_fnam).records())
+
 ds = gdal.Open(opts.mask_fnam)
 mask = ds.ReadAsArray()
 mask_shape = mask.shape
@@ -99,9 +103,6 @@ xmax = xmin+xstp*data_shape[1]
 ymax = data_trans[3]
 ystp = data_trans[5]
 ymin = ymax+ystp*data_shape[0]
-
-block_shp = list(shpreader.Reader(opts.block_fnam).geometries())
-block_rec = list(shpreader.Reader(opts.block_fnam).records())
 
 sys.stderr.write('tmin: {}\n'.format(num2date(np.nanmin(data[0])).strftime('%Y%m%d')))
 sys.stderr.write('tmax: {}\n'.format(num2date(np.nanmax(data[0])).strftime('%Y%m%d')))
@@ -162,7 +163,9 @@ dmin = num2date(tmin)
 torg = date2num(datetime(dmin.year,1,1))
 twid = 365.0*1.5
 newcolors = mymap(np.linspace((tmin-torg)/twid,(tmax-torg)/twid,mymap.N))
-#newcolors[indx:,:] = to_rgba('maroon')
+if opts.early:
+    indx = int(mymap.N*0.995+0.5)
+    newcolors[indx:,:] = to_rgba('maroon')
 mymap2 = ListedColormap(newcolors)
 
 im1 = ax1.imshow(data[0],extent=(xmin,xmax,ymax,ymin),vmin=tmin,vmax=tmax,cmap=mymap2)
@@ -173,7 +176,7 @@ ax12.xaxis.set_minor_locator(plt.FixedLocator(ticks))
 #ax1.set_title('(a) Transplanting date')
 for l in ax12.xaxis.get_ticklabels():
     l.set_rotation(30)
-ax12.set_xlabel('Estimated transplanting date')
+ax12.set_xlabel('Estimated transplanting date (MM/DD)')
 ax12.xaxis.set_label_coords(0.5,-2.8)
 ax1.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 

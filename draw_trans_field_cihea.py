@@ -12,6 +12,7 @@ import cartopy.feature as cfeature
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from matplotlib.colors import ListedColormap,LinearSegmentedColormap,to_rgba
 from matplotlib.dates import date2num,num2date
 from matplotlib.path import Path
 from optparse import OptionParser,IndentedHelpFormatter
@@ -38,6 +39,7 @@ parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--block_fnam',default=BLOCK_FNAM,help='Block shape file (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape file (%default)')
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
+parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
 (opts,args) = parser.parse_args()
 
@@ -64,6 +66,10 @@ center_x_utm = x[ind_y,:]
 center_y_utm = y[:,ind_x]
 x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((x*60.0-int(x*60.0))*60.0+0.1))+'$^{\prime\prime}$E' for x in lon]
 y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((y*60.0-int(y*60.0))*60.0+0.1))+'$^{\prime\prime}$S' for y in -lat]
+
+color = cm.hsv(np.linspace(0.0,1.0,365))
+colors = np.vstack((color,color,color,color,color,color))
+mymap = LinearSegmentedColormap.from_list('my_colormap',colors,N=len(colors)*2)
 
 prj = ccrs.UTM(zone=48,southern_hemisphere=True)
 
@@ -125,9 +131,6 @@ if opts.pmax is not None:
     pmax = opts.pmax
 tdif = tmax-tmin
 pdif = pmax-pmin
-dmin = -30.0
-dmax = 30.0
-ddif = dmax-dmin
 
 values = []
 labels = []
@@ -168,30 +171,38 @@ plt.subplots_adjust(top=0.93,bottom=0.03,left=0.015,right=0.95,wspace=0.08,hspac
 
 ax1 = plt.subplot(121,projection=prj)
 ax2 = plt.subplot(122,projection=prj)
+
+dmin = num2date(tmin)
+torg = date2num(datetime(dmin.year,1,1))
+twid = 365.0*1.5
+newcolors = mymap(np.linspace((tmin-torg)/twid,(tmax-torg)/twid,mymap.N))
+if opts.early:
+    indx = int(mymap.N*0.995+0.5)
+    newcolors[indx:,:] = to_rgba('maroon')
+mymap2 = ListedColormap(newcolors)
+
 for shp,rec in zip(shapes,records):
     t = rec.attributes['trans_date']#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
     p = rec.attributes['peak_value']
     s = rec.attributes['TANAM']
     d = t-s
-    ax1.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((t-tmin)/tdif))
+    ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
     ax2.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
-im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=cm.jet)
+im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=mymap2)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=0.92,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))
 ax12.xaxis.set_major_formatter(plt.FixedFormatter(labels))
 ax12.xaxis.set_minor_locator(plt.FixedLocator(ticks))
-#ax12.set_xlabel('Transplanting date (Estimated)')
 #ax1.set_title('(a)')
 for l in ax12.xaxis.get_ticklabels():
     l.set_rotation(30)
 ax12.xaxis.set_label_coords(0.5,-3.2)
-ax12.set_xlabel('Estimated transplanting date')
+ax12.set_xlabel('Estimated transplanting date (MM/DD)')
 ax1.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
 im2 = ax2.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=pmin,vmax=pmax,cmap=cm.jet)
 ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=0.93,pad=0.01).ax
 ax22.minorticks_on()
-#ax22.set_ylabel('Signal (dB)')
 #ax2.set_title('(b)')
 ax22.set_xlabel('Signal (dB)')
 ax22.xaxis.set_label_coords(0.5,-3.2)
