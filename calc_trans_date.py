@@ -336,13 +336,16 @@ for i in range(opts.ymin,opts.ymax):
                     continue
                 if k == xc_indx_1:
                     vmin = yy[k]
+                    if vmin < opts.vthr:
+                        xpek_sid[sid].append(xx[k])
+                        ypek_sid[sid].append(opts.vthr-vmin)
                 else:
                     k1 = max(k+k1_offset,0)
                     k2 = min(k+k2_offset,xx.size)
                     vmin = yy[k1:k2].mean()
-                if vmin < opts.vthr:
-                    xpek_sid[sid].append(xx[k])
-                    ypek_sid[sid].append(opts.vthr-vmin)
+                    if vmin < opts.vthr:
+                        xpek_sid[sid].append(xx[k]+opts.offset)
+                        ypek_sid[sid].append(opts.vthr-vmin)
 for i in range(ngrd):
     xpek_sid[i] = np.array(xpek_sid[i])
     ypek_sid[i] = np.array(ypek_sid[i])
@@ -376,7 +379,7 @@ for i in range(ngrd):
     k = np.argmax(yy)
     if xx[k] < nmin or xx[k] > nmax:
         continue
-    output_data[0,indy,indx] = xx[k]+opts.offset
+    output_data[0,indy,indx] = xx[k]
     output_data[1,indy,indx] = yy[k]
 if opts.npy_fnam is not None:
     np.save(opts.npy_fnam,output_data)
