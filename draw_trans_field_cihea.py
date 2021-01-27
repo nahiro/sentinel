@@ -39,6 +39,8 @@ parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--block_fnam',default=BLOCK_FNAM,help='Block shape file (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape file (%default)')
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
+parser.add_option('--add_tmin',default=False,action='store_true',help='Add tmin in colorbar (%default)')
+parser.add_option('--add_tmax',default=False,action='store_true',help='Add tmax in colorbar (%default)')
 parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
 (opts,args) = parser.parse_args()
@@ -162,6 +164,31 @@ for y in range(num2date(tmin).year,num2date(tmax).year+1):
             for day in [5,10,20,25]:
                 d = datetime(y,m,day)
                 ticks.append(date2num(d))
+dmin = num2date(tmin)
+dmax = num2date(tmax)
+if opts.add_tmin:
+    if not tmin in values:
+        if ds > 1.0:
+            values.append(tmin)
+            labels.append(dmin.strftime('%Y-%m'))
+        else:
+            values.append(tmin)
+            labels.append(dmin.strftime('%m/%d'))
+if opts.add_tmax:
+    if not tmax in values:
+        if ds > 1.0:
+            values.append(tmax)
+            labels.append(dmax.strftime('%Y-%m'))
+        else:
+            values.append(tmax)
+            labels.append(dmax.strftime('%m/%d'))
+torg = date2num(datetime(dmin.year,1,1))
+twid = 365.0*2.0
+newcolors = mymap(np.linspace((tmin-torg)/twid,(tmax-torg)/twid,mymap.N))
+if opts.early:
+    indx = int(mymap.N*0.995+0.5)
+    newcolors[indx:,:] = to_rgba('maroon')
+mymap2 = ListedColormap(newcolors)
 
 if not opts.batch:
     plt.interactive(True)
@@ -171,15 +198,6 @@ plt.subplots_adjust(top=0.93,bottom=0.03,left=0.015,right=0.95,wspace=0.08,hspac
 
 ax1 = plt.subplot(121,projection=prj)
 ax2 = plt.subplot(122,projection=prj)
-
-dmin = num2date(tmin)
-torg = date2num(datetime(dmin.year,1,1))
-twid = 365.0*1.5
-newcolors = mymap(np.linspace((tmin-torg)/twid,(tmax-torg)/twid,mymap.N))
-if opts.early:
-    indx = int(mymap.N*0.995+0.5)
-    newcolors[indx:,:] = to_rgba('maroon')
-mymap2 = ListedColormap(newcolors)
 
 for shp,rec in zip(shapes,records):
     t = rec.attributes['trans_date']#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
