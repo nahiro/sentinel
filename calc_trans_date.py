@@ -332,19 +332,20 @@ for i in range(opts.ymin,opts.ymax):
         if len(min_peaks) > 0:
             sid = np.ravel_multi_index((i,j),data_shape)
             for k in min_peaks:
-                if xx[k] < nmin or xx[k] > nmax:
-                    continue
                 if k == xc_indx_1:
                     vmin = yy[k]
                     if vmin < opts.vthr:
                         xpek_sid[sid].append(xx[k])
                         ypek_sid[sid].append(opts.vthr-vmin)
                 else:
+                    xtmp = xx[k]+opts.offset
+                    if xtmp < nmin or xtmp > nmax:
+                        continue
                     k1 = max(k+k1_offset,0)
                     k2 = min(k+k2_offset,xx.size)
                     vmin = yy[k1:k2].mean()
                     if vmin < opts.vthr:
-                        xpek_sid[sid].append(xx[k]+opts.offset)
+                        xpek_sid[sid].append(xtmp)
                         ypek_sid[sid].append(opts.vthr-vmin)
 for i in range(ngrd):
     xpek_sid[i] = np.array(xpek_sid[i])
