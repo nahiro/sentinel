@@ -156,9 +156,9 @@ if opts.download:
                 os.makedirs(dnam)
             if not os.path.isdir(dnam):
                 raise IOError('Error, no such directory >>> '+dnam)
-            fnam = os.path.join(dnam,names[i]+'.zip')
         else:
-            fnam = os.path.join(path,names[i]+'.zip')
+            dnam = path
+        fnam = os.path.join(dnam,names[i]+'.zip')
         gnam = os.path.join(fnam+'.incomplete')
         # Skip if gnam does not exist and fnam with expected size exists
         if os.path.exists(fnam) and not os.path.exists(gnam):
@@ -193,8 +193,7 @@ if opts.download:
             command += ' --password {}'.format(opts.password)
         if opts.url is not None:
             command += ' --url {}'.format(opts.url)
-        if opts.path is not None:
-            command += ' --path {}'.format(opts.path)
+        command += ' --path {}'.format(dnam)
         if not opts.checksum:
             command += ' --no-checksum'
         for ntry in range(opts.max_retry): # loop to download 1 file
