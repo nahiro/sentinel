@@ -71,33 +71,34 @@ for site,start in zip(opts.sites,dmaxs):
     if not os.path.exists(fnam):
         raise IOError('No such file >>> '+fnam)
     datdir = os.path.join(opts.datdir,site)
-    os.chdir(datdir)
     command = 'python'
     command += ' '+os.path.join(opts.scrdir,'sentinel_download.py')
-    command += ' -g '+fnam
-    command += ' -t GRD'
-    command += ' -s '+start
-    command += ' -e '+opts.end
-    command += ' -d'
+    command += ' --geometry '+fnam
+    command += ' --producttyp GRD'
+    command += ' --start '+start
+    command += ' --end '+opts.end
+    command += ' --path '+datdir
+    command += ' --download'
+    command += ' --sort_year'
     sys.stderr.write(command+'\n')
     call(command,shell=True)
-    os.chdir(topdir)
-    for f in sorted(os.listdir(datdir)):
-        #S1A_IW_GRDH_1SDV_20171227T223338_20171227T223405_019894_021DC8_434F.zip
-        #S1B_IW_GRDH_1SDV_20200116T223300_20200116T223336_019848_025883_2DEF.zip
-        m = re.search('^S1[AB]_IW_GRDH_1SDV_('+'\d'*4+')'+'\d'*4+'T\S+\.zip$',f)
-        if not m:
-            continue
-        year = m.group(1)
-        fnam = os.path.join(datdir,f)
+    d1 = datetime.strptime(start,'%Y%m%d')
+    d2 = datetime.strptime(opts.end,'%Y%m%d')
+    for y in range(d1.year,d2.year+1):
+        year = '{:04d}'.format(y)
         dnam = os.path.join(datdir,year)
-        if not os.path.exists(dnam):
-            os.makedirs(dnam)
-        if not os.path.isdir(dnam):
-            raise IOError('Error, no such directory >>> '+dnam)
-        gnam = os.path.join(dnam,f)
-        os.rename(fnam,gnam)
-        gnams.append(gnam)
+        for f in sorted(os.listdir(dnam)):
+            #S1A_IW_GRDH_1SDV_20171227T223338_20171227T223405_019894_021DC8_434F.zip
+            #S1B_IW_GRDH_1SDV_20200116T223300_20200116T223336_019848_025883_2DEF.zip
+            m = re.search('^S1[AB]_IW_GRDH_1SDV_('+'\d'*8+')'+'T\S+\.zip$',f)
+            if not m:
+                continue
+            dstr = m.group(1)
+            dtim = datetime.strptime(dstr,'%Y%m%d')
+            if (dtim < d1) or (dtim > d2):
+                continue
+            gnam = os.path.join(dnam,f)
+            gnams.append(gnam)
 
 # Upload data
 if not opts.skip_upload:

@@ -46,6 +46,7 @@ parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait tim
 parser.add_option('-O','--online_check_time',default=ONLINE_CHECK_TIME,type='int',help='Wait time to check online data in sec (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
+parser.add_option('-Y','--sort_year',default=False,action='store_true',help='Sort files by year. (%default)')
 parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
@@ -145,7 +146,19 @@ if opts.download:
     path = '.' if opts.path is None else opts.path
     for i in range(len(uuids)):
         # Check data availability
-        fnam = os.path.join(path,names[i]+'.zip')
+        if opts.sort_year:
+            m = re.search('^\S+[^\d]_('+'\d'*4+')'+'\d'*4+'T'+'\d'*6+'_',names[i])
+            if not m:
+                raise ValueError('Error in file name >>> '+names[i])
+            year = m.group(1)
+            dnam = os.path.join(path,year)
+            if not os.path.exists(dnam):
+                os.makedirs(dnam)
+            if not os.path.isdir(dnam):
+                raise IOError('Error, no such directory >>> '+dnam)
+            fnam = os.path.join(dnam,names[i]+'.zip')
+        else:
+            fnam = os.path.join(path,names[i]+'.zip')
         gnam = os.path.join(fnam+'.incomplete')
         # Skip if gnam does not exist and fnam with expected size exists
         if os.path.exists(fnam) and not os.path.exists(gnam):
