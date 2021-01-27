@@ -116,6 +116,7 @@ for site in opts.sites:
                 command += ' --trans_fnam '+tif_fnam
                 command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask.tif')
                 command += ' --output_fnam '+trans_pixel_image
+                command += ' --add_tmax'
                 command += ' --batch'
                 call(command,shell=True)
                 if os.path.exists(trans_pixel_image):
@@ -134,6 +135,7 @@ for site in opts.sites:
                 command += ' --title "Search Period: {} - {}"'.format(tmin,tmax)
                 command += ' --trans_fnam '+shp_fnam
                 command += ' --output_fnam '+trans_field_image
+                command += ' --add_tmax'
                 command += ' --batch'
                 call(command,shell=True)
                 if os.path.exists(trans_field_image):
