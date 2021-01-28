@@ -39,39 +39,39 @@ gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
 
 # Get Spatial-Information folder
-l = drive.ListFile({'q': '"root" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "Spatial-Information"'}).GetList()
+l = drive.ListFile({'q': '"root" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "Spatial-Information"'}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding Spatial-Information folder')
 folder_spatial_information = l[0]
 # Get Transplanting_date folder
-l = drive.ListFile({'q': '"{}" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "Transplanting_date"'.format(folder_spatial_information['id'])}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "Transplanting_date"'.format(folder_spatial_information['id'])}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding Transplanting_date folder')
 folder_transplanting_date = l[0]
 # Get v1.0 folder
-l = drive.ListFile({'q': '"{}" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "v1.0"'.format(folder_transplanting_date['id'])}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "v1.0"'.format(folder_transplanting_date['id'])}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding v1.0 folder')
 folder_v1_0 = l[0]
 # Get site folder
-l = drive.ListFile({'q': '"{}" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_v1_0['id'],opts.site)}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_v1_0['id'],opts.site)}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding {} folder'.format(opts.site))
 folder_site = l[0]
 # Get level folder
-l = drive.ListFile({'q': '"{}" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_site['id'],opts.level.lower())}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_site['id'],opts.level.lower())}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding {} folder'.format(opts.level))
 folder_level = l[0]
 # Get Year folder
 dstr_year = opts.date
-l = drive.ListFile({'q': '"{}" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_level['id'],dstr_year)}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_level['id'],dstr_year)}).GetList()
 if len(l) != 1:
     folder_year = drive.CreateFile({'parents':[{'id':folder_level['id']}],'mimeType':'application/vnd.google-apps.folder','title':dstr_year})
     folder_year.Upload()
 else:
     folder_year = l[0]
-l = drive.ListFile({'q': '"{}" in parents and mimeType != "application/vnd.google-apps.folder"'.format(folder_year['id'])}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType != "application/vnd.google-apps.folder"'.format(folder_year['id'])}).GetList()
 
 for input_fnam in fnams:
     upload_fnam = os.path.basename(input_fnam)
