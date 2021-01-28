@@ -106,6 +106,6 @@ if not opts.skip_upload:
     for gnam in gnams:
         command = 'python'
         command += ' '+os.path.join(opts.scrdir,'sentinel1_upload.py')
-        comamnd += ' '+gnams
+        command += ' '+gnams
         call(command,shell=True)
     os.chdir(topdir)
