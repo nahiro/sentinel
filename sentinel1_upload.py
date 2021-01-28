@@ -24,22 +24,22 @@ gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
 
 # Get Spatial-Information folder
-l = drive.ListFile({'q': '"root" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "Spatial-Information"'}).GetList()
+l = drive.ListFile({'q': '"root" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "Spatial-Information"'}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding Spatial-Information folder')
 folder_spatial_information = l[0]
 # Get SENTINEL-1 folder
-l = drive.ListFile({'q': '"{}" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "SENTINEL-1"'.format(folder_spatial_information['id'])}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "SENTINEL-1"'.format(folder_spatial_information['id'])}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding SENTINEL-1 folder')
 folder_sentinel_1 = l[0]
 # Get GRD folder
-l = drive.ListFile({'q': '"{}" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "GRD"'.format(folder_sentinel_1['id'])}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "GRD"'.format(folder_sentinel_1['id'])}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding GRD folder')
 folder_grd = l[0]
 # Get Cihea folder
-l = drive.ListFile({'q': '"{}" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "Cihea"'.format(folder_grd['id'])}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "Cihea"'.format(folder_grd['id'])}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding Cihea folder')
 folder_cihea = l[0]
@@ -67,13 +67,13 @@ for input_fnam in fnams:
     upload_fnam = bnam+enam.lower()
     dstr_year = d1.strftime('%Y')
     # Get Year folder
-    l = drive.ListFile({'q': '"{}" in parents and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_cihea['id'],dstr_year)}).GetList()
+    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_cihea['id'],dstr_year)}).GetList()
     if len(l) != 1:
         folder_year = drive.CreateFile({'parents':[{'id':folder_cihea['id']}],'mimeType':'application/vnd.google-apps.folder','title':dstr_year})
         folder_year.Upload()
     else:
         folder_year = l[0]
-    l = drive.ListFile({'q': '"{}" in parents and mimeType != "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_year['id'],search_key)}).GetList()
+    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType != "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_year['id'],search_key)}).GetList()
     flag = True
     for f in l:
         if f['title'].upper() == unam:
