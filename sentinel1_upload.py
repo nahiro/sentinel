@@ -8,10 +8,12 @@ from pydrive2.drive import GoogleDrive
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
+SITE = 'Test'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog list_of_input_file [options]')
+parser.add_option('-S','--site',default=SITE,help='Target sites (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -38,11 +40,11 @@ l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "ap
 if len(l) != 1:
     raise ValueError('Error in finding GRD folder')
 folder_grd = l[0]
-# Get Cihea folder
-l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "Cihea"'.format(folder_grd['id'])}).GetList()
+# Get SITE folder
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_grd['id'],opts.site)}).GetList()
 if len(l) != 1:
-    raise ValueError('Error in finding Cihea folder')
-folder_cihea = l[0]
+    raise ValueError('Error in finding {} folder'.format(opts.site))
+folder_site = l[0]
 
 for input_fnam in fnams:
     # S1A_IW_GRDH_1SDV_20200102T111446_20200102T111515_030620_038227_6964.zip
@@ -67,9 +69,9 @@ for input_fnam in fnams:
     upload_fnam = bnam+enam.lower()
     dstr_year = d1.strftime('%Y')
     # Get Year folder
-    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_cihea['id'],dstr_year)}).GetList()
+    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_site['id'],dstr_year)}).GetList()
     if len(l) != 1:
-        folder_year = drive.CreateFile({'parents':[{'id':folder_cihea['id']}],'mimeType':'application/vnd.google-apps.folder','title':dstr_year})
+        folder_year = drive.CreateFile({'parents':[{'id':folder_site['id']}],'mimeType':'application/vnd.google-apps.folder','title':dstr_year})
         folder_year.Upload()
     else:
         folder_year = l[0]

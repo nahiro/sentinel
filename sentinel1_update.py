@@ -65,11 +65,12 @@ if len(dmaxs) != len(opts.sites):
 
 # Download data
 topdir = os.getcwd()
-gnams = []
+gnams = {}
 for site,start in zip(opts.sites,dmaxs):
     fnam = os.path.join(opts.scrdir,site.lower()+'.json')
     if not os.path.exists(fnam):
         raise IOError('No such file >>> '+fnam)
+    gnams.update({site:[]})
     datdir = os.path.join(opts.datdir,site)
     command = 'python'
     command += ' '+os.path.join(opts.scrdir,'sentinel_download.py')
@@ -98,14 +99,16 @@ for site,start in zip(opts.sites,dmaxs):
             if (dtim < d1) or (dtim > d2):
                 continue
             gnam = os.path.join(dnam,f)
-            gnams.append(gnam)
+            gnams[site].append(gnam)
 
 # Upload data
 if not opts.skip_upload:
     os.chdir(opts.drvdir)
-    for gnam in gnams:
-        command = 'python'
-        command += ' '+os.path.join(opts.scrdir,'sentinel1_upload.py')
-        command += ' '+gnams
-        call(command,shell=True)
+    for site in opts.sites:
+        for gnam in gnams[site]:
+            command = 'python'
+            command += ' '+os.path.join(opts.scrdir,'sentinel1_upload.py')
+            command += ' --site '+site
+            command += ' '+gnam
+            call(command,shell=True)
     os.chdir(topdir)
