@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 import os
 import sys
+import shutil
 import re
 from glob import glob
 from datetime import datetime
 import gdal
 import osr
 import json
+import shapefile
 from collections import OrderedDict
 import numpy as np
 from matplotlib.dates import date2num,num2date
@@ -30,7 +32,12 @@ SEARCH_KEY = 'resample'
 X_PROFILE = 'x_profile.npy'
 Y_PROFILE = 'y_profile.npy'
 AREA_FNAM = 'pixel_area_block.dat'
+HOME = os.environ.get('HOME')
+if HOME is None:
+    HOME = os.environ.get('HOMEPATH')
+SHP_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','Bojongsoang','Bojongsoang')
 JSON_FNAM = 'output.json'
+OUT_FNAM = os.path.join('.','transplanting_date')
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -52,10 +59,12 @@ parser.add_option('--search_key',default=SEARCH_KEY,help='Search key for input d
 parser.add_option('--x_profile',default=X_PROFILE,help='Time of BSC profile to calculate post-transplanting signal (%default)')
 parser.add_option('--y_profile',default=Y_PROFILE,help='BSC profile to calculate post-transplanting signal (%default)')
 parser.add_option('--area_fnam',default=AREA_FNAM,help='Pixel area file name (%default)')
+parser.add_option('--shp_fnam',default=SHP_FNAM,help='Input shapefile name (%default)')
 parser.add_option('-i','--inp_fnam',default=None,help='Input GeoTIFF name (%default)')
 parser.add_option('-j','--json_fnam',default=JSON_FNAM,help='Output JSON name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
-parser.add_option('-F','--fignam',default=None,help='Output figure name for debug (%default)')
+parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
+parser.add_option('-F','--fig_fnam',default=None,help='Output figure name for debug (%default)')
 (opts,args) = parser.parse_args()
 
 data_info = OrderedDict()
@@ -274,12 +283,12 @@ for i,band in enumerate(band_list):
     else:
         dtmp = data[i].flatten()
     data_avg = []
-    for i in range(nobject):
-        if inds[i].size < 1:
+    for j in range(nobject):
+        if inds[j].size < 1:
             data_avg.append(np.nan)
             continue
-        data_value = dtmp[inds[i]]
-        data_weight = areas[i]
+        data_value = dtmp[inds[j]]
+        data_weight = areas[j]
         cnd = ~np.isnan(data_value)
         if cnd.sum() <= 1:
             data_avg.append(data_value[cnd].mean())
@@ -301,7 +310,7 @@ xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+0.1*opts.tstp,opts
 x_profile = np.load(opts.x_profile)
 y_profile = np.load(opts.y_profile)
 
-if opts.fignam is not None:
+if opts.fig_fnam is not None:
     values = []
     labels = []
     ticks = []
@@ -316,17 +325,19 @@ if opts.fignam is not None:
     plt.interactive(True)
     fig = plt.figure(1,facecolor='w')
     plt.subplots_adjust(left=0.12,right=0.88,bottom=0.12,top=0.80,hspace=0.5)
-    pdf = PdfPages(opts.fignam)
+    pdf = PdfPages(opts.fig_fnam)
 
-for i in range(nobject):
-    object_id = object_ids[i]
-    if object_id != i+1:
-        raise ValueError('Error, object_id={}, i={}'.format(object_id,i))
+nb = 17 # (trans_dN,bsc_minN,post_sN,fpi_N,res_N)x3,fpi_s,fpi_e
+output_data = np.full((nb,nobject),np.nan)
+for ii in range(nobject):
+    object_id = object_ids[ii]
+    if object_id != ii+1:
+        raise ValueError('Error, object_id={}, ii={}'.format(object_id,ii))
     if not object_id in object_id_check:
         continue
-    if inds[i].size < 1:
+    if inds[ii].size < 1:
         continue
-    yi = vh_data[:,i] # VH
+    yi = vh_data[:,ii] # VH
     yy = csaps(vh_ntim,yi,xx,smooth=opts.smooth)
 
     # Calculate fishpond index
@@ -522,7 +533,7 @@ for i in range(nobject):
     yans = np.array(yans)
 
     # Plot data
-    if opts.fignam is not None:
+    if opts.fig_fnam is not None:
         fig.clear()
         ax1 = plt.subplot(111)
         ax1.minorticks_on()
@@ -560,5 +571,29 @@ for i in range(nobject):
         plt.draw()
         #plt.pause(0.1)
     #break
-if opts.fignam is not None:
+if opts.fig_fnam is not None:
     pdf.close()
+
+if opts.npy_fnam is not None:
+    np.save(opts.npy_fnam,output_data)
+
+r = shapefile.Reader(opts.shp_fnam)
+w = shapefile.Writer(opts.out_fnam)
+w.shapeType = shapefile.POLYGON
+w.fields = r.fields[1:] # skip first deletion field
+for i in range(3):
+    w.field('trans_d{}'.format(i+1),'F',13,6)
+    w.field('bsc_min{}'.format(i+1),'F',13,6)
+    w.field('post_s{}'.format(i+1),'F',13,6)
+    w.field('fpi_{}'.format(i+1),'F',13,6)
+    w.field('res_{}'.format(i+1),'F',13,6)
+w.field('fpi_s','F',13,6)
+w.field('fpi_e','F',13,6)
+for i,shaperec in enumerate(r.iterShapeRecords()):
+    rec = shaperec.record
+    shp = shaperec.shape
+    rec.extend(list(output_data[i]))
+    w.shape(shp)
+    w.record(*rec)
+w.close()
+shutil.copy2(opts.shp_fnam+'.prj',opts.out_fnam+'.prj')
