@@ -6,12 +6,12 @@ from glob import glob
 from datetime import datetime
 import gdal
 import osr
+import json
+from collections import OrderedDict
 import numpy as np
-import cartopy.io.shapereader as shpreader
 from matplotlib.dates import date2num,num2date
 from csaps import csaps
 from statsmodels.stats.weightstats import DescrStatsW
-from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from optparse import OptionParser,IndentedHelpFormatter
@@ -22,11 +22,15 @@ TMAX = '20190915'
 TMGN = 30.0 # day
 TSTP = 0.1 # day
 SMOOTH = 0.01
-OFFSET_V = 4.8
-OFFSET_FACT = 1.25
+SIGNAL_V = 4.8 # dB
+SIGNAL_FACT = 1.25
+OFFSET = 0.0 # day
 DATDIR = '.'
 SEARCH_KEY = 'resample'
+X_PROFILE = 'x_profile.npy'
+Y_PROFILE = 'y_profile.npy'
 AREA_FNAM = 'pixel_area_block.dat'
+JSON_FNAM = 'output.json'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -36,17 +40,39 @@ parser.add_option('--data_tmin',default=DATA_TMIN,help='Min date of input data i
 parser.add_option('--data_tmax',default=DATA_TMAX,help='Max date of input data in the format YYYYMMDD (%default)')
 parser.add_option('--tmgn',default=TMGN,type='float',help='Margin of input data in day (%default)')
 parser.add_option('--tstp',default=TSTP,type='float',help='Precision of transplanting date in day (%default)')
-parser.add_option('--offset_v',default=OFFSET_V,type='float',help='Max offset-free VH_BSC difference (%default)')
-parser.add_option('--offset_fact',default=OFFSET_FACT,type='float',help='Offset factor for VH_BSC difference (%default)')
+parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
+parser.add_option('--signal_v',default=SIGNAL_V,type='float',help='Max offset-free VH_BSC difference (%default)')
+parser.add_option('--signal_fact',default=SIGNAL_FACT,type='float',help='Offset factor for VH_BSC difference (%default)')
+parser.add_option('--offset',default=OFFSET,type='float',help='Offset of transplanting date in day (%default)')
+parser.add_option('--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
 parser.add_option('-I','--incidence_angle',default=None,help='Incidence angle file, format: date(%Y%m%d) angle(deg) (%default)')
 parser.add_option('-l','--incidence_list',default=None,help='Incidence angle list, format: flag(0|1=baseline) pol(VH|VV) angle(deg) filename (%default)')
-parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
-parser.add_option('--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
-parser.add_option('--area_fnam',default=AREA_FNAM,help='Pixel area file name (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory, not used if input_fnam is given (%default)')
 parser.add_option('--search_key',default=SEARCH_KEY,help='Search key for input data, not used if input_fnam is given (%default)')
+parser.add_option('--x_profile',default=X_PROFILE,help='Time of BSC profile to calculate post-transplanting signal (%default)')
+parser.add_option('--y_profile',default=Y_PROFILE,help='BSC profile to calculate post-transplanting signal (%default)')
+parser.add_option('--area_fnam',default=AREA_FNAM,help='Pixel area file name (%default)')
 parser.add_option('-i','--inp_fnam',default=None,help='Input GeoTIFF name (%default)')
+parser.add_option('-j','--json_fnam',default=JSON_FNAM,help='Output JSON name (%default)')
+parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
+parser.add_option('-F','--fignam',default=None,help='Output figure name for debug (%default)')
 (opts,args) = parser.parse_args()
+
+data_info = OrderedDict()
+data_info['tmin'] = opts.tmin
+data_info['tmax'] = opts.tmax
+data_info['data_tmin'] = opts.data_tmin
+data_info['data_tmax'] = opts.data_tmax
+data_info['tmgn'] = opts.tmgn
+data_info['tstp'] = opts.tstp
+data_info['smooth'] = opts.smooth
+data_info['signal_v'] = opts.signal_v
+data_info['signal_fact'] = opts.signal_fact
+data_info['offset'] = opts.offset
+data_info['early'] = opts.early
+data_info['incidence_angle'] = opts.incidence_angle if opts.incidence_angle is None else os.path.basename(opts.incidence_angle)
+data_info['incidence_list'] = opts.incidence_list if opts.incidence_list is None else os.path.basename(opts.incidence_list)
+data_info['area_fnam'] = os.path.basename(opts.area_fnam)
 
 nmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 nmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
@@ -58,18 +84,6 @@ if opts.data_tmax is not None:
     dmax = datetime.strptime(opts.data_tmax,'%Y%m%d')
 else:
     dmax = num2date(nmax+opts.tmgn).replace(tzinfo=None)
-
-values = []
-labels = []
-ticks = []
-for y in range(2017,2022):
-    for m in range(1,13,2):
-        d = datetime(y,m,1)
-        values.append(date2num(d))
-        labels.append(d.strftime('%Y-%m'))
-    for m in range(1,13,1):
-        d = datetime(y,m,1)
-        ticks.append(date2num(d))
 
 object_ids = []
 blocks = []
@@ -262,13 +276,27 @@ vh_dtim = np.array(vh_dtim)
 vh_data = np.array(vh_data)
 vh_ntim = date2num(vh_dtim)
 
-y_profile = np.load('y_profile.npy')
-
 xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+0.1*opts.tstp,opts.tstp)
-plt.interactive(True)
-fig = plt.figure(1,facecolor='w')
-plt.subplots_adjust(left=0.12,right=0.88,bottom=0.12,top=0.80,hspace=0.5)
-pdf = PdfPages('example_estimation.pdf')
+x_profile = np.load(opts.x_profile)
+y_profile = np.load(opts.y_profile)
+
+if opts.fignam is not None:
+    values = []
+    labels = []
+    ticks = []
+    for y in range(vh_dtim[0].year,vh_dtim[-1].year+1):
+        for m in range(1,13,2):
+            d = datetime(y,m,1)
+            values.append(date2num(d))
+            labels.append(d.strftime('%Y-%m'))
+        for m in range(1,13,1):
+            d = datetime(y,m,1)
+            ticks.append(date2num(d))
+    plt.interactive(True)
+    fig = plt.figure(1,facecolor='w')
+    plt.subplots_adjust(left=0.12,right=0.88,bottom=0.12,top=0.80,hspace=0.5)
+    pdf = PdfPages(opts.fignam)
+
 for i in range(nobject):
     object_id = object_ids[i]
     if object_id != i+1:
@@ -280,10 +308,10 @@ for i in range(nobject):
     yi = vh_data[:,i] # VH
     yy = csaps(vh_ntim,yi,xx,smooth=opts.smooth)
 
+    # Calculate fishpond index
     yy_max = yy.max()
     yy_min = yy.min()
     yy_thr = max(yy_min+0.3*(yy_max-yy_min),-21.0)
-    #fp_thr = 60.0
     fp_thr = 30.0
     cc = (yy < yy_thr)
     fp_inds = []
@@ -309,20 +337,19 @@ for i in range(nobject):
         if xx[i1:i2].ptp() > fp_thr:
             fp_inds.append([i1,i2])
     fp_inds = np.array(fp_inds)
-    ff1 = np.zeros(xx.size)
+    ff = np.zeros(xx.size)
     for f in fp_inds:
         j1 = f[0]
         j2 = f[1]
-        ff1[j1:j2] = (yy_thr-yy[j1:j2]).sum()
-    fishpond_index = (ff1/2000.0).clip(0.0,1.0)
+        ff[j1:j2] = (yy_thr-yy[j1:j2]).sum()
+    fishpond_index = (ff/2000.0).clip(0.0,1.0)
 
-    ss1 = []
-    ss2 = []
-    ss3 = []
+    # Calculate post-transplanting signal
+    ss = []
     for i in range(xx.size):
         dmax = yy.max()-yy[i]
-        if (dmax > opts.offset_v) and (fishpond_index[i] > 0.01):
-            offset = (dmax-opts.offset_v)*opts.offset_fact
+        if (dmax > opts.signal_v) and (fishpond_index[i] > 0.01):
+            offset = (dmax-opts.signal_v)*opts.signal_fact
         else:
             offset = 0.0
         ytmp = yy-(yy[i]+offset)
@@ -331,23 +358,15 @@ for i in range(nobject):
             yfact = y_profile[0:i2-i].copy()
             yfact *= yfact.size/yfact.sum()
             ytmp[i:i2] *= yfact
-        cnd = (xx > xx[i]) & (xx < xx[i]+30)
-        y2 = ytmp[cnd].mean()
-        ss1.append(y2)
-        cnd = (xx > xx[i]) & (xx < xx[i]+60)
-        y2 = ytmp[cnd].mean()
-        ss2.append(y2)
         cnd = (xx > xx[i]) & (xx < xx[i]+90)
         y2 = ytmp[cnd].mean()
-        ss3.append(y2)
-    ss1 = np.array(ss1)
-    ss2 = np.array(ss2)
-    ss3 = np.array(ss3)
+        ss.append(y2)
+    ss = np.array(ss)
+
+    # Search local minima and rising points
     f1 = np.gradient(yy)/np.gradient(xx)
     f2 = np.gradient(f1)/np.gradient(xx)
     cc = (f1 >= -0.1) & (f1 <= 0.1) & (f2 > 0.0)
-    #cc = (f2 > 0.0)
-
     xcs = []
     ycs = []
     f1cs = []
@@ -388,22 +407,7 @@ for i in range(nobject):
             fflg.append(False)
     fflg = np.array(fflg)
 
-    fig.clear()
-    ax1 = plt.subplot(111)
-    ax1.minorticks_on()
-    ax2 = ax1.twinx()
-    ax3 = ax1.twinx()
-    ax3.set_yticks([])
-    #ax1.set_zorder(0)
-    #ax2.set_zorder(-1)
-    #ax1.plot(vh_ntim,yi,'k.')
-    l1, = ax1.plot(xx,yy,'k-',label='BSC')
-    ss3[-10:] = np.nan
-    l2, = ax3.plot(xx,ss3,'y-',lw=1,label='Signal')
-    #ax3.plot(xx,ss1,'y-')
-    #ax3.plot(xx,ss2,'-',color='orange')
-    #ax3.plot(xx,ss3,'-',color='brown')
-    
+    # List candidates
     xest = []
     yest = []
     yflg = []
@@ -417,6 +421,8 @@ for i in range(nobject):
         yflg.append(False)
     xest = np.array(xest)
     yest = np.array(yest)
+
+    # Examine the superiority of the candidates
     yflg = np.array(yflg)
     ydif = []
     yinc = []
@@ -447,85 +453,26 @@ for i in range(nobject):
     yrgt = np.array(yrgt)
     sval = []
     for ic in range(fflg.size):
-        #if fflg[ic]:
-        #    ax1.plot(xest[ic],yest[ic],'ro')
-        #else:
-        #    ax1.plot(xest[ic],yest[ic],'bo')
         ix = np.argmin(np.abs(xx-xest[ic]))
         if yflg[ic]:
-            #ax1.plot(xcs[ic],ycs[ic],'m-')
-            #ax1.plot(xest[ic],yest[ic],'m.')
-            #ax1.plot(xest[ic],yest[ic],'ro',ms=20,mfc='none')
-            if fflg[ic]:
-                ax1.plot(xest[ic],yest[ic],'ro')
-            else:
-                ax1.plot(xest[ic],yest[ic],'bo')
-            s = ss3[ix]
-            y1 = yest[ic]
-            y2 = s-bsc_ofs
-            ax1.vlines(xest[ic],min(y1,y2),max(y1,y2),color='k',ls=':')
+            s = ss[ix]
         elif yrgt[ic] < 1.75:
-            #ax1.plot(xcs[ic],ycs[ic],'c-')
-            #ax1.plot(xest[ic],yest[ic],'c.')
-            if fflg[ic]:
-                ax1.plot(xest[ic],yest[ic],'ro')
-            else:
-                ax1.plot(xest[ic],yest[ic],'bo')
-            ax1.plot(xest[ic],yest[ic],'rx',ms=20)
             s = -1.0e10
         elif (ic < fflg.size-1) and (ydif[ic]-yinc[ic] > 4.0) and (xest[ic+1]-xest[ic] < 60.0):
-            #ax1.plot(xcs[ic],ycs[ic],'c-')
-            #ax1.plot(xest[ic],yest[ic],'c.')
-            if fflg[ic]:
-                ax1.plot(xest[ic],yest[ic],'ro')
-            else:
-                ax1.plot(xest[ic],yest[ic],'bo')
-            ax1.plot(xest[ic],yest[ic],'rx',ms=20)
             s = -1.0e10
-        elif (ydif[ic] > 0.9) or (yinc[ic] > 0.75) or ((ylft[ic] > 3.0) & (yrgt[ic] > 3.0)):
-            #ax1.plot(xcs[ic],ycs[ic],'r-')
-            #ax1.plot(xest[ic],yest[ic],'r.')
-            #ax1.plot(xest[ic],yest[ic],'ro',ms=20,mfc='none')
-            if fflg[ic]:
-                ax1.plot(xest[ic],yest[ic],'ro')
-            else:
-                ax1.plot(xest[ic],yest[ic],'bo')
-            s = ss3[ix]
-            y1 = yest[ic]
-            y2 = s-bsc_ofs
-            ax1.vlines(xest[ic],min(y1,y2),max(y1,y2),color='k',ls=':')
+        #elif (ydif[ic] > 0.9) or (yinc[ic] > 0.75) or ((ylft[ic] > 3.0) & (yrgt[ic] > 3.0)):
+        #    s = ss[ix]
         else:
-            #ax1.plot(xcs[ic],ycs[ic],'r-')
-            #ax1.plot(xest[ic],yest[ic],'r.')
-            #ax1.plot(xest[ic],yest[ic],'ro',ms=20,mfc='none')
-            if fflg[ic]:
-                ax1.plot(xest[ic],yest[ic],'ro')
-            else:
-                ax1.plot(xest[ic],yest[ic],'bo')
-            s = ss3[ix]
-            y1 = yest[ic]
-            y2 = s-bsc_ofs
-            ax1.vlines(xest[ic],min(y1,y2),max(y1,y2),color='k',ls=':')
-        if (xest[ic] <= nmin) or (xest[ic] >= nmax):
+            s = ss[ix]
+        if (xest[ic]+opts.offset < nmin) or (xest[ic]+opts.offset > nmax):
             s = -1.5e10
         sval.append(s)
     sval = np.array(sval)
-    indv = np.argsort(sval)[::-1]
 
-    cols = ['r','m','c','b','k']
-    for iv in range(fflg.size):
-        if sval[indv[iv]] > -1000.0:
-            ic = indv[iv]
-            ix = np.argmin(np.abs(xx-xest[ic]))
-            #ax1.plot(xest[ic],yest[ic],'*',color=cols[iv%len(cols)])
-            ax3.text(xx[ix],ss3[ix]+0.1,'{}'.format(iv+1),ha='center',va='bottom',size=16)
-            #if iv < 2:
-            #    ax1.plot(xest[ic],yest[ic],'o',ms=20,mfc='none',color=cols[iv%len(cols)],mew=2)
-            #    ax1.vlines(xest[ic],bsc_min,yest[ic],color=cols[iv%len(cols)])
-            #ax3.plot(xx[ix],ss3[ix],'o',color=cols[iv%len(cols)])
-
+    # Select three candidates
     xans = []
     yans = []
+    indv = np.argsort(sval)[::-1]
     if sval[indv[0]] > -10.0:
         xans.append(xest[indv[0]])
         yans.append(yest[indv[0]])
@@ -552,61 +499,45 @@ for i in range(nobject):
         yans.append(np.nan)
     xans = np.array(xans)
     yans = np.array(yans)
-    ax1.plot(xans[2],yans[2],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
-    ax1.plot(xans[1],yans[1],'o',ms=20,mfc='none',color=cols[1],mew=2,zorder=9)
-    ax1.plot(xans[0],yans[0],'o',ms=20,mfc='none',color=cols[0],mew=2,zorder=9)
-    l9 = ax1.vlines(xans[2],bsc_min,yans[2],color='orange',label='T$_{est3}$',zorder=10)
-    l8 = ax1.vlines(xans[1],bsc_min,yans[1],color=cols[1],label='T$_{est2}$',zorder=10)
-    l7 = ax1.vlines(xans[0],bsc_min,yans[0],color=cols[0],label='T$_{est1}$',zorder=10)
-    #ax1.plot(xans[0],yans[0],'r*',ms=10)
-    #ax1.plot(xans[1],yans[1],'m*',ms=10)
 
-    #ax2.plot(ndvi_ntim,zi,'.',color='#888888')
-    l3, = ax2.plot(xx,zz,'-',color='#888888',label='NDVI')
-    l4, = ax2.plot(xx,fishpond_index,'-',color='#cccccc',label='FI',zorder=0)
-    indx = list(object_id_check).index(object_id)
-    trans_date_uncorrected = trans_date_check[indx]+9.0
-    trans_date_corrected = trans_date_check[indx]
-    trans_date_survey = trans_date_true_check[indx]
-    #ax1.axvline(trans_date_uncorrected,color='b',linestyle=':',label='T$_{uncorrected}$') # back correct for the offset
-    #ax1.axvline(trans_date_corrected,color='b',linestyle='-',label='T$_{corrected}$')
-    l5 = ax1.axvline(trans_date_survey,color='g',label='T$_{survey}$')
-    #if plot_check[indx] != 120:
-        #ax1.plot(date2num(datetime.strptime('2019/'+survey_check[indx],'%Y/%m/%d'))-plot_check[indx],-23.75,'rv')
-        #ax1.plot(trans_date_survey,-23.65,'gv',ms=10)
-    inde = np.argmin(np.abs(trans_date_survey-xest))
-    trans_date_estimate = xest[inde]
-    trans_signal_estimate = yest[inde]
-    trans_date_answer1 = xans[0]
-    trans_signal_answer1 = yans[0]
-    trans_date_answer2 = xans[1]
-    trans_signal_answer2 = yans[1]
-    trans_date_answer3 = xans[2]
-    trans_signal_answer3 = yans[2]
-
-    ax1.set_title('OBJECTID= {}, $\epsilon$= {:.1f}, Site({})={}, Growth={}'.format(object_id,trans_date_estimate-trans_date_true_check[indx],survey_check[indx],site_check[indx],plot_check[indx]),y=1.15,x=0.5)
-    ax1.set_ylim(bsc_min,bsc_max)
-    ax2.set_ylim(-0.2,1.1)
-    ax3.set_ylim(bsc_min+bsc_ofs,bsc_max+bsc_ofs)
-    ax1.set_xlim(xx.min(),xx.max())
-    #ax2.set_xlim(xx.min(),xx.max())
-    ax1.xaxis.set_major_locator(plt.FixedLocator(values))
-    ax1.xaxis.set_major_formatter(plt.FixedFormatter(labels))
-    ax1.xaxis.set_minor_locator(plt.FixedLocator(ticks))
-    ax1.yaxis.set_major_locator(plt.MultipleLocator(5.0))
-    ax1.set_ylabel('BSC, Signal $-$ {} (dB)'.format(int(bsc_ofs+0.1)))
-    #ax2.set_ylabel('NDVI',color='#888888')
-    ax2.set_ylabel('NDVI, FI')
-    ax1.yaxis.set_label_coords(-0.105,0.5)
-    ax2.yaxis.set_label_coords(1.10,0.5)
-    for l in ax1.xaxis.get_ticklabels():
-        l.set_rotation(30.0)
-    lns = [l1,l2,l3,l4,l5,l6,l7,l8,l9]
-    lbs = [l.get_label() for l in lns]
-    ax1.legend(lns,lbs,prop={'size':12},numpoints=1,loc=8,bbox_to_anchor=(0.5,1.01),ncol=9,frameon=False,handletextpad=0.1,columnspacing=0.60,handlelength=1.2)
-
-    plt.savefig(pdf,format='pdf')
-    plt.draw()
-    #plt.pause(0.1)
+    # Plot data
+    if opts.fignam is not None:
+        fig.clear()
+        ax1 = plt.subplot(111)
+        ax1.minorticks_on()
+        ax2 = ax1.twinx()
+        ax3 = ax1.twinx()
+        ax3.set_yticks([])
+        l1, = ax1.plot(xx,yy,'k-',label='BSC')
+        ss[-10:] = np.nan
+        l2, = ax3.plot(xx,ss,'y-',lw=1,label='Signal')
+        ax1.plot(xans[2],yans[2],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
+        ax1.plot(xans[1],yans[1],'o',ms=20,mfc='none',color=cols[1],mew=2,zorder=9)
+        ax1.plot(xans[0],yans[0],'o',ms=20,mfc='none',color=cols[0],mew=2,zorder=9)
+        l9 = ax1.vlines(xans[2],bsc_min,yans[2],color='orange',label='T$_{est3}$',zorder=10)
+        l8 = ax1.vlines(xans[1],bsc_min,yans[1],color=cols[1],label='T$_{est2}$',zorder=10)
+        l7 = ax1.vlines(xans[0],bsc_min,yans[0],color=cols[0],label='T$_{est1}$',zorder=10)
+        l4, = ax2.plot(xx,fishpond_index,'-',color='#cccccc',label='FI',zorder=0)
+        ax1.set_title('OBJECTID: {}'.format(object_id),y=1.15,x=0.5)
+        ax1.set_ylim(bsc_min,bsc_max)
+        ax2.set_ylim(-0.2,1.1)
+        ax3.set_ylim(bsc_min+bsc_ofs,bsc_max+bsc_ofs)
+        ax1.set_xlim(xx.min(),xx.max())
+        ax1.xaxis.set_major_locator(plt.FixedLocator(values))
+        ax1.xaxis.set_major_formatter(plt.FixedFormatter(labels))
+        ax1.xaxis.set_minor_locator(plt.FixedLocator(ticks))
+        ax1.yaxis.set_major_locator(plt.MultipleLocator(5.0))
+        ax1.set_ylabel('BSC, Signal $-$ {} (dB)'.format(int(bsc_ofs+0.1)))
+        ax1.yaxis.set_label_coords(-0.105,0.5)
+        ax2.yaxis.set_label_coords(1.10,0.5)
+        for l in ax1.xaxis.get_ticklabels():
+            l.set_rotation(30.0)
+        lns = [l1,l2,l3,l4,l5,l6,l7,l8,l9]
+        lbs = [l.get_label() for l in lns]
+        ax1.legend(lns,lbs,prop={'size':12},numpoints=1,loc=8,bbox_to_anchor=(0.5,1.01),ncol=9,frameon=False,handletextpad=0.1,columnspacing=0.60,handlelength=1.2)
+        plt.savefig(pdf,format='pdf')
+        plt.draw()
+        #plt.pause(0.1)
     #break
-pdf.close()
+if opts.fignam is not None:
+    pdf.close()
