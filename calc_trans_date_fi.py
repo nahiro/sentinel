@@ -508,6 +508,11 @@ for ii in range(nobject):
     if sval[indv[0]] > -10.0:
         xans.append(xest[indv[0]])
         yans.append(yest[indv[0]])
+        ix = np.argmin(np.abs(xx-xest[indv[0]]))
+        output_data[0,ii] = xx[ix]
+        output_data[1,ii] = yy[ix]
+        output_data[2,ii] = ss[ix]
+        output_data[3,ii] = ff[ix]
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         sval[cnd] = -2.0e10
         indv = np.argsort(sval)[::-1]
@@ -517,6 +522,11 @@ for ii in range(nobject):
     if sval[indv[0]] > -10.0:
         xans.append(xest[indv[0]])
         yans.append(yest[indv[0]])
+        ix = np.argmin(np.abs(xx-xest[indv[0]]))
+        output_data[5,ii] = xx[ix]
+        output_data[6,ii] = yy[ix]
+        output_data[7,ii] = ss[ix]
+        output_data[8,ii] = ff[ix]
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         sval[cnd] = -3.0e10
         indv = np.argsort(sval)[::-1]
@@ -526,11 +536,20 @@ for ii in range(nobject):
     if sval[indv[0]] > -10.0:
         xans.append(xest[indv[0]])
         yans.append(yest[indv[0]])
+        ix = np.argmin(np.abs(xx-xest[indv[0]]))
+        output_data[10,ii] = xx[ix]
+        output_data[11,ii] = yy[ix]
+        output_data[12,ii] = ss[ix]
+        output_data[13,ii] = ff[ix]
     else:
         xans.append(np.nan)
         yans.append(np.nan)
     xans = np.array(xans)
     yans = np.array(yans)
+    ix = np.argmin(np.abs(xx-nmin))
+    output_data[15,ii] = ff[ix]
+    ix = np.argmin(np.abs(xx-nmax))
+    output_data[16,ii] = ff[ix]
 
     # Plot data
     if opts.fig_fnam is not None:
@@ -569,7 +588,7 @@ for ii in range(nobject):
         ax1.legend(lns,lbs,prop={'size':12},numpoints=1,loc=8,bbox_to_anchor=(0.5,1.01),ncol=9,frameon=False,handletextpad=0.1,columnspacing=0.60,handlelength=1.2)
         plt.savefig(pdf,format='pdf')
         plt.draw()
-        #plt.pause(0.1)
+        plt.pause(0.1)
     #break
 if opts.fig_fnam is not None:
     pdf.close()
@@ -589,10 +608,10 @@ for i in range(3):
     w.field('res_{}'.format(i+1),'F',13,6)
 w.field('fpi_s','F',13,6)
 w.field('fpi_e','F',13,6)
-for i,shaperec in enumerate(r.iterShapeRecords()):
+for ii,shaperec in enumerate(r.iterShapeRecords()):
     rec = shaperec.record
     shp = shaperec.shape
-    rec.extend(list(output_data[i]))
+    rec.extend(list(output_data[:,ii]))
     w.shape(shp)
     w.record(*rec)
 w.close()
