@@ -72,6 +72,8 @@ data_info['offset'] = opts.offset
 data_info['early'] = opts.early
 data_info['incidence_angle'] = opts.incidence_angle if opts.incidence_angle is None else os.path.basename(opts.incidence_angle)
 data_info['incidence_list'] = opts.incidence_list if opts.incidence_list is None else os.path.basename(opts.incidence_list)
+data_info['x_profile'] = os.path.basename(opts.x_profile)
+data_info['y_profile'] = os.path.basename(opts.y_profile)
 data_info['area_fnam'] = os.path.basename(opts.area_fnam)
 
 nmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
@@ -136,6 +138,7 @@ else:
     data_shape = None
     data_trans = None
     data = []
+    iangle = {}
     band_list = []
     fs = sorted(glob(os.path.join(opts.datdir,'*'+'[0-9]'*8+'*.tif')))
     for fnam in fs:
@@ -163,6 +166,9 @@ else:
                 output_epsg = int(epsg)
             else:
                 output_epsg = opts.output_epsg
+        meta = ds.GetMetadata()
+        if 'iangle' in meta:
+            iangle.update({dstr:float(meta['iangle'])})
         dtmp = ds.ReadAsArray()
         if data_shape is None:
             data_shape = dtmp[0].shape
@@ -226,20 +232,29 @@ if opts.incidence_list is not None:
         else:
             signal_dif.append(signal_avg[baseline_indx]-signal_avg[i])
     incidence_indx = {}
-    with open(opts.incidence_angle,'r') as fp:
-        for line in fp:
-            item = line.split()
-            if len(item) < 2:
-                continue
-            if item[0][0] == '#':
-                continue
-            ang = float(item[1])
+    if opts.incidence_angle is not None:
+        with open(opts.incidence_angle,'r') as fp:
+            for line in fp:
+                item = line.split()
+                if len(item) < 2:
+                    continue
+                if item[0][0] == '#':
+                    continue
+                ang = float(item[1])
+                dif = np.abs(incidence_angle-ang)
+                indx = np.argmin(dif)
+                if dif[indx] > 0.1:
+                    sys.stderr.write('Warning, ang={}, dif={}\n'.format(ang,dif[indx]))
+                    continue
+                incidence_indx.update({item[0]:indx})
+    else:
+        for dstr in iangle:
+            ang = iangle[dstr]
             dif = np.abs(incidence_angle-ang)
             indx = np.argmin(dif)
             if dif[indx] > 0.1:
-                sys.stderr.write('Warning, ang={}, dif={}\n'.format(ang,dif[indx]))
-                continue
-            incidence_indx.update({item[0]:indx})
+                raise ValueError('Error, dif={} ({})'.format(dif[indx],dstr))
+            incidence_indx.update({dstr:indx})
 
 vh_dtim = []
 vh_data = []
@@ -251,7 +266,9 @@ for i,band in enumerate(band_list):
         raise ValueError('Error in finding date >>> '+band)
     dstr = m.group(1)
     if opts.incidence_list is not None:
-        if not incidence_select[incidence_indx[dstr]]:
+        if not dstr in incidence_indx:
+            raise ValueError('Error, no incidence angle for '+dstr)
+        elif not incidence_select[incidence_indx[dstr]]:
             continue
         dtmp = (data[i]+signal_dif[incidence_indx[dstr]]).flatten()
     else:
@@ -275,6 +292,10 @@ for i,band in enumerate(band_list):
 vh_dtim = np.array(vh_dtim)
 vh_data = np.array(vh_data)
 vh_ntim = date2num(vh_dtim)
+data_info['dtim'] = ','.join([d.strftime('%Y%m%d') for d in vh_dtim])
+with open(opts.json_fnam,'w') as json_file:
+    json.dump(data_info,json_file,indent=4)
+    json_file.write('\n') # Add newline cause PyJSON does not
 
 xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+0.1*opts.tstp,opts.tstp)
 x_profile = np.load(opts.x_profile)
