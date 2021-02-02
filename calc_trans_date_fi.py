@@ -19,8 +19,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
-TMIN = '20190501'
-TMAX = '20190915'
+#TMIN = '20190501'
+#TMAX = '20190915'
+TMIN = '20190601'
+TMAX = '20191015'
 TMGN = 30.0 # day
 TSTP = 0.1 # day
 SMOOTH = 0.01
@@ -43,8 +45,8 @@ OUT_FNAM = os.path.join('.','transplanting_date')
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-s','--tmin',default=TMIN,help='Min date of transplanting in the format YYYYMMDD (%default)')
 parser.add_option('-e','--tmax',default=TMAX,help='Max date of transplanting in the format YYYYMMDD (%default)')
-parser.add_option('--data_tmin',default=DATA_TMIN,help='Min date of input data in the format YYYYMMDD (%default)')
-parser.add_option('--data_tmax',default=DATA_TMAX,help='Max date of input data in the format YYYYMMDD (%default)')
+parser.add_option('--data_tmin',default=None,help='Min date of input data in the format YYYYMMDD (%default)')
+parser.add_option('--data_tmax',default=None,help='Max date of input data in the format YYYYMMDD (%default)')
 parser.add_option('--tmgn',default=TMGN,type='float',help='Margin of input data in day (%default)')
 parser.add_option('--tstp',default=TSTP,type='float',help='Precision of transplanting date in day (%default)')
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
@@ -65,6 +67,7 @@ parser.add_option('-j','--json_fnam',default=JSON_FNAM,help='Output JSON name (%
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
 parser.add_option('-F','--fig_fnam',default=None,help='Output figure name for debug (%default)')
+parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 (opts,args) = parser.parse_args()
 
 data_info = OrderedDict()
@@ -309,6 +312,9 @@ with open(opts.json_fnam,'w') as json_file:
 xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+0.1*opts.tstp,opts.tstp)
 x_profile = np.load(opts.x_profile)
 y_profile = np.load(opts.y_profile)
+xstp = np.diff(x_profile).mean()
+if np.abs(xstp-opts.tstp) > 1.0e-8:
+    raise ValueError('Error, xstp={}, opts.tstp={}'.format(xstp,opts.tstp))
 
 if opts.fig_fnam is not None:
     values = []
@@ -333,8 +339,6 @@ for ii in range(nobject):
     object_id = object_ids[ii]
     if object_id != ii+1:
         raise ValueError('Error, object_id={}, ii={}'.format(object_id,ii))
-    if not object_id in object_id_check:
-        continue
     if inds[ii].size < 1:
         continue
     yi = vh_data[:,ii] # VH
@@ -502,50 +506,37 @@ for ii in range(nobject):
     sval = np.array(sval)
 
     # Select three candidates
-    xans = []
-    yans = []
     indv = np.argsort(sval)[::-1]
     if sval[indv[0]] > -10.0:
-        xans.append(xest[indv[0]])
-        yans.append(yest[indv[0]])
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[0,ii] = xx[ix]
         output_data[1,ii] = yy[ix]
         output_data[2,ii] = ss[ix]
         output_data[3,ii] = ff[ix]
+        if not np.all(output_data[[0,1],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
+            raise ValueError('Error in result check 1')
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         sval[cnd] = -2.0e10
         indv = np.argsort(sval)[::-1]
-    else:
-        xans.append(np.nan)
-        yans.append(np.nan)
     if sval[indv[0]] > -10.0:
-        xans.append(xest[indv[0]])
-        yans.append(yest[indv[0]])
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[5,ii] = xx[ix]
         output_data[6,ii] = yy[ix]
         output_data[7,ii] = ss[ix]
         output_data[8,ii] = ff[ix]
+        if not np.all(output_data[[5,6],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
+            raise ValueError('Error in result check 2')
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         sval[cnd] = -3.0e10
         indv = np.argsort(sval)[::-1]
-    else:
-        xans.append(np.nan)
-        yans.append(np.nan)
     if sval[indv[0]] > -10.0:
-        xans.append(xest[indv[0]])
-        yans.append(yest[indv[0]])
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[10,ii] = xx[ix]
         output_data[11,ii] = yy[ix]
         output_data[12,ii] = ss[ix]
         output_data[13,ii] = ff[ix]
-    else:
-        xans.append(np.nan)
-        yans.append(np.nan)
-    xans = np.array(xans)
-    yans = np.array(yans)
+        if not np.all(output_data[[10,11],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
+            raise ValueError('Error in result check 3')
     ix = np.argmin(np.abs(xx-nmin))
     output_data[15,ii] = ff[ix]
     ix = np.argmin(np.abs(xx-nmax))
@@ -553,37 +544,38 @@ for ii in range(nobject):
 
     # Plot data
     if opts.fig_fnam is not None:
+        ss_offset = 15.0
+        bsc_min = -25.0
+        bsc_max = -5.0
         fig.clear()
         ax1 = plt.subplot(111)
         ax1.minorticks_on()
         ax2 = ax1.twinx()
-        ax3 = ax1.twinx()
-        ax3.set_yticks([])
         l1, = ax1.plot(xx,yy,'k-',label='BSC')
         ss[-10:] = np.nan
-        l2, = ax3.plot(xx,ss,'y-',lw=1,label='Signal')
-        ax1.plot(xans[2],yans[2],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
-        ax1.plot(xans[1],yans[1],'o',ms=20,mfc='none',color=cols[1],mew=2,zorder=9)
-        ax1.plot(xans[0],yans[0],'o',ms=20,mfc='none',color=cols[0],mew=2,zorder=9)
-        l9 = ax1.vlines(xans[2],bsc_min,yans[2],color='orange',label='T$_{est3}$',zorder=10)
-        l8 = ax1.vlines(xans[1],bsc_min,yans[1],color=cols[1],label='T$_{est2}$',zorder=10)
-        l7 = ax1.vlines(xans[0],bsc_min,yans[0],color=cols[0],label='T$_{est1}$',zorder=10)
-        l4, = ax2.plot(xx,fishpond_index,'-',color='#cccccc',label='FI',zorder=0)
+        l2, = ax1.plot(xx,ss-ss_offset,'y-',lw=1,label='Signal')
+        l3, = ax2.plot(xx,fishpond_index,'-',color='#cccccc',label='FI',zorder=0)
+        ax1.plot(output_data[10,ii],output_data[11,ii],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
+        ax1.plot(output_data[5,ii],output_data[6,ii],'o',ms=20,mfc='none',color='m',mew=2,zorder=9)
+        ax1.plot(output_data[0,ii],output_data[1,ii],'o',ms=20,mfc='none',color='r',mew=2,zorder=9)
+        l4 = ax1.vlines(output_data[10,ii],bsc_min,output_data[11,ii],color='orange',label='T$_{est3}$',zorder=10)
+        l5 = ax1.vlines(output_data[5,ii],bsc_min,output_data[6,ii],color='m',label='T$_{est2}$',zorder=10)
+        l6 = ax1.vlines(output_data[0,ii],bsc_min,output_data[1,ii],color='r',label='T$_{est1}$',zorder=10)
         ax1.set_title('OBJECTID: {}'.format(object_id),y=1.15,x=0.5)
         ax1.set_ylim(bsc_min,bsc_max)
-        ax2.set_ylim(-0.2,1.1)
-        ax3.set_ylim(bsc_min+bsc_ofs,bsc_max+bsc_ofs)
+        ax2.set_ylim(-0.1,1.1)
         ax1.set_xlim(xx.min(),xx.max())
         ax1.xaxis.set_major_locator(plt.FixedLocator(values))
         ax1.xaxis.set_major_formatter(plt.FixedFormatter(labels))
         ax1.xaxis.set_minor_locator(plt.FixedLocator(ticks))
         ax1.yaxis.set_major_locator(plt.MultipleLocator(5.0))
-        ax1.set_ylabel('BSC, Signal $-$ {} (dB)'.format(int(bsc_ofs+0.1)))
+        ax1.set_ylabel('BSC, Signal $-$ {} (dB)'.format(int(ss_offset+0.1)))
+        ax2.set_ylabel('FI')
         ax1.yaxis.set_label_coords(-0.105,0.5)
         ax2.yaxis.set_label_coords(1.10,0.5)
         for l in ax1.xaxis.get_ticklabels():
             l.set_rotation(30.0)
-        lns = [l1,l2,l3,l4,l5,l6,l7,l8,l9]
+        lns = [l1,l2,l3,l4,l5,l6]
         lbs = [l.get_label() for l in lns]
         ax1.legend(lns,lbs,prop={'size':12},numpoints=1,loc=8,bbox_to_anchor=(0.5,1.01),ncol=9,frameon=False,handletextpad=0.1,columnspacing=0.60,handlelength=1.2)
         plt.savefig(pdf,format='pdf')
@@ -597,6 +589,8 @@ if opts.npy_fnam is not None:
     np.save(opts.npy_fnam,output_data)
 
 r = shapefile.Reader(opts.shp_fnam)
+if len(r) != nobject:
+    raise ValueError('Error, len(r)={}, nobject={}'.format(len(r),nobject))
 w = shapefile.Writer(opts.out_fnam)
 w.shapeType = shapefile.POLYGON
 w.fields = r.fields[1:] # skip first deletion field
