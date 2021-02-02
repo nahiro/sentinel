@@ -67,8 +67,9 @@ parser.add_option('-i','--inp_fnam',default=None,help='Input GeoTIFF name (%defa
 parser.add_option('-j','--json_fnam',default=JSON_FNAM,help='Output JSON name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
-parser.add_option('-F','--fig_fnam',default=None,help='Output figure name for debug (%default)')
+parser.add_option('-F','--fig_fnam',default=None,help='Output figure name (%default)')
 parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
+parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 
 data_info = OrderedDict()
@@ -336,7 +337,8 @@ if opts.fig_fnam is not None:
 
 nb = 17 # (trans_dN,bsc_minN,post_sN,fpi_N,res_N)x3,fpi_s,fpi_e
 output_data = np.full((nb,nobject),np.nan)
-warnings.simplefilter('ignore')
+if not opts.debug:
+    warnings.simplefilter('ignore')
 for ii in range(nobject):
     if ii%1000 == 0:
         sys.stderr.write('{}/{}\n'.format(ii,nobject))
