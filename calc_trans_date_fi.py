@@ -3,6 +3,7 @@ import os
 import sys
 import shutil
 import re
+import warnings
 from glob import glob
 from datetime import datetime
 import gdal
@@ -335,7 +336,10 @@ if opts.fig_fnam is not None:
 
 nb = 17 # (trans_dN,bsc_minN,post_sN,fpi_N,res_N)x3,fpi_s,fpi_e
 output_data = np.full((nb,nobject),np.nan)
+warnings.simplefilter('ignore')
 for ii in range(nobject):
+    if ii%1000 == 0:
+        sys.stderr.write('{}/{}\n'.format(ii,nobject))
     object_id = object_ids[ii]
     if object_id != ii+1:
         raise ValueError('Error, object_id={}, ii={}'.format(object_id,ii))
@@ -504,6 +508,7 @@ for ii in range(nobject):
             s = -1.5e10
         sval.append(s)
     sval = np.array(sval)
+    sval_org = sval.copy()
 
     # Select three candidates
     indv = np.argsort(sval)[::-1]
@@ -555,12 +560,21 @@ for ii in range(nobject):
         ss[-10:] = np.nan
         l2, = ax1.plot(xx,ss-ss_offset,'y-',lw=1,label='Signal')
         l3, = ax2.plot(xx,fishpond_index,'-',color='#cccccc',label='FI',zorder=0)
+        for ic in range(fflg.size):
+            if fflg[ic]:
+                ax1.plot(xest[ic],yest[ic],'ro')
+            else:
+                ax1.plot(xest[ic],yest[ic],'bo')
+            if sval_org[ic] < -10.0:
+                ax1.plot(xest[ic],yest[ic],'rx',ms=20)
         ax1.plot(output_data[10,ii],output_data[11,ii],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
         ax1.plot(output_data[5,ii],output_data[6,ii],'o',ms=20,mfc='none',color='m',mew=2,zorder=9)
         ax1.plot(output_data[0,ii],output_data[1,ii],'o',ms=20,mfc='none',color='r',mew=2,zorder=9)
         l4 = ax1.vlines(output_data[10,ii],bsc_min,output_data[11,ii],color='orange',label='T$_{est3}$',zorder=10)
         l5 = ax1.vlines(output_data[5,ii],bsc_min,output_data[6,ii],color='m',label='T$_{est2}$',zorder=10)
         l6 = ax1.vlines(output_data[0,ii],bsc_min,output_data[1,ii],color='r',label='T$_{est1}$',zorder=10)
+        ax1.fill_betweenx([bsc_min,bsc_max],xx.min(),nmin,color='k',alpha=0.1)
+        ax1.fill_betweenx([bsc_min,bsc_max],nmax,xx.max(),color='k',alpha=0.1)
         ax1.set_title('OBJECTID: {}'.format(object_id),y=1.15,x=0.5)
         ax1.set_ylim(bsc_min,bsc_max)
         ax2.set_ylim(-0.1,1.1)
@@ -580,7 +594,7 @@ for ii in range(nobject):
         ax1.legend(lns,lbs,prop={'size':12},numpoints=1,loc=8,bbox_to_anchor=(0.5,1.01),ncol=9,frameon=False,handletextpad=0.1,columnspacing=0.60,handlelength=1.2)
         plt.savefig(pdf,format='pdf')
         plt.draw()
-        plt.pause(0.1)
+        #plt.pause(0.1)
     #break
 if opts.fig_fnam is not None:
     pdf.close()
