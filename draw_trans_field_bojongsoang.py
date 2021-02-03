@@ -2,6 +2,7 @@
 #from shapely.geometry.polygon import Polygon
 import os
 import sys
+import warnings
 from datetime import datetime
 import numpy as np
 import osr
@@ -25,6 +26,8 @@ TMIN = '20190415'
 TMAX = '20190601'
 PMIN = 0.0
 PMAX = 5.0
+NCAN = 1
+COORDS_COLOR = '#aaaaaa'
 TRANS_FNAM = os.path.join('.','transplanting_date.shp')
 OUTPUT_FNAM = 'trans_date_testsite.pdf'
 
@@ -34,14 +37,22 @@ parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMM
 parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
 parser.add_option('-p','--pmin',default=PMIN,type='float',help='Min signal in dB (%default)')
 parser.add_option('-P','--pmax',default=PMAX,type='float',help='Max signal in dB (%default)')
+parser.add_option('-N','--ncan',default=NCAN,type='int',help='Candidate number between 1 and 3 (%default)')
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape file (%default)')
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
 parser.add_option('--add_tmin',default=False,action='store_true',help='Add tmin in colorbar (%default)')
 parser.add_option('--add_tmax',default=False,action='store_true',help='Add tmax in colorbar (%default)')
+parser.add_option('--add_coords',default=False,action='store_true',help='Add geographical coordinates (%default)')
+parser.add_option('--coords_color',default=COORDS_COLOR,help='Color of geographical coordinates (%default)')
 parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
+parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
+if opts.ncan < 1 or opts.ncan > 3:
+    raise ValueError('Error, ncan={}'.format(opts.ncan))
+if not opts.debug:
+    warnings.simplefilter('ignore')
 
 def transform_wgs84_to_utm(longitude,latitude):
     utm_zone = (int(1+(longitude.mean()+180.0)/6.0))
@@ -54,20 +65,21 @@ def transform_wgs84_to_utm(longitude,latitude):
     xyz = np.array(wgs84_to_utm_geo_transform.TransformPoints(np.dstack((longitude,latitude)).reshape((-1,2)))).reshape(longitude.shape[0],longitude.shape[1],3)
     return xyz[:,:,0],xyz[:,:,1],xyz[:,:,2] # returns easting, northing, altitude
 
-center_x = 107.67225
-center_y = -6.98795
-lon = np.arange(107+36/60,107+44/60,1.0/60.0)
-lat = np.arange(-7-2/60,-6-56/60,1.0/60.0)
-xg,yg = np.meshgrid(lon,lat)
-x,y,z = transform_wgs84_to_utm(xg,yg)
-ind_x = np.argmin(np.abs(lon-center_x))
-ind_y = np.argmin(np.abs(lat-center_y))
-center_x_utm = x[ind_y,:]
-center_y_utm = y[:,ind_x]
-#x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((x*60.0-int(x*60.0))*60.0+0.1))+'$^{\prime\prime}$E' for x in lon]
-#y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((y*60.0-int(y*60.0))*60.0+0.1))+'$^{\prime\prime}$S' for y in -lat]
-x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$E' for x in lon]
-y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$S' for y in -lat]
+if opts.add_coords:
+    center_x = 107.67225
+    center_y = -6.98795
+    lon = np.arange(107+36/60,107+44/60,1.0/60.0)
+    lat = np.arange(-7-2/60,-6-56/60,1.0/60.0)
+    xg,yg = np.meshgrid(lon,lat)
+    x,y,z = transform_wgs84_to_utm(xg,yg)
+    ind_x = np.argmin(np.abs(lon-center_x))
+    ind_y = np.argmin(np.abs(lat-center_y))
+    center_x_utm = x[ind_y,:]
+    center_y_utm = y[:,ind_x]
+    #x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((x*60.0-int(x*60.0))*60.0+0.1))+'$^{\prime\prime}$E' for x in lon]
+    #y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((y*60.0-int(y*60.0))*60.0+0.1))+'$^{\prime\prime}$S' for y in -lat]
+    x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$E' for x in lon]
+    y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$S' for y in -lat]
 
 color = cm.hsv(np.linspace(0.0,1.0,365))
 colors = np.vstack((color,color,color,color,color,color))
@@ -101,8 +113,8 @@ tmax = -1.0e10
 pmin = 1.0e10
 pmax = -1.0e10
 for rec in records:
-    t = rec.attributes['trans_d1']#+date2num(np.datetime64('0000-12-31'))
-    p = rec.attributes['post_s1']
+    t = rec.attributes['trans_d{:d}'.format(opts.ncan)]#+date2num(np.datetime64('0000-12-31'))
+    p = rec.attributes['post_s{:d}'.format(opts.ncan)]
     if t > 1000.0:
         if t < tmin:
             tmin = t
@@ -199,10 +211,10 @@ ax3 = plt.subplot(223,projection=prj)
 ax4 = plt.subplot(224,projection=prj)
 
 for shp,rec in zip(shapes,records):
-    t = rec.attributes['trans_d1']#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
-    b = rec.attributes['bsc_min1']
-    p = rec.attributes['post_s1']
-    f = rec.attributes['fpi_1']
+    t = rec.attributes['trans_d{:d}'.format(opts.ncan)]#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
+    b = rec.attributes['bsc_min{:d}'.format(opts.ncan)]
+    p = rec.attributes['post_s{:d}'.format(opts.ncan)]
+    f = rec.attributes['fpi_{:d}'.format(opts.ncan)]
     ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
     ax2.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((b-bmin)/bdif))
     ax3.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
@@ -244,57 +256,66 @@ ax42.set_xlabel('Fishpond Index at transplanting')
 ax42.xaxis.set_label_coords(0.5,-2.2)
 #ax2.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
 
-ax1.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
-ax1.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
-ax1.xaxis.set_label_position('top')
-ax1.xaxis.tick_top()
-ax1.yaxis.set_label_position('right')
-ax1.yaxis.tick_right()
-ax1.set_xticks(np.arange(100.0,120.0,0.1))
-ax1.set_yticks(np.arange(-7.5,-5.5,0.1))
-ax1.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
-ax1.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
-ax1.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
-ax1.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
+if opts.add_coords:
+    ax1.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax1.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax1.xaxis.set_label_position('top')
+    ax1.xaxis.tick_top()
+    ax1.yaxis.set_label_position('right')
+    ax1.yaxis.tick_right()
+    plt.setp(ax1.get_xticklabels(),color=opts.coords_color)
+    plt.setp(ax1.get_yticklabels(),color=opts.coords_color)
+    ax1.set_xticks(np.arange(100.0,120.0,0.1))
+    ax1.set_yticks(np.arange(-7.5,-5.5,0.1))
+    ax1.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
+    ax1.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
+    ax1.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
+    ax1.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
 
-ax2.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
-ax2.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
-ax2.xaxis.set_label_position('top')
-ax2.xaxis.tick_top()
-ax2.yaxis.set_label_position('right')
-ax2.yaxis.tick_right()
-ax2.set_xticks(np.arange(100.0,120.0,0.1))
-ax2.set_yticks(np.arange(-7.5,-5.5,0.1))
-ax2.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
-ax2.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
-ax2.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
-ax2.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
+    ax2.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax2.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax2.xaxis.set_label_position('top')
+    ax2.xaxis.tick_top()
+    ax2.yaxis.set_label_position('right')
+    ax2.yaxis.tick_right()
+    plt.setp(ax2.get_xticklabels(),color=opts.coords_color)
+    plt.setp(ax2.get_yticklabels(),color=opts.coords_color)
+    ax2.set_xticks(np.arange(100.0,120.0,0.1))
+    ax2.set_yticks(np.arange(-7.5,-5.5,0.1))
+    ax2.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
+    ax2.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
+    ax2.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
+    ax2.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
 
-ax3.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
-ax3.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
-ax3.xaxis.set_label_position('top')
-ax3.xaxis.tick_top()
-ax3.yaxis.set_label_position('right')
-ax3.yaxis.tick_right()
-ax3.set_xticks(np.arange(100.0,120.0,0.1))
-ax3.set_yticks(np.arange(-7.5,-5.5,0.1))
-ax3.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
-ax3.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
-ax3.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
-ax3.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
+    ax3.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax3.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax3.xaxis.set_label_position('top')
+    ax3.xaxis.tick_top()
+    ax3.yaxis.set_label_position('right')
+    ax3.yaxis.tick_right()
+    plt.setp(ax3.get_xticklabels(),color=opts.coords_color)
+    plt.setp(ax3.get_yticklabels(),color=opts.coords_color)
+    ax3.set_xticks(np.arange(100.0,120.0,0.1))
+    ax3.set_yticks(np.arange(-7.5,-5.5,0.1))
+    ax3.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
+    ax3.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
+    ax3.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
+    ax3.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
 
-ax4.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
-ax4.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
-ax4.xaxis.set_label_position('top')
-ax4.xaxis.tick_top()
-ax4.yaxis.set_label_position('right')
-ax4.yaxis.tick_right()
-ax4.set_xticks(np.arange(100.0,120.0,0.1))
-ax4.set_yticks(np.arange(-7.5,-5.5,0.1))
-ax4.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
-ax4.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
-ax4.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
-ax4.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
+    ax4.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax4.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax4.xaxis.set_label_position('top')
+    ax4.xaxis.tick_top()
+    ax4.yaxis.set_label_position('right')
+    ax4.yaxis.tick_right()
+    plt.setp(ax4.get_xticklabels(),color=opts.coords_color)
+    plt.setp(ax4.get_yticklabels(),color=opts.coords_color)
+    ax4.set_xticks(np.arange(100.0,120.0,0.1))
+    ax4.set_yticks(np.arange(-7.5,-5.5,0.1))
+    ax4.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
+    ax4.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
+    ax4.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
+    ax4.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
 
 ax1.set_xlim(xmin,xmax)
 ax1.set_ylim(ymin,ymax)

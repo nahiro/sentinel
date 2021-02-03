@@ -519,7 +519,7 @@ for ii in range(nobject):
         output_data[0,ii] = xx[ix]
         output_data[1,ii] = yy[ix]
         output_data[2,ii] = ss[ix]
-        output_data[3,ii] = ff[ix]
+        output_data[3,ii] = fishpond_index[ix]
         if not np.all(output_data[[0,1],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
             raise ValueError('Error in result check 1')
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
@@ -530,7 +530,7 @@ for ii in range(nobject):
         output_data[5,ii] = xx[ix]
         output_data[6,ii] = yy[ix]
         output_data[7,ii] = ss[ix]
-        output_data[8,ii] = ff[ix]
+        output_data[8,ii] = fishpond_index[ix]
         if not np.all(output_data[[5,6],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
             raise ValueError('Error in result check 2')
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
@@ -541,13 +541,13 @@ for ii in range(nobject):
         output_data[10,ii] = xx[ix]
         output_data[11,ii] = yy[ix]
         output_data[12,ii] = ss[ix]
-        output_data[13,ii] = ff[ix]
+        output_data[13,ii] = fishpond_index[ix]
         if not np.all(output_data[[10,11],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
             raise ValueError('Error in result check 3')
     ix = np.argmin(np.abs(xx-nmin))
-    output_data[15,ii] = ff[ix]
+    output_data[15,ii] = fishpond_index[ix]
     ix = np.argmin(np.abs(xx-nmax))
-    output_data[16,ii] = ff[ix]
+    output_data[16,ii] = fishpond_index[ix]
 
     # Plot data
     if opts.fig_fnam is not None:
@@ -559,7 +559,7 @@ for ii in range(nobject):
         ax1.minorticks_on()
         ax2 = ax1.twinx()
         l1, = ax1.plot(xx,yy,'k-',label='BSC')
-        ss[-10:] = np.nan
+        #ss[-10:] = np.nan
         l2, = ax1.plot(xx,ss-ss_offset,'y-',lw=1,label='Signal')
         l3, = ax2.plot(xx,fishpond_index,'-',color='#cccccc',label='FI',zorder=0)
         for ic in range(fflg.size):
