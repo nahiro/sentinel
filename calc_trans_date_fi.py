@@ -335,12 +335,11 @@ if opts.fig_fnam is not None:
     plt.subplots_adjust(left=0.12,right=0.88,bottom=0.12,top=0.80,hspace=0.5)
     pdf = PdfPages(opts.fig_fnam)
 
-nb = 17 # (trans_dN,bsc_minN,post_sN,fpi_N,res_N)x3,fpi_s,fpi_e
+nb = 17 # (trans_dN,bsc_minN,fp_offsN,post_sN,fpi_N)x3,fpi_s,fpi_e
 output_data = np.full((nb,nobject),np.nan)
 if not opts.debug:
     warnings.simplefilter('ignore')
 for ii in range(nobject):
-#for ii in [7629]:
     if ii%1000 == 0:
         sys.stderr.write('{}/{}\n'.format(ii,nobject))
     object_id = object_ids[ii]
@@ -389,6 +388,7 @@ for ii in range(nobject):
 
     # Calculate post-transplanting signal
     ss = []
+    oo = []
     for i in range(xx.size):
         dmax = yy.max()-yy[i]
         if (dmax > opts.signal_v) and (fishpond_index[i] > 0.01):
@@ -404,7 +404,9 @@ for ii in range(nobject):
         cnd = (xx > xx[i]) & (xx < xx[i]+90)
         y2 = ytmp[cnd].mean()
         ss.append(y2)
+        oo.append(offset)
     ss = np.array(ss)
+    oo = np.array(oo)
 
     # Search local minima and rising points
     f1 = np.gradient(yy)/np.gradient(xx)
@@ -508,6 +510,8 @@ for ii in range(nobject):
         ix = np.argmin(np.abs(xx-xest[ic]))
         if yflg[ic]:
             s = ss[ix]
+        elif yrgt[ic] < oo[ix]:
+            s = -1.0e10
         elif yrgt[ic] < 1.5:
             s = -1.0e10
         elif (ic < fflg.size-1) and (ydif[ic]-yinc[ic] > 4.0) and (xest[ic+1]-xest[ic] < 60.0):
@@ -528,8 +532,9 @@ for ii in range(nobject):
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[0,ii] = xx[ix]
         output_data[1,ii] = yy[ix]
-        output_data[2,ii] = ss[ix]
-        output_data[3,ii] = fishpond_index[ix]
+        output_data[2,ii] = oo[ix]
+        output_data[3,ii] = ss[ix]
+        output_data[4,ii] = fishpond_index[ix]
         if not np.all(output_data[[0,1],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
             raise ValueError('Error in result check 1')
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
@@ -539,8 +544,9 @@ for ii in range(nobject):
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[5,ii] = xx[ix]
         output_data[6,ii] = yy[ix]
-        output_data[7,ii] = ss[ix]
-        output_data[8,ii] = fishpond_index[ix]
+        output_data[7,ii] = oo[ix]
+        output_data[8,ii] = ss[ix]
+        output_data[9,ii] = fishpond_index[ix]
         if not np.all(output_data[[5,6],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
             raise ValueError('Error in result check 2')
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
@@ -550,8 +556,9 @@ for ii in range(nobject):
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[10,ii] = xx[ix]
         output_data[11,ii] = yy[ix]
-        output_data[12,ii] = ss[ix]
-        output_data[13,ii] = fishpond_index[ix]
+        output_data[12,ii] = oo[ix]
+        output_data[13,ii] = ss[ix]
+        output_data[14,ii] = fishpond_index[ix]
         if not np.all(output_data[[10,11],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
             raise ValueError('Error in result check 3')
     ix = np.argmin(np.abs(xx-nmin))
@@ -623,9 +630,9 @@ w.fields = r.fields[1:] # skip first deletion field
 for i in range(3):
     w.field('trans_d{}'.format(i+1),'F',13,6)
     w.field('bsc_min{}'.format(i+1),'F',13,6)
+    w.field('fp_offs{}'.format(i+1),'F',13,6)
     w.field('post_s{}'.format(i+1),'F',13,6)
     w.field('fpi_{}'.format(i+1),'F',13,6)
-    w.field('res_{}'.format(i+1),'F',13,6)
 w.field('fpi_s','F',13,6)
 w.field('fpi_e','F',13,6)
 for ii,shaperec in enumerate(r.iterShapeRecords()):
