@@ -489,6 +489,7 @@ for ii in [1000]:
             xflg = np.append(xflg,True)
             yflg = np.append(yflg,False)
             fflg = np.append(fflg,False)
+    test = np.array([xest[ic] if xflg[ic] else xest[ic]+opts.offset for ic in range(fflg.size)])
 
     # Examine the superiority of the candidates
     ydif = []
@@ -520,24 +521,34 @@ for ii in [1000]:
     ydif = np.array(ydif)
     yinc = np.array(yinc)
     yrgt = np.array(yrgt)
+    yval = []
     sval = []
     for ic in range(fflg.size):
         ix = np.argmin(np.abs(xx-xest[ic]))
         if xflg[ic]:
+            y = -vv[ix]
             s = ss[ix]
         elif yflg[ic]:
+            y = -vv[ix]
             s = ss[ix]
         elif yrgt[ic] < oo[ix]:
+            y = -1.0e10
             s = -1.0e10
         elif yrgt[ic] < 1.5:
+            y = -1.0e10
             s = -1.0e10
         elif (ic < fflg.size-1) and (ydif[ic]-yinc[ic] > 4.0) and (xest[ic+1]-xest[ic] < 60.0):
+            y = -1.0e10
             s = -1.0e10
         else:
+            y = -vv[ix]
             s = ss[ix]
-        if (xest[ic]+opts.offset < nmin) or (xest[ic]+opts.offset > nmax):
+        if (test[ic] < nmin) or (test[ic] > nmax):
+            y = -1.5e10
             s = -1.5e10
+        yval.append(y)
         sval.append(s)
+    yval = np.array(yval)
     sval = np.array(sval)
     sval_org = sval.copy()
 
