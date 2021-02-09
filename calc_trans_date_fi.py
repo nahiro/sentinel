@@ -22,8 +22,8 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 #TMIN = '20190501'
 #TMAX = '20190915'
-TMIN = '20190601'
-TMAX = '20191015'
+TMIN = '20190401'
+TMAX = '20190615'
 TMGN = 30.0 # day
 TSTP = 0.1 # day
 SMOOTH = 0.01
@@ -125,8 +125,6 @@ with open(opts.area_fnam,'r') as fp:
         areas[-1] = np.array(areas[-1])
 object_ids = np.array(object_ids)
 blocks = np.array(blocks)
-inds = np.array(inds)
-areas = np.array(areas)
 nobject = object_ids.size
 
 if opts.inp_fnam is not None:
@@ -313,6 +311,14 @@ with open(opts.json_fnam,'w') as json_file:
     json_file.write('\n') # Add newline cause PyJSON does not
 
 xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+0.1*opts.tstp,opts.tstp)
+cnd = (xx >= nmin) & (xx <= nmax)
+xc_indx = np.where(cnd)[0]
+if xc_indx.size < 3:
+    raise ValueError('Error, not enough data, xc_indx.size={}'.format(xc_indx.size))
+xc_indx0 = xc_indx[0]
+xc_indx1 = xc_indx[1]
+xc_indx_1 = xc_indx[-1]
+xc_indx_2 = xc_indx[-2]
 x_profile = np.load(opts.x_profile)
 y_profile = np.load(opts.y_profile)
 xstp = np.diff(x_profile).mean()
@@ -419,7 +425,7 @@ for ii in [1000]:
     ycs = []
     f1cs = []
     f2cs = []
-    fflg = [] # True: minimum point, False: rising point
+    fflg = [] # True: local minimum, False: rising point
     i1 = None
     i2 = None
     flag = False
@@ -473,6 +479,13 @@ for ii in [1000]:
     yest = np.array(yest)
     xflg = np.array(xflg)
     yflg = np.array(yflg)
+    if opts.early and np.abs(xest-xx[xc_indx_1]).min() > 1.0:
+        if (yy[xc_indx_1] < yy[xc_indx_2]):
+            xest = np.append(xest,xx[xc_indx_1])
+            yest = np.append(yest,yy[xc_indx_1])
+            xflg = np.append(xflg,True)
+            yflg = np.append(yflg,False)
+            fflg = np.append(fflg,False)
 
     # Examine the superiority of the candidates
     ydif = []
@@ -507,7 +520,9 @@ for ii in [1000]:
     sval = []
     for ic in range(fflg.size):
         ix = np.argmin(np.abs(xx-xest[ic]))
-        if yflg[ic]:
+        if xflg[ic]:
+            s = ss[ix]
+        elif yflg[ic]:
             s = ss[ix]
         elif yrgt[ic] < oo[ix]:
             s = -1.0e10
