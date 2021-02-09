@@ -340,6 +340,7 @@ output_data = np.full((nb,nobject),np.nan)
 if not opts.debug:
     warnings.simplefilter('ignore')
 for ii in range(nobject):
+#for ii in [7629]:
     if ii%1000 == 0:
         sys.stderr.write('{}/{}\n'.format(ii,nobject))
     object_id = object_ids[ii]
@@ -454,7 +455,7 @@ for ii in range(nobject):
     yest = []
     yflg = []
     for ic in range(fflg.size):
-        if f1cs[ic].min()*f1cs[ic].max() < 0:
+        if fflg[ic]:
             indc = np.argmin(np.abs(f1cs[ic]))
         else:
             indc = np.argmax(f2cs[ic])
@@ -468,13 +469,19 @@ for ii in range(nobject):
     yflg = np.array(yflg)
     ydif = []
     yinc = []
-    ylft = []
+    #ylft = []
     yrgt = []
     for ic in range(fflg.size):
-        cnd = (xx > xest[ic]-60) & (xx < xest[ic])
-        ylft.append(yy[cnd].max()-yest[ic])
+        #cnd = (xx > xest[ic]-60) & (xx < xest[ic])
+        #if cnd.sum() < 1:
+        #    ylft.append(0.0)
+        #else:
+        #    ylft.append(yy[cnd].max()-yest[ic])
         cnd = (xx > xest[ic]) & (xx < xest[ic]+60)
-        yrgt.append(yy[cnd].max()-yest[ic])
+        if cnd.sum() < 1:
+            yrgt.append(0.0)
+        else:
+            yrgt.append(yy[cnd].max()-yest[ic])
         cnd = (xest > xest[ic]) & (fflg)
         if cnd.sum() > 0:
             ix = np.where(cnd)[0][0]
@@ -486,12 +493,15 @@ for ii in range(nobject):
                 yflg[ix] = True
         else:
             cnd = (xx > xest[ic])
-            yd = yy[cnd].max()-yest[ic]
+            if cnd.sum() < 1:
+                yd = 0.0
+            else:
+                yd = yy[cnd].max()-yest[ic]
             ydif.append(yd)
             yinc.append(yd)
     ydif = np.array(ydif)
     yinc = np.array(yinc)
-    ylft = np.array(ylft)
+    #ylft = np.array(ylft)
     yrgt = np.array(yrgt)
     sval = []
     for ic in range(fflg.size):
