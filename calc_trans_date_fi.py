@@ -410,7 +410,10 @@ for ii in [1000]:
             yfact *= yfact.size/yfact.sum()
             ytmp[i:i2] *= yfact
         cnd = (xx > xx[i]) & (xx < xx[i]+90)
-        y2 = ytmp[cnd].mean()
+        if cnd.sum() < 1:
+            y2 = 0.0
+        else:
+            y2 = ytmp[cnd].mean()
         ss.append(y2)
         oo.append(offset)
     ss = np.array(ss)
