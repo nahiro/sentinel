@@ -550,11 +550,14 @@ for ii in [1000]:
         sval.append(s)
     yval = np.array(yval)
     sval = np.array(sval)
-    sval_org = sval.copy()
 
     # Select three candidates
-    indv = np.argsort(sval)[::-1]
-    if sval[indv[0]] > -10.0:
+    if opts.sort_post_s:
+        cval = sval.copy()
+    else:
+        cval = yval.copy()
+    indv = np.argsort(cval)[::-1]
+    if cval[indv[0]] > -10.0:
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[0,ii] = xx[ix]
         output_data[1,ii] = yy[ix]
@@ -564,9 +567,9 @@ for ii in [1000]:
         if not np.all(output_data[[0,1],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
             raise ValueError('Error in result check 1')
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
-        sval[cnd] = -2.0e10
-        indv = np.argsort(sval)[::-1]
-    if sval[indv[0]] > -10.0:
+        cval[cnd] = -2.0e10
+        indv = np.argsort(cval)[::-1]
+    if cval[indv[0]] > -10.0:
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[5,ii] = xx[ix]
         output_data[6,ii] = yy[ix]
@@ -576,9 +579,9 @@ for ii in [1000]:
         if not np.all(output_data[[5,6],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
             raise ValueError('Error in result check 2')
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
-        sval[cnd] = -3.0e10
-        indv = np.argsort(sval)[::-1]
-    if sval[indv[0]] > -10.0:
+        cval[cnd] = -3.0e10
+        indv = np.argsort(cval)[::-1]
+    if cval[indv[0]] > -10.0:
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[10,ii] = xx[ix]
         output_data[11,ii] = yy[ix]
@@ -612,7 +615,7 @@ for ii in [1000]:
                 ax1.plot(xest[ic],yest[ic],'ro')
             else:
                 ax1.plot(xest[ic],yest[ic],'bo')
-            if sval_org[ic] < -10.0:
+            if sval[ic] < -10.0:
                 ax1.plot(xest[ic],yest[ic],'rx',ms=20)
         ax1.plot(output_data[10,ii],output_data[11,ii],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
         ax1.plot(output_data[5,ii],output_data[6,ii],'o',ms=20,mfc='none',color='m',mew=2,zorder=9)
