@@ -477,7 +477,7 @@ for ii in range(nobject):
         #    ylft.append(0.0)
         #else:
         #    ylft.append(yy[cnd].max()-yest[ic])
-        cnd = (xx > xest[ic]) & (xx < xest[ic]+60)
+        cnd = (xx > xest[ic]) & (xx < xest[ic]+45)
         if cnd.sum() < 1:
             yrgt.append(0.0)
         else:
@@ -508,7 +508,7 @@ for ii in range(nobject):
         ix = np.argmin(np.abs(xx-xest[ic]))
         if yflg[ic]:
             s = ss[ix]
-        elif yrgt[ic] < 1.75:
+        elif yrgt[ic] < 1.5:
             s = -1.0e10
         elif (ic < fflg.size-1) and (ydif[ic]-yinc[ic] > 4.0) and (xest[ic+1]-xest[ic] < 60.0):
             s = -1.0e10
