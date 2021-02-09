@@ -85,6 +85,8 @@ data_info['smooth'] = opts.smooth
 data_info['signal_v'] = opts.signal_v
 data_info['signal_fact'] = opts.signal_fact
 data_info['offset'] = opts.offset
+data_info['select_post_s'] = opts.select_post_s
+data_info['sort_post_s'] = opts.sort_post_s
 data_info['early'] = opts.early
 data_info['incidence_angle'] = opts.incidence_angle if opts.incidence_angle is None else os.path.basename(opts.incidence_angle)
 data_info['incidence_list'] = opts.incidence_list if opts.incidence_list is None else os.path.basename(opts.incidence_list)
@@ -583,36 +585,36 @@ for ii in [1000]:
     indv = np.argsort(cval)[::-1]
     if cval[indv[0]] > -10.0:
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
-        output_data[0,ii] = xx[ix]
+        output_data[0,ii] = test[indv[0]]
         output_data[1,ii] = yy[ix]
         output_data[2,ii] = oo[ix]
         output_data[3,ii] = ss[ix]
         output_data[4,ii] = fishpond_index[ix]
-        if not np.all(output_data[[0,1],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
+        if not np.all(output_data[[1],ii] == np.array([yest[indv[0]]])):
             raise ValueError('Error in result check 1')
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         cval[cnd] = -2.0e10
         indv = np.argsort(cval)[::-1]
     if cval[indv[0]] > -10.0:
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
-        output_data[5,ii] = xx[ix]
+        output_data[5,ii] = test[indv[0]]
         output_data[6,ii] = yy[ix]
         output_data[7,ii] = oo[ix]
         output_data[8,ii] = ss[ix]
         output_data[9,ii] = fishpond_index[ix]
-        if not np.all(output_data[[5,6],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
+        if not np.all(output_data[[6],ii] == np.array([yest[indv[0]]])):
             raise ValueError('Error in result check 2')
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         cval[cnd] = -3.0e10
         indv = np.argsort(cval)[::-1]
     if cval[indv[0]] > -10.0:
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
-        output_data[10,ii] = xx[ix]
+        output_data[10,ii] = test[indv[0]]
         output_data[11,ii] = yy[ix]
         output_data[12,ii] = oo[ix]
         output_data[13,ii] = ss[ix]
         output_data[14,ii] = fishpond_index[ix]
-        if not np.all(output_data[[10,11],ii] == np.array([xest[indv[0]],yest[indv[0]]])):
+        if not np.all(output_data[[11],ii] == np.array([yest[indv[0]]])):
             raise ValueError('Error in result check 3')
     ix = np.argmin(np.abs(xx-nmin))
     output_data[15,ii] = fishpond_index[ix]
