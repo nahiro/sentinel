@@ -68,6 +68,7 @@ parser.add_option('-j','--json_fnam',default=JSON_FNAM,help='Output JSON name (%
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
 parser.add_option('-F','--fig_fnam',default=None,help='Output figure name (%default)')
+parser.add_option('--sort_post_s',default=False,action='store_true',help='Sort by post-transplanting signal (%default)')
 parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
@@ -339,7 +340,8 @@ nb = 17 # (trans_dN,bsc_minN,fp_offsN,post_sN,fpi_N)x3,fpi_s,fpi_e
 output_data = np.full((nb,nobject),np.nan)
 if not opts.debug:
     warnings.simplefilter('ignore')
-for ii in range(nobject):
+#for ii in range(nobject):
+for ii in [1000]:
     if ii%1000 == 0:
         sys.stderr.write('{}/{}\n'.format(ii,nobject))
     object_id = object_ids[ii]
@@ -407,6 +409,7 @@ for ii in range(nobject):
         oo.append(offset)
     ss = np.array(ss)
     oo = np.array(oo)
+    vv = yy+oo
 
     # Search local minima and rising points
     f1 = np.gradient(yy)/np.gradient(xx)
@@ -416,7 +419,7 @@ for ii in range(nobject):
     ycs = []
     f1cs = []
     f2cs = []
-    fflg = []
+    fflg = [] # True: minimum point, False: rising point
     i1 = None
     i2 = None
     flag = False
@@ -455,7 +458,8 @@ for ii in range(nobject):
     # List candidates
     xest = []
     yest = []
-    yflg = []
+    xflg = [] # True: latest data point
+    yflg = [] # True: valley after a peak
     for ic in range(fflg.size):
         if fflg[ic]:
             indc = np.argmin(np.abs(f1cs[ic]))
@@ -463,22 +467,18 @@ for ii in range(nobject):
             indc = np.argmax(f2cs[ic])
         xest.append(xcs[ic][indc])
         yest.append(ycs[ic][indc])
+        xflg.append(False)
         yflg.append(False)
     xest = np.array(xest)
     yest = np.array(yest)
+    xflg = np.array(xflg)
+    yflg = np.array(yflg)
 
     # Examine the superiority of the candidates
-    yflg = np.array(yflg)
     ydif = []
     yinc = []
-    #ylft = []
     yrgt = []
     for ic in range(fflg.size):
-        #cnd = (xx > xest[ic]-60) & (xx < xest[ic])
-        #if cnd.sum() < 1:
-        #    ylft.append(0.0)
-        #else:
-        #    ylft.append(yy[cnd].max()-yest[ic])
         cnd = (xx > xest[ic]) & (xx < xest[ic]+45)
         if cnd.sum() < 1:
             yrgt.append(0.0)
@@ -503,7 +503,6 @@ for ii in range(nobject):
             yinc.append(yd)
     ydif = np.array(ydif)
     yinc = np.array(yinc)
-    #ylft = np.array(ylft)
     yrgt = np.array(yrgt)
     sval = []
     for ic in range(fflg.size):
@@ -516,8 +515,6 @@ for ii in range(nobject):
             s = -1.0e10
         elif (ic < fflg.size-1) and (ydif[ic]-yinc[ic] > 4.0) and (xest[ic+1]-xest[ic] < 60.0):
             s = -1.0e10
-        #elif (ydif[ic] > 0.9) or (yinc[ic] > 0.75) or ((ylft[ic] > 3.0) & (yrgt[ic] > 3.0)):
-        #    s = ss[ix]
         else:
             s = ss[ix]
         if (xest[ic]+opts.offset < nmin) or (xest[ic]+opts.offset > nmax):
@@ -575,6 +572,8 @@ for ii in range(nobject):
         ax1 = plt.subplot(111)
         ax1.minorticks_on()
         ax2 = ax1.twinx()
+        if not np.all(np.abs(oo) < 1.0e-8):
+            ax1.plot(xx,vv,'k--')
         l1, = ax1.plot(xx,yy,'k-',label='BSC')
         #ss[-10:] = np.nan
         l2, = ax1.plot(xx,ss-ss_offset,'y-',lw=1,label='Signal')
