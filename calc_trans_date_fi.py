@@ -68,6 +68,7 @@ parser.add_option('-j','--json_fnam',default=JSON_FNAM,help='Output JSON name (%
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
 parser.add_option('-F','--fig_fnam',default=None,help='Output figure name (%default)')
+parser.add_option('--select_post_s',default=False,action='store_true',help='Select by post-transplanting signal (%default)')
 parser.add_option('--sort_post_s',default=False,action='store_true',help='Sort by post-transplanting signal (%default)')
 parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
@@ -552,10 +553,33 @@ for ii in [1000]:
     sval = np.array(sval)
 
     # Select three candidates
+    if opts.select_post_s:
+        cval = sval.copy()
+    else:
+        cval = yval.copy()
+    can_inds = []
+    indv = np.argsort(cval)[::-1]
+    if cval[indv[0]] > -10.0:
+        can_inds.append(indv[0])
+        cnd = np.abs(xest-xest[indv[0]]) < 1.0
+        cval[cnd] = -2.0e10
+        indv = np.argsort(cval)[::-1]
+    if cval[indv[0]] > -10.0:
+        can_inds.append(indv[0])
+        cnd = np.abs(xest-xest[indv[0]]) < 1.0
+        cval[cnd] = -3.0e10
+        indv = np.argsort(cval)[::-1]
+    if cval[indv[0]] > -10.0:
+        can_inds.append(indv[0])
+
+    # Sort three candidates
     if opts.sort_post_s:
         cval = sval.copy()
     else:
         cval = yval.copy()
+    for ic in range(fflg.size):
+        if not ic in can_inds:
+            cval[ic] = -5.0e10
     indv = np.argsort(cval)[::-1]
     if cval[indv[0]] > -10.0:
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
@@ -615,7 +639,11 @@ for ii in [1000]:
                 ax1.plot(xest[ic],yest[ic],'ro')
             else:
                 ax1.plot(xest[ic],yest[ic],'bo')
-            if sval[ic] < -10.0:
+            if opts.select_post_s:
+                cval = sval.copy()
+            else:
+                cval = yval.copy()
+            if cval[ic] < -10.0:
                 ax1.plot(xest[ic],yest[ic],'rx',ms=20)
         ax1.plot(output_data[10,ii],output_data[11,ii],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
         ax1.plot(output_data[5,ii],output_data[6,ii],'o',ms=20,mfc='none',color='m',mew=2,zorder=9)
