@@ -349,8 +349,7 @@ nb = 17 # (trans_dN,bsc_minN,fp_offsN,post_sN,fpi_N)x3,fpi_s,fpi_e
 output_data = np.full((nb,nobject),np.nan)
 if not opts.debug:
     warnings.simplefilter('ignore')
-#for ii in range(nobject):
-for ii in [1000]:
+for ii in range(nobject):
     if ii%1000 == 0:
         sys.stderr.write('{}/{}\n'.format(ii,nobject))
     object_id = object_ids[ii]
