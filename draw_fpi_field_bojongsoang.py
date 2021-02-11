@@ -25,7 +25,7 @@ parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape fi
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
 parser.add_option('--add_coords',default=False,action='store_true',help='Add geographical coordinates (%default)')
 parser.add_option('--coords_color',default=COORDS_COLOR,help='Color of geographical coordinates (%default)')
-parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
+parser.add_option('--fpi_s',default=False,action='store_true',help='Output FPI at start time (%default)')
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
@@ -100,15 +100,22 @@ plt.subplots_adjust(top=0.97,bottom=0.09,left=0.034,right=0.96,wspace=0.12,hspac
 
 ax1 = plt.subplot(111,projection=prj)
 
+if opts.fpi_s:
+    fpi = 'fpi_s'
+else:
+    fpi = 'fpi_e'
 for shp,rec in zip(shapes,records):
-    f = rec.attributes['fpi_e']
+    f = rec.attributes[fpi]
     ax1.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((f-fmin)/fdif))
 
 im4 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=fmin,vmax=fmax,cmap=cm.jet)
 ax12 = plt.colorbar(im4,ax=ax1,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax12.minorticks_on()
 #ax2.set_title('(b)')
-ax12.set_xlabel('Fishpond Index')
+if opts.fpi_s:
+    ax12.set_xlabel('Fishpond Index S')
+else:
+    ax12.set_xlabel('Fishpond Index E')
 ax12.xaxis.set_label_coords(0.5,-1.8)
 #ax2.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
 

@@ -60,11 +60,6 @@ for site in opts.sites:
     d = d1
     while d <= d2:
         dstr = d.strftime('%Y%m%d')
-        t1 = datetime(d.year,d.month,1) # the first day of the month
-        tmin = (t1-relativedelta(months=3)).strftime('%Y%m%d')
-        tmax = (t1-timedelta(days=1)).strftime('%Y%m%d')
-        data_tmin = (t1-relativedelta(months=5)).strftime('%Y%m%d')
-        data_tmax = dstr
         #sys.stderr.write(dstr+'\n')
         wrkdir = os.path.join(opts.wrkdir,site,'final',dstr)
         if not os.path.exists(wrkdir):
@@ -72,74 +67,147 @@ for site in opts.sites:
         if not os.path.isdir(wrkdir):
             raise IOError('Error, no such directory >>> '+wrkdir)
         os.chdir(wrkdir)
-        jsn_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.json'.format(site,dstr))
-        tif_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.tif'.format(site,dstr))
-        shp_bnam = os.path.join(wrkdir,'trans_date_{}_{}_final'.format(site,dstr))
-        shp_fnam = shp_bnam+'.shp'
-        trans_pixel_image = os.path.join(wrkdir,'trans_pixel_{}_{}_final.pdf'.format(site,dstr))
-        trans_field_image = os.path.join(wrkdir,'trans_field_{}_{}_final.pdf'.format(site,dstr))
         file_list = []
         try:
-            command = 'python'
-            command += ' '+os.path.join(opts.scrdir,'calc_trans_date.py')
-            #command += ' -x 600 -X 900 -y 680 -Y 1030'
-            command += ' --tmin '+tmin
-            command += ' --tmax '+tmax
-            command += ' --data_tmin '+data_tmin
-            command += ' --data_tmax '+data_tmax
-            command += ' --offset {:.4f}'.format(offset[site])
-            command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
-            command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0_speckle')
-            command += ' --search_key resample'
-            command += ' --near_fnam '+os.path.join(opts.wrkdir,site,'find_nearest.npz')
-            command += ' --json_fnam '+jsn_fnam
-            command += ' --out_fnam '+tif_fnam
-            command += ' 2>'+os.path.join(wrkdir,'err')
-            sys.stderr.write(command+'\n')
-            call(command,shell=True)
-            if os.path.exists(tif_fnam):
-                file_list.append(jsn_fnam)
-                file_list.append(tif_fnam)
+            if site.lower() == 'cihea':
+                t1 = datetime(d.year,d.month,1) # the first day of the month
+                tmin = (t1-relativedelta(months=3)).strftime('%Y%m%d')
+                tmax = (t1-timedelta(days=1)).strftime('%Y%m%d')
+                data_tmin = (t1-relativedelta(months=5)).strftime('%Y%m%d')
+                data_tmax = dstr
+                jsn_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.json'.format(site,dstr))
+                tif_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.tif'.format(site,dstr))
+                shp_bnam = os.path.join(wrkdir,'trans_date_{}_{}_final'.format(site,dstr))
+                shp_fnam = shp_bnam+'.shp'
+                trans_pixel_image = os.path.join(wrkdir,'trans_pixel_{}_{}_final.pdf'.format(site,dstr))
+                trans_field_image = os.path.join(wrkdir,'trans_field_{}_{}_final.pdf'.format(site,dstr))
                 command = 'python'
-                command += ' '+os.path.join(opts.scrdir,'field_mean_shapefile.py')
-                command += ' --data_file '+tif_fnam
-                command += ' --area_file '+os.path.join(opts.wrkdir,site,'pixel_area_block.dat')
-                command += ' --outnam '+shp_bnam
-                call(command,shell=True)
-                command = 'python'
-                command += ' '+os.path.join(opts.scrdir,'draw_trans_pixel_{}.py'.format(site.lower()))
+                command += ' '+os.path.join(opts.scrdir,'calc_trans_date.py')
+                #command += ' -x 600 -X 900 -y 680 -Y 1030'
                 command += ' --tmin '+tmin
                 command += ' --tmax '+tmax
-                command += ' --pmin 0'
-                command += ' --pmax 300'
-                command += ' --title "Search Period: {} - {}"'.format(tmin,tmax)
-                command += ' --trans_fnam '+tif_fnam
-                command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask.tif')
-                command += ' --output_fnam '+trans_pixel_image
-                command += ' --add_tmax'
-                command += ' --batch'
+                command += ' --data_tmin '+data_tmin
+                command += ' --data_tmax '+data_tmax
+                command += ' --offset {:.4f}'.format(offset[site])
+                command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
+                command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0_speckle')
+                command += ' --search_key resample'
+                command += ' --near_fnam '+os.path.join(opts.wrkdir,site,'find_nearest.npz')
+                command += ' --json_fnam '+jsn_fnam
+                command += ' --out_fnam '+tif_fnam
+                command += ' 2>'+os.path.join(wrkdir,'err')
+                sys.stderr.write(command+'\n')
                 call(command,shell=True)
-                if os.path.exists(trans_pixel_image):
-                    file_list.append(trans_pixel_image)
-            if os.path.exists(shp_fnam):
-                file_list.append(shp_fnam)
-                file_list.append(shp_bnam+'.dbf')
-                file_list.append(shp_bnam+'.prj')
-                file_list.append(shp_bnam+'.shx')
+                if os.path.exists(tif_fnam):
+                    file_list.append(jsn_fnam)
+                    file_list.append(tif_fnam)
+                    command = 'python'
+                    command += ' '+os.path.join(opts.scrdir,'field_mean_shapefile.py')
+                    command += ' --data_file '+tif_fnam
+                    command += ' --area_file '+os.path.join(opts.wrkdir,site,'pixel_area_block.dat')
+                    command += ' --outnam '+shp_bnam
+                    call(command,shell=True)
+                    command = 'python'
+                    command += ' '+os.path.join(opts.scrdir,'draw_trans_pixel_{}.py'.format(site.lower()))
+                    command += ' --tmin '+tmin
+                    command += ' --tmax '+tmax
+                    command += ' --pmin 0'
+                    command += ' --pmax 300'
+                    command += ' --title "Search Period: {} - {}"'.format(tmin,tmax)
+                    command += ' --trans_fnam '+tif_fnam
+                    command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask.tif')
+                    command += ' --output_fnam '+trans_pixel_image
+                    command += ' --add_tmax'
+                    command += ' --batch'
+                    call(command,shell=True)
+                    if os.path.exists(trans_pixel_image):
+                        file_list.append(trans_pixel_image)
+                if os.path.exists(shp_fnam):
+                    file_list.append(shp_fnam)
+                    file_list.append(shp_bnam+'.dbf')
+                    file_list.append(shp_bnam+'.prj')
+                    file_list.append(shp_bnam+'.shx')
+                    command = 'python'
+                    command += ' '+os.path.join(opts.scrdir,'draw_trans_field_{}.py'.format(site.lower()))
+                    command += ' --tmin '+tmin
+                    command += ' --tmax '+tmax
+                    command += ' --pmin 0'
+                    command += ' --pmax 300'
+                    command += ' --title "Search Period: {} - {}"'.format(tmin,tmax)
+                    command += ' --trans_fnam '+shp_fnam
+                    command += ' --output_fnam '+trans_field_image
+                    command += ' --add_tmax'
+                    command += ' --batch'
+                    call(command,shell=True)
+                    if os.path.exists(trans_field_image):
+                        file_list.append(trans_field_image)
+            elif site.lower() == 'bojongsoang':
+                t1 = datetime(d.year,d.month,1) # the first day of the month
+                tmin = (t1-relativedelta(months=5)).strftime('%Y%m%d')
+                tmax = (t1-relativedelta(months=2)-timedelta(days=1)).strftime('%Y%m%d')
+                data_tmin = (t1-relativedelta(months=11)).strftime('%Y%m%d')
+                data_tmax = dstr
+                jsn_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.json'.format(site,dstr))
+                shp_bnam = os.path.join(wrkdir,'trans_date_{}_{}_final'.format(site,dstr))
+                shp_fnam = shp_bnam+'.shp'
+                fpi_s_field_image = os.path.join(wrkdir,'fpi_s_field_{}_{}_final.pdf'.format(site,dstr))
+                trans_field_image = []
+                for ican in range(3):
+                    trans_field_image.append(os.path.join(wrkdir,'trans_field_{}_{}_{}_final.pdf'.format(site,dstr,ican+1)))
                 command = 'python'
-                command += ' '+os.path.join(opts.scrdir,'draw_trans_field_{}.py'.format(site.lower()))
+                command += ' '+os.path.join(opts.scrdir,'calc_trans_date_fi.py')
                 command += ' --tmin '+tmin
                 command += ' --tmax '+tmax
-                command += ' --pmin 0'
-                command += ' --pmax 300'
-                command += ' --title "Search Period: {} - {}"'.format(tmin,tmax)
-                command += ' --trans_fnam '+shp_fnam
-                command += ' --output_fnam '+trans_field_image
-                command += ' --add_tmax'
-                command += ' --batch'
+                command += ' --data_tmin '+data_tmin
+                command += ' --data_tmax '+data_tmax
+                command += ' --offset {:.4f}'.format(offset[site])
+                command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
+                command += ' --incidence_angle '+os.path.join(opts.wrkdir,site,'incidence_angle.dat')
+                command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0_speckle')
+                command += ' --search_key resample'
+                command += ' --x_profile '+os.path.join(opts.wrkdir,site,'x_profile.npy')
+                command += ' --y_profile '+os.path.join(opts.wrkdir,site,'y_profile.npy')
+                command += ' --area_fnam '+os.path.join(opts.wrkdir,site,'pixel_area_block.dat')
+                command += ' --shp_fnam '+os.path.join(opts.wrkdir,site,site)
+                command += ' --json_fnam '+jsn_fnam
+                command += ' --out_fnam '+shp_bnam
+                command += ' --select_post_s'
+                command += ' 2>'+os.path.join(wrkdir,'err')
+                sys.stderr.write(command+'\n')
                 call(command,shell=True)
-                if os.path.exists(trans_field_image):
-                    file_list.append(trans_field_image)
+                if os.path.exists(shp_fnam):
+                    file_list.append(shp_fnam)
+                    file_list.append(shp_bnam+'.dbf')
+                    file_list.append(shp_bnam+'.prj')
+                    file_list.append(shp_bnam+'.shx')
+                    command = 'python'
+                    command += ' '+os.path.join(opts.scrdir,'draw_fpi_field_{}.py'.format(site.lower()))
+                    command += ' --title {}'.format(tmin)
+                    command += ' --trans_fnam '+shp_fnam
+                    command += ' --output_fnam '+fpi_s_field_image
+                    command += ' --fpi_s'
+                    command += ' --batch'
+                    call(command,shell=True)
+                    if os.path.exists(fpi_s_field_image):
+                        file_list.append(fpi_s_field_image)
+                    for ican in range(3):
+                        command = 'python'
+                        command += ' '+os.path.join(opts.scrdir,'draw_trans_field_{}.py'.format(site.lower()))
+                        command += ' --tmin '+tmin
+                        command += ' --tmax '+tmax
+                        command += ' --pmin 0'
+                        command += ' --pmax 5'
+                        command += ' --ncan {}'.format(ican+1)
+                        command += ' --title "#{}, Search Period: {} - {}"'.format(ican+1,tmin,tmax)
+                        command += ' --trans_fnam '+shp_fnam
+                        command += ' --output_fnam '+trans_field_image[ican]
+                        command += ' --add_tmax'
+                        command += ' --batch'
+                        call(command,shell=True)
+                        if os.path.exists(trans_field_image[ican]):
+                            file_list.append(trans_field_image[ican])
+            else:
+                raise ValueError('Error, unknown site >>> '+site)
             if len(file_list) > 0:
                 command = 'python'
                 command += ' '+os.path.join(opts.scrdir,'trans_date_upload.py')
