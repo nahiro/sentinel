@@ -63,7 +63,7 @@ for site in opts.sites:
         #sys.stderr.write(dstr+'\n')
         wrkdir = os.path.join(opts.wrkdir,site,'final',dstr)
         if not os.path.exists(wrkdir):
-            os.makedirs(wrkdir)
+            continue
         if not os.path.isdir(wrkdir):
             raise IOError('Error, no such directory >>> '+wrkdir)
         os.chdir(wrkdir)
