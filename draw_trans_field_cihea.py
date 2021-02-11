@@ -2,6 +2,7 @@
 #from shapely.geometry.polygon import Polygon
 import os
 import sys
+import warnings
 from datetime import datetime
 import numpy as np
 import osr
@@ -25,6 +26,7 @@ TMIN = '20190415'
 TMAX = '20190601'
 PMIN = 0.0
 PMAX = 300.0
+COORDS_COLOR = '#aaaaaa'
 BLOCK_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','cihea_testsite_200819','cihea_testsite_200819.shp')
 TRANS_FNAM = os.path.join('.','transplanting_date.shp')
 OUTPUT_FNAM = 'trans_date_testsite.pdf'
@@ -41,9 +43,14 @@ parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape fi
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
 parser.add_option('--add_tmin',default=False,action='store_true',help='Add tmin in colorbar (%default)')
 parser.add_option('--add_tmax',default=False,action='store_true',help='Add tmax in colorbar (%default)')
+parser.add_option('--add_coords',default=False,action='store_true',help='Add geographical coordinates (%default)')
+parser.add_option('--coords_color',default=COORDS_COLOR,help='Color of geographical coordinates (%default)')
 parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
+parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
+if not opts.debug:
+    warnings.simplefilter('ignore')
 
 def transform_wgs84_to_utm(longitude,latitude):
     utm_zone = (int(1+(longitude.mean()+180.0)/6.0))
@@ -56,18 +63,19 @@ def transform_wgs84_to_utm(longitude,latitude):
     xyz = np.array(wgs84_to_utm_geo_transform.TransformPoints(np.dstack((longitude,latitude)).reshape((-1,2)))).reshape(longitude.shape[0],longitude.shape[1],3)
     return xyz[:,:,0],xyz[:,:,1],xyz[:,:,2] # returns easting, northing, altitude
 
-center_x = 107.268
-center_y = -6.839
-lon = np.arange(107+10/60,107+23/60,2.0/360.0)
-lat = np.arange(-6-56/60,-6.756,2.0/360.0)
-xg,yg = np.meshgrid(lon,lat)
-x,y,z = transform_wgs84_to_utm(xg,yg)
-ind_x = np.argmin(np.abs(lon-center_x))
-ind_y = np.argmin(np.abs(lat-center_y))
-center_x_utm = x[ind_y,:]
-center_y_utm = y[:,ind_x]
-x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((x*60.0-int(x*60.0))*60.0+0.1))+'$^{\prime\prime}$E' for x in lon]
-y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((y*60.0-int(y*60.0))*60.0+0.1))+'$^{\prime\prime}$S' for y in -lat]
+if opts.add_coords:
+    center_x = 107.268
+    center_y = -6.839
+    lon = np.arange(107+10/60,107+23/60,2.0/360.0)
+    lat = np.arange(-6-56/60,-6.756,2.0/360.0)
+    xg,yg = np.meshgrid(lon,lat)
+    x,y,z = transform_wgs84_to_utm(xg,yg)
+    ind_x = np.argmin(np.abs(lon-center_x))
+    ind_y = np.argmin(np.abs(lat-center_y))
+    center_x_utm = x[ind_y,:]
+    center_y_utm = y[:,ind_x]
+    x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((x*60.0-int(x*60.0))*60.0+0.1))+'$^{\prime\prime}$E' for x in lon]
+    y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((y*60.0-int(y*60.0))*60.0+0.1))+'$^{\prime\prime}$S' for y in -lat]
 
 color = cm.hsv(np.linspace(0.0,1.0,365))
 colors = np.vstack((color,color,color,color,color,color))
@@ -192,9 +200,9 @@ mymap2 = ListedColormap(newcolors)
 
 if not opts.batch:
     plt.interactive(True)
-fig = plt.figure(1,facecolor='w',figsize=(7.25,6.0))
+fig = plt.figure(1,facecolor='w',figsize=(7.4,6.0))
 fig.clear()
-plt.subplots_adjust(top=0.93,bottom=0.03,left=0.015,right=0.95,wspace=0.08,hspace=0.0)
+plt.subplots_adjust(top=0.93,bottom=0.01,left=0.030,right=0.940,wspace=0.145,hspace=0.0)
 
 ax1 = plt.subplot(121,projection=prj)
 ax2 = plt.subplot(122,projection=prj)
@@ -207,7 +215,7 @@ for shp,rec in zip(shapes,records):
     if not np.isnan(p):
         ax2.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=mymap2)
-ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=0.92,pad=0.01).ax
+ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))
 ax12.xaxis.set_major_formatter(plt.FixedFormatter(labels))
 ax12.xaxis.set_minor_locator(plt.FixedLocator(ticks))
@@ -219,7 +227,7 @@ ax12.set_xlabel('Estimated transplanting date (MM/DD)')
 ax1.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
 im2 = ax2.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=pmin,vmax=pmax,cmap=cm.jet)
-ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=0.93,pad=0.01).ax
+ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax22.minorticks_on()
 #ax2.set_title('(b)')
 ax22.set_xlabel('Signal (dB)')
@@ -249,38 +257,43 @@ for bs,br in zip(block_shp,block_rec):
             ax2.text(xt,yt,t,transform=prj,ha='center',va='center')
         #break
 
-ax1.xaxis.set_tick_params(labelsize=6,direction='in',pad=-13)
-ax1.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
-ax1.xaxis.set_label_position('top')
-ax1.xaxis.tick_top()
-ax1.yaxis.set_label_position('right')
-ax1.yaxis.tick_right()
-ax1.set_xticks(np.arange(100.0,120.0,0.1))
-ax1.set_yticks(np.arange(-7.5,-5.5,0.1))
-ax1.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
-ax1.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
-ax1.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
-ax1.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
+if opts.add_coords:
+    ax1.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax1.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax1.xaxis.set_label_position('top')
+    ax1.xaxis.tick_top()
+    ax1.yaxis.set_label_position('right')
+    ax1.yaxis.tick_right()
+    plt.setp(ax1.get_xticklabels(),color=opts.coords_color)
+    plt.setp(ax1.get_yticklabels(),color=opts.coords_color)
+    ax1.set_xticks(np.arange(100.0,120.0,0.1))
+    ax1.set_yticks(np.arange(-7.5,-5.5,0.1))
+    ax1.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
+    ax1.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
+    ax1.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
+    ax1.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
 
-ax2.xaxis.set_tick_params(labelsize=6,direction='in',pad=-13)
-ax2.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
-ax2.xaxis.set_label_position('top')
-ax2.xaxis.tick_top()
-ax2.yaxis.set_label_position('right')
-ax2.yaxis.tick_right()
-ax2.set_xticks(np.arange(100.0,120.0,0.1))
-ax2.set_yticks(np.arange(-7.5,-5.5,0.1))
-ax2.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
-ax2.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
-ax2.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
-ax2.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
+    ax2.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax2.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax2.xaxis.set_label_position('top')
+    ax2.xaxis.tick_top()
+    ax2.yaxis.set_label_position('right')
+    ax2.yaxis.tick_right()
+    plt.setp(ax2.get_xticklabels(),color=opts.coords_color)
+    plt.setp(ax2.get_yticklabels(),color=opts.coords_color)
+    ax2.set_xticks(np.arange(100.0,120.0,0.1))
+    ax2.set_yticks(np.arange(-7.5,-5.5,0.1))
+    ax2.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
+    ax2.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
+    ax2.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
+    ax2.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
 
 ax1.set_xlim(xmin,xmax)
-ax1.set_ylim(ymin,ymax+1.0e2)
+ax1.set_ylim(ymin,ymax)
 ax2.set_xlim(xmin,xmax)
-ax2.set_ylim(ymin,ymax+1.0e2)
+ax2.set_ylim(ymin,ymax)
 if opts.title is not None:
-    plt.suptitle(opts.title)
+    plt.suptitle(opts.title,y=0.99)
 plt.savefig(opts.output_fnam)
 if not opts.batch:
     plt.draw()
