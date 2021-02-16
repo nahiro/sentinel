@@ -21,6 +21,9 @@ parser.add_option('-s','--shp_fnam',default=None,help='Shape file name (%default
 parser.add_option('-b','--blk_fnam',default=None,help='Block file name (%default)')
 parser.add_option('-B','--block',default=None,help='Block name (%default)')
 parser.add_option('--buffer',default=None,type='float',help='Buffer distance (%default)')
+parser.add_option('--radius',default=None,type='float',help='Radius to be considered (%default)')
+parser.add_option('--xmgn',default=None,type='float',help='X margin (%default)')
+parser.add_option('--ymgn',default=None,type='float',help='Y margin (%default)')
 parser.add_option('--use_index',default=False,action='store_true',help='Use index instead of OBJECTID (%default)')
 parser.add_option('--use_objectid',default=False,action='store_true',help='Use OBJECTID instead of Block (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
@@ -41,7 +44,12 @@ xstp = abs(xp[0,1]-xp[0,0])
 ystp = abs(yp[1,0]-yp[0,0])
 xhlf = 0.5*xstp
 yhlf = 0.5*ystp
-rstp = max(xstp,ystp)
+if opts.radius is None:
+    opts.radius = max(xstp,ystp)*3.0
+if opts.xmgn is None:
+    opts.xmgn = xstp*6.0
+if opts.ymgn is None:
+    opts.ymgn = ystp*6.0
 
 r = shapefile.Reader(opts.shp_fnam)
 
@@ -75,7 +83,7 @@ with open(opts.datnam,'w') as fp:
             p1 = Polygon(shp.points).buffer(opts.buffer)
         else:
             p1 = Polygon(shp.points)
-        flags = p.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=-3.0*rstp).reshape(data_shape)
+        flags = p.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=-opts.radius).reshape(data_shape)
         if opts.debug or opts.check:
             flags_inside = []
             flags_near = []
@@ -155,8 +163,8 @@ with open(opts.datnam,'w') as fp:
                 xmax = max(xmax,pp[0])
                 ymin = min(ymin,pp[1])
                 ymax = max(ymax,pp[1])
-            ax1.set_xlim(xmin-6.0*xstp,xmax+6.0*xstp)
-            ax1.set_ylim(ymin-6.0*ystp,ymax+6.0*ystp)
+            ax1.set_xlim(xmin-opts.xmgn,xmax+opts.xmgn)
+            ax1.set_ylim(ymin-opts.ymgn,ymax+opts.ymgn)
             ax1.ticklabel_format(useOffset=False,style='plain')
             plt.savefig(pdf,format='pdf')
             plt.draw()
