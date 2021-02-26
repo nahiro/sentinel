@@ -65,8 +65,8 @@ for indt in range(ntim.size):
         object_id = i+1
         indx = nearest_inds[i]
         data_x = data_x_all[indt,indx]
-        data_y = data_x_all[indx]
-        data_z = data_x_all[indx]
+        data_y = data_y_all[indx]
+        data_z = data_z_all[indx]
         cnd = ~np.isnan(data_x)
         xcnd = data_x[cnd]
         ycnd = data_y[cnd]
