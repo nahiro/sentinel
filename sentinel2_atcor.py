@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import sys
 import warnings
 import gdal
 from datetime import datetime
@@ -56,12 +57,13 @@ for indt in range(ntim.size):
         continue
     dtim = num2date(ntim[indt])
     dstr = dtim.strftime('%Y%m%d')
+    sys.stderr.write(dstr+'\n')
     factor = []
     offset = []
     rmse = []
     for i in range(nobject):
-        if i%500 == 0:
-            print(i)
+        if opts.debug and (i%500 == 0):
+            sys.stderr.write('{}\n'.format(i))
         object_id = i+1
         indx = nearest_inds[i]
         data_x = data_x_all[indt,indx]
