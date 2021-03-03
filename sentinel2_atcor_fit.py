@@ -42,7 +42,7 @@ ntim = np.load(os.path.join(opts.datdir,'ntim.npy'))
 if opts.band.upper() == 'NDVI':
     band_l = opts.band.lower()
     band_u = opts.band.upper()
-    band_s = opts.band.lower()
+    band_s = 'nv'
 else:
     band_l = 'band'+opts.band
     band_u = 'Band'+opts.band
