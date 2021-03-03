@@ -20,7 +20,7 @@ TMIN = '20190401'
 TMAX = '20190615'
 VTHR = 0.02
 DATDIR = '..'
-INDS_FNAM = 'nearest_inds_500.npy'
+INDS_FNAM = 'nearest_inds_1000.npy'
 FIG_FNAM = 'sentinel2_atcor.pdf'
 
 # Read options
