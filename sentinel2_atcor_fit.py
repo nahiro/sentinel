@@ -19,7 +19,6 @@ BAND = '4'
 TMIN = '20160101'
 TMAX = '20300101'
 RTHR = 1.0
-VTHR = 0.02
 DATDIR = '..'
 INDS_FNAM = 'nearest_inds_1000.npy'
 
@@ -29,7 +28,7 @@ parser.add_option('-b','--band',default=BAND,help='Target band (%default)')
 parser.add_option('-s','--tmin',default=TMIN,help='Min date of transplanting in the format YYYYMMDD (%default)')
 parser.add_option('-e','--tmax',default=TMAX,help='Max date of transplanting in the format YYYYMMDD (%default)')
 parser.add_option('-r','--rthr',default=RTHR,type='float',help='Relative threshold to remove outliers (%default)')
-parser.add_option('-v','--vthr',default=VTHR,type='float',help='Absolute threshold to remove outliers (%default)')
+parser.add_option('-v','--vthr',default=None,type='float',help='Absolute threshold to remove outliers (%default)')
 parser.add_option('--ax1_xmin',default=None,type='float',help='Axis1 X min (%default)')
 parser.add_option('--ax1_xmax',default=None,type='float',help='Axis1 X max (%default)')
 parser.add_option('--ax1_ymin',default=None,type='float',help='Axis1 Y min (%default)')
@@ -50,6 +49,8 @@ if opts.band.upper() == 'NDVI':
     band_l = opts.band.lower()
     band_u = opts.band.upper()
     band_s = 'nv'
+    if opts.vthr is None:
+        opts.vthr = 0.1
     if opts.ax1_xmin is None:
         opts.ax1_xmin = -0.5
     if opts.ax1_xmax is None:
@@ -66,6 +67,8 @@ else:
     band_l = 'band'+opts.band
     band_u = 'Band'+opts.band
     band_s = 'b'+opts.band
+    if opts.vthr is None:
+        opts.vthr = 0.02
     if opts.ax1_xmin is None:
         opts.ax1_xmin = 0.0
     if opts.ax1_xmax is None:
