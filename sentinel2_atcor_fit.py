@@ -128,17 +128,17 @@ for indt in range(ntim.size):
             result = np.polyfit(xcnd,ycnd,1)
             calc_y = xcnd*result[0]+result[1]
             cnd2 = np.abs(calc_y-ycnd) < opts.vthr
-            if cnd2.sum() != cnd2.size:
-                flag = True
-                xcnd2 = xcnd[cnd2]
-                ycnd2 = ycnd[cnd2]
-                zcnd2 = zcnd[cnd2]
+            xcnd2 = xcnd[cnd2]
+            ycnd2 = ycnd[cnd2]
+            zcnd2 = zcnd[cnd2]
+            if (xcnd2.size == cnd2.size) or (xcnd2.size < 2):
+                rms_value = np.sqrt(np.square(calc_y-ycnd).sum()/calc_y.size)
+                flag = False
+            else:
                 result = np.polyfit(xcnd2,ycnd2,1)
                 calc_y = xcnd2*result[0]+result[1]
                 rms_value = np.sqrt(np.square(calc_y-ycnd2).sum()/calc_y.size)
-            else:
-                flag = False
-                rms_value = np.sqrt(np.square(calc_y-ycnd).sum()/calc_y.size)
+                flag = True
         factor.append(result[0])
         offset.append(result[1])
         rmse.append(rms_value)
