@@ -38,9 +38,19 @@ parser.add_option('--debug',default=False,action='store_true',help='Debug mode (
 nmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 nmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
 ntim = np.load(os.path.join(opts.datdir,'ntim.npy'))
-data_x_all = np.load(os.path.join(opts.datdir,'band{}.npy'.format(opts.band)))
-data_y_all = np.load(os.path.join(opts.datdir,'b{}_mean.npy'.format(opts.band)))
-data_z_all = np.load(os.path.join(opts.datdir,'b{}_std.npy'.format(opts.band)))
+
+if opts.band.upper() == 'NDVI':
+    band_l = opts.band.lower()
+    band_u = opts.band.upper()
+    band_s = opts.band.lower()
+else:
+    band_l = 'band'+opts.band
+    band_u = 'Band'+opts.band
+    band_s = 'b'+opts.band
+
+data_x_all = np.load(os.path.join(opts.datdir,band_l+'.npy'))
+data_y_all = np.load(os.path.join(opts.datdir,band_s+'_mean.npy'))
+data_z_all = np.load(os.path.join(opts.datdir,band_s+'_std.npy'))
 nearest_inds = np.load(opts.inds_fnam)
 nobject = len(nearest_inds)
 
@@ -109,11 +119,11 @@ for indt in range(ntim.size):
             ax1.plot(xfit,np.polyval(result,xfit),'k:')
             ax2 = plt.colorbar(im,ticks=np.arange(0.0,0.051,0.01)).ax
             ax2.minorticks_on()
-            ax2.set_ylabel('Band{} std'.format(opts.band))
+            ax2.set_ylabel(band_u+' std')
             ax1.set_xlim(0.0,0.5)
             ax1.set_ylim(0.0,0.5)
-            ax1.set_xlabel('Band{}'.format(opts.band))
-            ax1.set_ylabel('Band{} mean'.format(opts.band))
+            ax1.set_xlabel(band_u)
+            ax1.set_ylabel(band_u+' mean')
             ax1.xaxis.set_tick_params(pad=7)
             ax1.xaxis.set_label_coords(0.5,-0.14)
             ax1.yaxis.set_label_coords(-0.15,0.5)
@@ -128,6 +138,6 @@ for indt in range(ntim.size):
     factor = np.array(factor)
     offset = np.array(offset)
     rmse = np.array(rmse)
-    np.save('atcor_b{}_factor_{}.npy'.format(opts.band,dstr),factor)
-    np.save('atcor_b{}_offset_{}.npy'.format(opts.band,dstr),offset)
-    np.save('atcor_b{}_rmse_{}.npy'.format(opts.band,dstr),rmse)
+    np.save('atcor_{}_factor_{}.npy'.format(band_s,dstr),factor)
+    np.save('atcor_{}_offset_{}.npy'.format(band_s,dstr),offset)
+    np.save('atcor_{}_rmse_{}.npy'.format(band_s,dstr),rmse)
