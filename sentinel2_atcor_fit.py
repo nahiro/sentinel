@@ -163,7 +163,7 @@ for indt in range(ntim.size):
                 ax1.scatter(xcnd,ycnd,c='#888888',marker='.')
                 im = ax1.scatter(xcnd2,ycnd2,c=zcnd2,marker='.',cmap=cm.jet,vmin=opts.ax1_zmin,vmax=opts.ax1_zmax)
             else:
-                im = ax1.scatter(data_x,data_y,c=data_z,marker='.',cmap=cm.jet,vmin=opts.ax1_zmin,vmax=opts.ax1_zmax)
+                im = ax1.scatter(xcnd,ycnd,c=zcnd,marker='.',cmap=cm.jet,vmin=opts.ax1_zmin,vmax=opts.ax1_zmax)
             ax1.plot(xfit,np.polyval(result,xfit),'k:')
             ax2 = plt.colorbar(im,ticks=np.arange(0.0,0.101,0.01)).ax
             ax2.minorticks_on()
