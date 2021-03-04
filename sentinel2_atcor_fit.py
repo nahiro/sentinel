@@ -19,6 +19,7 @@ BAND = '4'
 TMIN = '20160101'
 TMAX = '20300101'
 RTHR = 1.0
+MTHR = 2.0
 DATDIR = '..'
 INDS_FNAM = 'nearest_inds_1000.npy'
 
@@ -29,6 +30,7 @@ parser.add_option('-s','--tmin',default=TMIN,help='Min date of transplanting in 
 parser.add_option('-e','--tmax',default=TMAX,help='Max date of transplanting in the format YYYYMMDD (%default)')
 parser.add_option('-r','--rthr',default=RTHR,type='float',help='Relative threshold to remove outliers (%default)')
 parser.add_option('-v','--vthr',default=None,type='float',help='Absolute threshold to remove outliers (%default)')
+parser.add_option('--mthr',default=MTHR,type='float',help='Multiplying factor of vthr (%default)')
 parser.add_option('--ax1_xmin',default=None,type='float',help='Axis1 X min (%default)')
 parser.add_option('--ax1_xmax',default=None,type='float',help='Axis1 X max (%default)')
 parser.add_option('--ax1_ymin',default=None,type='float',help='Axis1 Y min (%default)')
@@ -91,6 +93,7 @@ nearest_inds = np.load(opts.inds_fnam)
 nobject = len(nearest_inds)
 
 if opts.debug:
+    #plt.interactive(True)
     fig = plt.figure(1,facecolor='w',figsize=(6,5))
     plt.subplots_adjust(top=0.85,bottom=0.20,left=0.15,right=0.90)
     pdf = PdfPages(opts.fig_fnam)
@@ -115,7 +118,7 @@ for indt in range(ntim.size):
         data_x = data_x_all[indt,indx]
         data_y = data_y_all[indx]
         data_z = data_z_all[indx]
-        cnd1 = ~np.isnan(data_x) & (np.abs(data_x-data_y) < np.abs(data_y)*opts.rthr)
+        cnd1 = ~np.isnan(data_x) & (np.abs(data_x-data_y) < (np.abs(data_y)*opts.rthr).clip(min=opts.vthr*opts.mthr))
         xcnd = data_x[cnd1]
         ycnd = data_y[cnd1]
         zcnd = data_z[cnd1]
