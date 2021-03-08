@@ -51,7 +51,7 @@ for f in sorted(os.listdir(srcdir)):
             angs[indx].append(iangle)
         else:
             angs.append([iangle])
-    sys.stdout.write('{} {:10.6f}\n'.format(dstr,iangle))
+    sys.stderr.write('{} {:10.6f}\n'.format(dstr,iangle))
 
 angs_mean = []
 angs_std = []
