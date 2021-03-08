@@ -15,6 +15,7 @@ DATDIR = '.'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('--site',default=None,help='Site name for preset coordinates (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Sentinel-1 data directory (%default)')
 parser.add_option('-s','--start',default=None,help='Start date of the query in the format YYYYMMDD.')
 parser.add_option('-e','--end',default=None,help='End date of the query in the format YYYYMMDD.')
@@ -87,6 +88,7 @@ for year in range(dmin.year,dmax.year+1):
             continue
         command = 'sentinel1_preprocess.py'
         command += ' '+gnam
+        command += ' --site '+opts.site
         if opts.gamma0:
             command += ' --gamma0'
         if opts.skip_orbit:
