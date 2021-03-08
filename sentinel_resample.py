@@ -11,10 +11,14 @@ from scipy.interpolate import griddata
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
-XMIN = 743805.0 # Cihea, pixel center
-XMAX = 757305.0 # Cihea, pixel center
-YMIN = 9235815.0 # Cihea, pixel center
-YMAX = 9251805.0 # Cihea, pixel center
+XMIN_CIHEA = 743805.0 # Cihea, pixel center
+XMAX_CIHEA = 757305.0 # Cihea, pixel center
+YMIN_CIHEA = 9235815.0 # Cihea, pixel center
+YMAX_CIHEA = 9251805.0 # Cihea, pixel center
+XMIN_BOJONGSOANG = 790585.0 # Bojongsoang, pixel center
+XMAX_BOJONGSOANG = 799555.0 # Bojongsoang, pixel center
+YMIN_BOJONGSOANG = 9224425.0 # Bojongsoang, pixel center
+YMAX_BOJONGSOANG = 9229335.0 # Bojongsoang, pixel center
 XSTP = 10.0
 YSTP = -10.0
 BAND_COL = 1
@@ -22,16 +26,17 @@ BAND_COL = 1
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog list_of_input_file [options]')
+parser.add_option('--site',default=None,help='Site name for preset coordinates (%default)')
 parser.add_option('-b','--output_band',default=None,action='append',help='Output band name (%default)')
 parser.add_option('--output_bmin',default=None,type='int',help='Minimum output band index (%default)')
 parser.add_option('--output_bmax',default=None,type='int',help='Maximum output band index (%default)')
 parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
 parser.add_option('-e','--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
-parser.add_option('-x','--xmin',default=XMIN,type='float',help='Minimum X in m (%default)')
-parser.add_option('-X','--xmax',default=XMAX,type='float',help='Maximum X in m (%default)')
+parser.add_option('-x','--xmin',default=None,type='float',help='Minimum X in m (%default)')
+parser.add_option('-X','--xmax',default=None,type='float',help='Maximum X in m (%default)')
 parser.add_option('--xstp',default=XSTP,type='float',help='Step X in m (%default)')
-parser.add_option('-y','--ymin',default=YMIN,type='float',help='Minimum Y in m (%default)')
-parser.add_option('-Y','--ymax',default=YMAX,type='float',help='Maximum Y in m (%default)')
+parser.add_option('-y','--ymin',default=None,type='float',help='Minimum Y in m (%default)')
+parser.add_option('-Y','--ymax',default=None,type='float',help='Maximum Y in m (%default)')
 parser.add_option('--ystp',default=YSTP,type='float',help='Step Y in m (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
 parser.add_option('--no_check_grid',default=False,action='store_true',help='Do not check grid (%default)')
@@ -42,6 +47,19 @@ if len(args) < 1:
     parser.print_help()
     sys.exit(0)
 fnams = args
+if opts.site is not None:
+    if opts.site.lower() == 'cihea':
+        opts.xmin = XMIN_CIHEA
+        opts.xmax = XMAX_CIHEA
+        opts.ymin = YMIN_CIHEA
+        opts.ymax = YMAX_CIHEA
+    elif opts.site.lower() == 'bojongsoang':
+        opts.xmin = XMIN_BOJONGSOANG
+        opts.xmax = XMAX_BOJONGSOANG
+        opts.ymin = YMIN_BOJONGSOANG
+        opts.ymax = YMAX_BOJONGSOANG
+    else:
+        raise ValueError('Error, unknown site >>> '+opts.site)
 
 xg,yg = np.meshgrid(np.arange(opts.xmin,opts.xmax+0.1*opts.xstp,opts.xstp),np.arange(opts.ymax,opts.ymin+0.1*opts.ystp,opts.ystp))
 ngrd = xg.size
