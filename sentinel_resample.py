@@ -125,11 +125,19 @@ for input_fnam in fnams:
                 tif_tags[name] = value
         if '65000' in tif_tags:
             root = ET.fromstring(tif_tags['65000'])
+            for dataset in root.findall('Dataset_Sources'):
+                for metadata in dataset.findall('MDElem'):
+                    if metadata.attrib['name'].lower() == 'metadata':
+                        for abstract in metadata.findall('MDElem'):
+                            if abstract.attrib['name'].lower() == 'abstracted_metadata':
+                                for attr in abstract.findall('MDATTR'):
+                                    if attr.attrib['name'].lower() == 'pass':
+                                        comments[attr.attrib['name']] = attr.text
             for value in root.iter('DATASET_COMMENTS'):
                 for line in value.text.split('\n'):
                     m = re.search('([^=]+)=([^=]+)',value.text)
                     if m:
-                        comments.update({m.group(1).strip():m.group(2).strip()})
+                        comments[m.group(1).strip()] = m.group(2).strip()
     ds = None # close dataset
 
     if opts.output_bmin is not None:
