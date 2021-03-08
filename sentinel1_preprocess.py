@@ -13,12 +13,16 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Defaults
 ORIGIN_X = 743805.0 # pixel center
 ORIGIN_Y = 9236005.0 # pixel center
+POLYGON_CIHEA = 'POLYGON((107.201 -6.910,107.367 -6.910,107.367 -6.760,107.201 -6.760,107.201 -6.910))' # Cihea
+POLYGON_BOJONGSOANG = 'POLYGON((107.54 -7.04,107.75 -7.04,107.75 -6.95,107.54 -6.95,107.54 -7.04))' # Bojongsoang
 XY_STEP = 10.0
 EPSG = 32748 # UTM zone 48S
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog input_fnam [options]')
+parser.add_option('--site',default=None,help='Site name for preset coordinates (%default)')
+parser.add_option('--polygon',default=None,help='Polygon of ROI in WKT format (%default)')
 parser.add_option('-g','--gamma0',default=False,action='store_true',help='Output gamma0 instead of sigma0 (%default)')
 parser.add_option('--skip_orbit',default=False,action='store_true',help='Do not apply orbit file (%default)')
 parser.add_option('--speckle',default=False,action='store_true',help='Apply speckle filter (%default)')
@@ -48,6 +52,14 @@ else:
 if os.path.exists(output_fnam):
     sys.exit()
 
+if opts.site is not None:
+    if opts.site.lower() == 'cihea':
+        opts.polygon = POLYGON_CIHEA
+    elif opts.site.lower() == 'bojongsoang':
+        opts.polygon = POLYGON_BOJONGSOANG
+    else:
+        raise ValueError('Error, unknown site >>> '+opts.site)
+
 # Get snappy Operators
 GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
 # Read original product
@@ -63,7 +75,7 @@ if not opts.skip_orbit:
     data = data_tmp
 # Subset (SubsetOp.java)
 WKTReader = jpy.get_type('com.vividsolutions.jts.io.WKTReader')
-wkt = "POLYGON((107.201 -6.910,107.367 -6.910,107.367 -6.760,107.201 -6.760,107.201 -6.910))"
+wkt = opts.polygon
 geom = WKTReader().read(wkt)
 params = HashMap()
 params.put('copyMetadata',True)
