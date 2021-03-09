@@ -5,16 +5,34 @@ import re
 import numpy as np
 from subprocess import check_output
 
-srcdir = '/home/naohiro/Work/Sentinel-1/Cihea/sigma0_speckle'
-#srcdir = '/home/naohiro/Work/Sentinel-1/Bojongsoang/sigma0_speckle'
+# Default values
+HOME = os.environ.get('HOME')
+if HOME is None:
+    HOME = os.environ.get('HOMEPATH')
+DATDIR = os.path.join(HOME,'Work','Sentinel-1')
+
+# Read options
+parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('--site',default=None,help='Site name for preset data directory (%default)')
+parser.add_option('-D','--datdir',default=None,help='Sentinel-1 data directory (%default)')
+(opts,args) = parser.parse_args()
+if opts.datdir is None:
+    if opts.site is not None:
+        if opts.site.lower() == 'cihea':
+            opts.datdir = os.path.join(DATDIR,'Cihea','sigma0_speckle')
+        elif opts.site.lower() == 'bojongsoang':
+            opts.datdir = os.path.join(DATDIR,'Bojongsoang','sigma0_speckle')
+        else:
+            raise ValueError('Error, unknown site >>> '+opts.site)
+    else:
+        opts.datdir = os.curdir()
 
 angs = []
-
-for f in sorted(os.listdir(srcdir)):
+for f in sorted(os.listdir(opts.datdir)):
     m = re.search('('+'\d'*8+')_resample.tif',f)
     if not m:
         continue
-    fnam = os.path.join(srcdir,f)
+    fnam = os.path.join(opts.datdir,f)
     dstr = m.group(1)
     #print(dstr)
     command = 'gdalinfo'
