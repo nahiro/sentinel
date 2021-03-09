@@ -186,6 +186,7 @@ for site in opts.sites:
                 sys.stderr.write(command+'\n')
                 call(command,shell=True)
                 if os.path.exists(shp_fnam):
+                    file_list.append(jsn_fnam)
                     file_list.append(shp_fnam)
                     file_list.append(shp_bnam+'.dbf')
                     file_list.append(shp_bnam+'.prj')
