@@ -83,4 +83,5 @@ for i in range(len(angs)):
     angs_max.append(np.nanmax(angs[i]))
 indx = np.argsort(np.abs(angs_mean))
 for i in range(len(angs)):
-    sys.stdout.write('{:2d} {:10.6f} {:10.6f} {:10.6f} {:10.6f}\n'.format(i,angs_mean[i],angs_std[i],angs_min[i]-angs_mean[i],angs_max[i]-angs_mean[i]))
+    j = indx[i]
+    sys.stdout.write('{:2d} {:10.6f} {:10.6f} {:10.6f} {:10.6f}\n'.format(i,angs_mean[j],angs_std[j],angs_min[j]-angs_mean[j],angs_max[j]-angs_mean[j]))
