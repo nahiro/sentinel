@@ -172,7 +172,6 @@ for site in opts.sites:
                 command += ' --data_tmax '+data_tmax
                 command += ' --offset {:.4f}'.format(offset[site])
                 command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
-                command += ' --incidence_angle '+os.path.join(opts.wrkdir,site,'incidence_angle.dat')
                 command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0_speckle')
                 command += ' --search_key resample'
                 command += ' --x_profile '+os.path.join(opts.wrkdir,site,'x_profile.npy')
