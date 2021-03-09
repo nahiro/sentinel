@@ -169,8 +169,14 @@ else:
             else:
                 output_epsg = opts.output_epsg
         meta = ds.GetMetadata()
-        if 'iangle' in meta:
-            iangle.update({dstr:float(meta['iangle'])})
+        if 'iangle' in meta and 'PASS' in meta:
+            ang = float(meta['iangle'])
+            pas = meta['PASS'].upper()
+            if pas == 'DESCENDING':
+                ang *= -1.0
+            elif pas != 'ASCENDING':
+                raise ValueError('Error, PASS='+meta['PASS'])
+            iangle.update({dstr:ang})
         dtmp = ds.ReadAsArray()
         if data_shape is None:
             data_shape = dtmp[0].shape
