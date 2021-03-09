@@ -20,7 +20,6 @@ OFFSETS = ['Cihea:-9.0','Bojongsoang:0.0']
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
 parser.add_option('--scrdir',default=SCRDIR,help='Script directory (%default)')
 parser.add_option('--datdir',default=DATDIR,help='Data directory (%default)')
 parser.add_option('--wrkdir',default=WRKDIR,help='Work directory (%default)')

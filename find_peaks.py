@@ -27,7 +27,6 @@ FIGNAM = 'find_peaks.pdf'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.set_usage('Usage: %prog collocated_geotiff_file [options]')
 parser.add_option('-e','--end',default=END,help='End date of the analysis in the format YYYYMMDD (%default)')
 parser.add_option('-E','--enum',default=None,type='int',help='End number (%default)')
 parser.add_option('-i','--ind',default=None,type='int',action='append',help='Selected indices (%default)')
