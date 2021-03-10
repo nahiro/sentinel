@@ -45,7 +45,7 @@ ystp = abs(yp[1,0]-yp[0,0])
 xhlf = 0.5*xstp
 yhlf = 0.5*ystp
 if opts.radius is None:
-    opts.radius = max(xstp,ystp)*3.0
+    opts.radius = max(xstp,ystp)
 if opts.xmgn is None:
     opts.xmgn = xstp*6.0
 if opts.ymgn is None:
@@ -78,16 +78,17 @@ with open(opts.datnam,'w') as fp:
             object_id = ii+1
         else:
             object_id = rec.OBJECTID
-        p = Path(shp.points)
+        path_original = Path(shp.points)
         if opts.buffer is not None:
-            p1 = Polygon(shp.points).buffer(opts.buffer)
+            poly_buffer = Polygon(shp.points).buffer(opts.buffer)
         else:
-            p1 = Polygon(shp.points)
-        flags = p.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=-opts.radius).reshape(data_shape)
+            poly_buffer = Polygon(shp.points)
+        path_search = Path(np.array(poly_buffer.buffer(opts.radius).exterior.coords.xy).swapaxes(0,1))
+        flags = path_search.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=0.0).reshape(data_shape)
         if opts.debug or opts.check:
             flags_inside = []
             flags_near = []
-            p4_paths = []
+            path_pixels = []
         inds = []
         rats = []
         err = False
@@ -95,22 +96,22 @@ with open(opts.datnam,'w') as fp:
             xc = xp[iy,ix]
             yc = yp[iy,ix]
             pc = Point(xc,yc)
-            p2 = Polygon([(xc-xhlf,yc-yhlf),(xc-xhlf,yc+yhlf),(xc+xhlf,yc+yhlf),(xc+xhlf,yc-yhlf),(xc-xhlf,yc-yhlf)])
+            poly_pixel = Polygon([(xc-xhlf,yc-yhlf),(xc-xhlf,yc+yhlf),(xc+xhlf,yc+yhlf),(xc+xhlf,yc-yhlf),(xc-xhlf,yc-yhlf)])
             try:
-                p3 = p1.intersection(p2)
+                poly_intersect = poly_buffer.intersection(poly_pixel)
             except Exception:
                 sys.stderr.write('Warning, error occured at (ix,iy)=({},{}), ii={}\n'.format(ix,iy,ii))
                 err = True
                 continue
-            rat = p3.area/p2.area
+            rat = poly_intersect.area/poly_pixel.area
             if rat > 1.0e-10:
                 inds.append(np.ravel_multi_index((iy,ix),data_shape))
                 rats.append(rat)
             if opts.debug or opts.check:
-                flags_inside.append(pc.within(p1))
+                flags_inside.append(pc.within(poly_buffer))
                 flags_near.append(rat > 1.0e-10)
-                p4 = Path([(xc-xhlf,yc-yhlf),(xc-xhlf,yc+yhlf),(xc+xhlf,yc+yhlf),(xc+xhlf,yc-yhlf),(xc-xhlf,yc-yhlf)])
-                p4_paths.append(p4)
+                path_pixel = Path([(xc-xhlf,yc-yhlf),(xc-xhlf,yc+yhlf),(xc+xhlf,yc+yhlf),(xc+xhlf,yc-yhlf),(xc-xhlf,yc-yhlf)])
+                path_pixels.append(path_pixel)
         if err:
             continue
         inds = np.array(inds)
@@ -139,12 +140,17 @@ with open(opts.datnam,'w') as fp:
             fig.clear()
             ax1 = plt.subplot(111)
             ax1.set_title('OBJECTID: {}'.format(object_id))
-            for p4 in p4_paths:
-                patch = patches.PathPatch(p4,facecolor='none',lw=1)
+            for path_pixel in path_pixels:
+                patch = patches.PathPatch(path_pixel,facecolor='none',lw=1)
                 ax1.add_patch(patch)
-
-            patch = patches.PathPatch(p,facecolor='none',lw=2)
+            patch = patches.PathPatch(path_original,facecolor='none',lw=2)
             ax1.add_patch(patch)
+            patch = patches.PathPatch(path_search,facecolor='none',lw=2,ls='--')
+            ax1.add_patch(patch)
+            if opts.buffer is not None:
+                path_buffer = Path(np.array(poly_buffer.exterior.coords.xy).swapaxes(0,1))
+                patch = patches.PathPatch(path_buffer,facecolor='none',edgecolor='#888888',lw=2)
+                ax1.add_patch(patch)
             ax1.plot(xp,yp,'o',color='#888888')
             for j,(x,y) in enumerate(zip(xp[flags],yp[flags])):
                 if flags_inside[j]:
