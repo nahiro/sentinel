@@ -74,6 +74,7 @@ for site,start in zip(opts.sites,dmaxs):
     command = 'python'
     command += ' '+os.path.join(opts.scrdir,'sentinel_download.py')
     command += ' --geometry '+fnam
+    command += ' --log '+os.path.join(datdir,site.lower()+'.log')
     command += ' --producttyp GRD'
     command += ' --start '+start
     command += ' --end '+opts.end
