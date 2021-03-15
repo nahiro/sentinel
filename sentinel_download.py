@@ -38,6 +38,7 @@ parser.add_option('-t','--producttype',default=None,help='Limit search to a Sent
 parser.add_option('-c','--cloud',default=None,type='int',help='Maximum cloud cover in percent. (requires --sentinel to be 2 or 3)')
 parser.add_option('-o','--order_by',default=None,help='Comma-separated list of keywords to order the result by. Prefix keywords with \'-\' for descending order.')
 parser.add_option('-l','--limit',default=None,type='int',help='Maximum number of results to return.  Defaults to no limit.')
+parser.add_option('-L','--log',default=None,help='Set the log file name.')
 parser.add_option('-P','--path',default=None,help='Set the path where the files will be saved.')
 parser.add_option('-q','--query',default=None,help='Extra search keywords you want to use in the query. Separate keywords with comma. Example: \'producttype=GRD,polarisationmode=HH\'.')
 parser.add_option('-T','--timeout',default=TIMEOUT,type='float',help='Timeout to download data in sec (%default)')
@@ -210,6 +211,9 @@ if opts.download:
                 else:
                     if fsiz == sizes[i]:
                         sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
+                        if opts.log is not None:
+                            with open(opts.log,'a') as fp:
+                                fp.write(fnam+'\n')
                         break
                     else:
                         os.rename(fnam,gnam)
