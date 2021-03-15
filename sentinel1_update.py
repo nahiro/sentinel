@@ -66,7 +66,7 @@ if len(dmaxs) != len(opts.sites):
 topdir = os.getcwd()
 gnams = {}
 for site,start in zip(opts.sites,dmaxs):
-    fnam = os.path.join(opts.scrdir,site.lower()+'.json')
+    fnam = os.path.join(opts.datdir,site.lower()+'.json')
     if not os.path.exists(fnam):
         raise IOError('No such file >>> '+fnam)
     gnams.update({site:[]})
