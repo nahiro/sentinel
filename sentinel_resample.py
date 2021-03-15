@@ -11,6 +11,7 @@ from scipy.interpolate import griddata
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
+DATDIR = os.curdir
 XMIN_CIHEA = 743805.0 # Cihea, pixel center
 XMAX_CIHEA = 757305.0 # Cihea, pixel center
 YMIN_CIHEA = 9235815.0 # Cihea, pixel center
@@ -27,6 +28,7 @@ BAND_COL = 1
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog list_of_input_file [options]')
 parser.add_option('--site',default=None,help='Site name for preset coordinates (%default)')
+parser.add_option('-D','--datdir',default=DATDIR,help='Output data directory (%default)')
 parser.add_option('-b','--output_band',default=None,action='append',help='Output band name (%default)')
 parser.add_option('--output_bmin',default=None,type='int',help='Minimum output band index (%default)')
 parser.add_option('--output_bmax',default=None,type='int',help='Maximum output band index (%default)')
@@ -67,7 +69,7 @@ ny,nx = xg.shape
 
 for input_fnam in fnams:
     f,e = os.path.splitext(os.path.basename(input_fnam))
-    output_fnam = f+'_resample'+e
+    output_fnam = os.path.join(opts.datdir,f+'_resample'+e)
     if os.path.exists(output_fnam) and not opts.overwrite:
         sys.stderr.write('input: '+input_fnam+', output: '+output_fnam+' ... exists, skip!\n')
         continue

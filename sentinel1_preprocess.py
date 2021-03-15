@@ -11,6 +11,7 @@ from snappy import Product,ProductIO,ProductUtils,GPF,HashMap,WKTReader,jpy
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
+DATDIR = os.curdir
 ORIGIN_X = 743805.0 # pixel center
 ORIGIN_Y = 9236005.0 # pixel center
 POLYGON_CIHEA = 'POLYGON((107.201 -6.910,107.367 -6.910,107.367 -6.760,107.201 -6.760,107.201 -6.910))' # Cihea
@@ -22,6 +23,7 @@ EPSG = 32748 # UTM zone 48S
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog input_fnam [options]')
 parser.add_option('--site',default=None,help='Site name for preset coordinates (%default)')
+parser.add_option('-D','--datdir',default=DATDIR,help='Output data directory (%default)')
 parser.add_option('--polygon',default=None,help='Polygon of ROI in WKT format (%default)')
 parser.add_option('-g','--gamma0',default=False,action='store_true',help='Output gamma0 instead of sigma0 (%default)')
 parser.add_option('--skip_orbit',default=False,action='store_true',help='Do not apply orbit file (%default)')
@@ -46,9 +48,9 @@ if not m:
         raise ValueError('Error in file name >>> '+input_fnam)
 dstr = m.group(1)[:8]
 if opts.tiff:
-    output_fnam = '{}.tif'.format(dstr)
+    output_fnam = os.path.join(opts.datdir,'{}.tif'.format(dstr))
 else:
-    output_fnam = '{}.dim'.format(dstr)
+    output_fnam = os.path.join(opts.datdir,'{}.dim'.format(dstr))
 if os.path.exists(output_fnam):
     sys.exit()
 
