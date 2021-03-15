@@ -707,7 +707,7 @@ for ii,shaperec in enumerate(r.iterShapeRecords()):
     shp = shaperec.shape
     data_list = list(output_data[:,ii])
     for i in range(3):
-        data_list.insert(i*6+1,num2date(np.round(output_data[i*5,ii])+0.1).strftime('%Y/%m/%d'))
+        data_list.insert(i*6+1,'N/A' if np.isnan(output_data[i*5,ii]) else num2date(np.round(output_data[i*5,ii])+0.1).strftime('%Y/%m/%d'))
     rec.extend(data_list)
     w.shape(shp)
     w.record(*rec)
