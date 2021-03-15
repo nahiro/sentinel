@@ -6,7 +6,7 @@ import gdal
 import numpy as np
 from datetime import datetime
 import shapefile
-from matplotlib.dates import date2num
+from matplotlib.dates import date2num,num2date
 from statsmodels.stats.weightstats import DescrStatsW
 from optparse import OptionParser,IndentedHelpFormatter
 
@@ -97,12 +97,17 @@ w.shapeType = shapefile.POLYGON
 w.fields = r.fields[1:] # skip first deletion field
 w.field('Block','C',6,0)
 w.field('TANAM','F',13,6)
+w.field('TANAM_text','C',10,0)
 w.field('trans_date','F',13,6)
+w.field('trans_text','C',10,0)
 w.field('peak_value','F',13,6)
 for shaperec in r.iterShapeRecords():
     rec = shaperec.record
     shp = shaperec.shape
-    rec.extend(data_dict[rec[0]])
+    data_list = data_dict[rec.OBJECTID].copy()
+    data_list.insert(2,'N/A' if np.isnan(data_dict[rec.OBJECTID][1]) else num2date(np.round(data_dict[rec.OBJECTID][1])+0.1).strftime('%Y/%m/%d'))
+    data_list.insert(4,'N/A' if np.isnan(data_dict[rec.OBJECTID][2]) else num2date(np.round(data_dict[rec.OBJECTID][2])+0.1).strftime('%Y/%m/%d'))
+    rec.extend(data_list)
     w.shape(shp)
     w.record(*rec)
 w.close()
