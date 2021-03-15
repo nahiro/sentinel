@@ -2,9 +2,7 @@
 import os
 import sys
 import re
-import time
 from datetime import datetime,timedelta
-import numpy as np
 from subprocess import call
 from optparse import OptionParser,IndentedHelpFormatter
 
