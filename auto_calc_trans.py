@@ -13,6 +13,7 @@ if HOME is None:
 SCRDIR = os.path.join(HOME,'Script')
 DATDIR = os.path.join(HOME,'Work','Sentinel-1')
 SITES = ['Bojongsoang','Cihea']
+DATE_FINAL = 5
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -21,6 +22,7 @@ parser.add_option('--datdir',default=DATDIR,help='Data directory (%default)')
 parser.add_option('-s','--str',default=None,help='Start date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=None,help='End date in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
+parser.add_option('--date_final',default=DATE_FINAL,type='int',help='Date to calculate final estimation (%default)')
 parser.add_option('--skip_upload',default=False,action='store_true',help='Skip upload (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
@@ -99,3 +101,12 @@ for site in opts.sites:
         call(command,shell=True)
     if os.path.exists(log):
         os.remove(log)
+
+if datetime.now().day == opts.date_final:
+    for site in opts.sites:
+        command = 'python'
+        command += ' '+os.path.join(opts.scrdir,'get_final_estimation.py')
+        command += ' --scrdir '+opts.scrdir
+        command += ' --datdir '+opts.datdir
+        command += ' --sites '+site
+        call(command,shell=True)
