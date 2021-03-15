@@ -695,6 +695,7 @@ w.shapeType = shapefile.POLYGON
 w.fields = r.fields[1:] # skip first deletion field
 for i in range(3):
     w.field('trans_d{}'.format(i+1),'F',13,6)
+    w.field('trans_t{}'.format(i+1),'C',10,0)
     w.field('bsc_min{}'.format(i+1),'F',13,6)
     w.field('fp_offs{}'.format(i+1),'F',13,6)
     w.field('post_s{}'.format(i+1),'F',13,6)
@@ -704,7 +705,10 @@ w.field('fpi_e','F',13,6)
 for ii,shaperec in enumerate(r.iterShapeRecords()):
     rec = shaperec.record
     shp = shaperec.shape
-    rec.extend(list(output_data[:,ii]))
+    data_list = list(output_data[:,ii])
+    for i in range(3):
+        data_list.insert(i*6+1,num2date(np.round(output_data[i*5,ii])+0.1).strftime('%Y/%m/%d'))
+    rec.extend(data_list)
     w.shape(shp)
     w.record(*rec)
 w.close()
