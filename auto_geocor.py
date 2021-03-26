@@ -26,6 +26,7 @@ parser.set_usage('Usage: %prog target_georeferenced_image reference_georeference
 '       reference_georeferenced_image is not required if the use_gcps option is given.\n'
 '       Both target_georeferenced_image and reference_georeferenced_image are not required if the use_gcps option and the trg_shapefile option are given.\n')
 parser.add_option('--scrdir',default=SCRDIR,help='Script directory where find_gcps.py exists (%default)')
+parser.add_option('-o','--out_fnam',default=None,help='Output file name (%default)')
 parser.add_option('-b','--ref_band',default=None,type='int',help='Reference band# (%default)')
 parser.add_option('-B','--trg_band',default=None,type='int',help='Target band# (%default)')
 parser.add_option('--ref_multi_band',default=None,type='int',action='append',help='Reference multi-band number (%default)')
@@ -85,7 +86,10 @@ else: # No trg image
 if trg_fnam is not None:
     trg_bnam = os.path.splitext(os.path.basename(trg_fnam))[0]
     tmp_fnam = trg_bnam+'_tmp.tif'
-    out_fnam = trg_bnam+'_geocor.tif'
+    if opts.out_fnam is None:
+        out_fnam = trg_bnam+'_geocor.tif'
+    else:
+        out_fnam = opts.out_fnam
     if opts.trg_epsg is None:
         ds = gdal.Open(trg_fnam)
         prj = ds.GetProjection()
@@ -200,7 +204,10 @@ if trg_fnam is not None:
         os.remove(tmp_fnam)
 
 if opts.trg_shapefile is not None:
-    out_shapefile = os.path.splitext(os.path.basename(opts.trg_shapefile))[0]+'_geocor.shp'
+    if opts.out_fnam is None:
+        out_shapefile = os.path.splitext(os.path.basename(opts.trg_shapefile))[0]+'_geocor.shp'
+    else:
+        out_shapefile = opts.out_fnam
     command = 'ogr2ogr'
     command += ' -t_srs EPSG:{}'.format(opts.trg_epsg)
     command += ' -overwrite'
