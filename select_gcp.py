@@ -6,6 +6,8 @@ from scipy.interpolate import bisplrep,bisplev
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
+XTHR = 4.0
+YTHR = 4.0
 TRG_INDX_STEP = 50
 TRG_INDY_STEP = 50
 SMOOTH = 1.0e4
@@ -13,10 +15,13 @@ SMOOTH = 1.0e4
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog list_of_input_file [options]')
+parser.add_option('--xthr',default=XTHR,type='float',help='Max difference in X (%default)')
+parser.add_option('--ythr',default=YTHR,type='float',help='Max difference in Y (%default)')
 parser.add_option('-s','--trg_indx_step',default=TRG_INDX_STEP,type='int',help='Target step x index (%default)')
 parser.add_option('-S','--trg_indy_step',default=TRG_INDY_STEP,type='int',help='Target step y index (%default)')
 parser.add_option('--smooth_x',default=SMOOTH,type='float',help='Smoothing factor for X from 0 to 1 (%default)')
 parser.add_option('--smooth_y',default=None,type='float',help='Smoothing factor for Y from 0 to 1 (%default)')
+parser.add_option('-r','--replace',default=False,action='store_true',help='Replace mode (%default)')
 parser.add_option('-e','--exp',default=False,action='store_true',help='Output in exp format (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
@@ -83,12 +88,27 @@ for fnam in fnams:
     cnd = np.isnan(yd_grid)
     ys_grid[cnd] = np.nan
 
+    xr_grid = xd_grid-xs_grid
+    yr_grid = yd_grid-ys_grid
+
     with open(onam,'w') as fp:
         for ix,iy in zip(indx,indy):
-            if opts.exp:
-                line = '{:8.1f} {:8.1f} {:15.8e} {:15.8e} {:15.8e} {:15.8e} {:8.3f}\n'.format(xc_grid[iy,ix],yc_grid[iy,ix],xp_grid[iy,ix],yp_grid[iy,ix],xd_grid[iy,ix],yd_grid[iy,ix],rr_grid[iy,ix])
+            if (np.abs(xr_grid[iy,ix]) > opts.xthr) or (np.abs(yr_grid[iy,ix]) > opts.ythr):
+                continue
+            if opts.replace:
+                xp_out = xp_grid[iy,ix]-xd_grid[iy,ix]+xs_grid[iy,ix]
+                yp_out = yp_grid[iy,ix]-yd_grid[iy,ix]+ys_grid[iy,ix]
+                xd_out = xs_grid[iy,ix]
+                yd_out = ys_grid[iy,ix]
             else:
-                line = '{:8.1f} {:8.1f} {:8.2f} {:8.2f} {:6.2f} {:6.2f} {:8.3f}\n'.format(xc_grid[iy,ix],yc_grid[iy,ix],xp_grid[iy,ix],yp_grid[iy,ix],xd_grid[iy,ix],yd_grid[iy,ix],rr_grid[iy,ix])
+                xp_out = xp_grid[iy,ix]
+                yp_out = yp_grid[iy,ix]
+                xd_out = xd_grid[iy,ix]
+                yd_out = yd_grid[iy,ix]
+            if opts.exp:
+                line = '{:8.1f} {:8.1f} {:15.8e} {:15.8e} {:15.8e} {:15.8e} {:8.3f}\n'.format(xc_grid[iy,ix],yc_grid[iy,ix],xp_out,yp_out,xd_out,yd_out,rr_grid[iy,ix])
+            else:
+                line = '{:8.1f} {:8.1f} {:8.2f} {:8.2f} {:6.2f} {:6.2f} {:8.3f}\n'.format(xc_grid[iy,ix],yc_grid[iy,ix],xp_out,yp_out,xd_out,yd_out,rr_grid[iy,ix])
             fp.write(line)
             if opts.verbose:
                 sys.stdout.write(line)
