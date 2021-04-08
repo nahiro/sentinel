@@ -11,6 +11,7 @@ YTHR = 4.0
 TRG_INDX_STEP = 50
 TRG_INDY_STEP = 50
 SMOOTH = 1.0e4
+DATDIR = os.curdir
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -21,6 +22,7 @@ parser.add_option('-s','--trg_indx_step',default=TRG_INDX_STEP,type='int',help='
 parser.add_option('-S','--trg_indy_step',default=TRG_INDY_STEP,type='int',help='Target step y index (%default)')
 parser.add_option('--smooth_x',default=SMOOTH,type='float',help='Smoothing factor for X from 0 to 1 (%default)')
 parser.add_option('--smooth_y',default=None,type='float',help='Smoothing factor for Y from 0 to 1 (%default)')
+parser.add_option('-D','--datdir',default=DATDIR,help='Output data directory (%default)')
 parser.add_option('-r','--replace',default=False,action='store_true',help='Replace mode (%default)')
 parser.add_option('-e','--exp',default=False,action='store_true',help='Output in exp format (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
@@ -35,7 +37,7 @@ if opts.smooth_y is None:
 
 for fnam in fnams:
     bnam = os.path.basename(fnam)
-    onam = os.path.splitext(bnam)[0]+'_selected.dat'
+    onam = os.path.join(opts.datdir,os.path.splitext(bnam)[0]+'_selected.dat')
     xc,yc,xp,yp,xd,yd,rr = np.loadtxt(fnam,unpack=True)
     xc_uniq = np.unique(xc)
     yc_uniq = np.unique(yc)
