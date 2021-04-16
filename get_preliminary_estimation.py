@@ -239,6 +239,17 @@ for site in opts.sites:
                 command += ' --overwrite'
                 command += ' '+' '.join(file_list)
                 call(command,shell=True)
+                command = 'python'
+                command += ' '+os.path.join(opts.scrdir,'trans_date_copy.py')
+                command += ' --site '+site
+                command += ' --date '+dstr
+                if opts.test:
+                    command += ' --level test'
+                else:
+                    command += ' --level preliminary'
+                command += ' --overwrite'
+                command += ' '+' '.join(file_list)
+                call(command,shell=True)
         except Exception:
             sys.stderr.write('Warning, error occured.\n')
         os.chdir(topdir)
