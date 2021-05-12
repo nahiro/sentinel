@@ -25,6 +25,8 @@ TEND = 20.0 # day
 SMOOTH = 0.01
 SEN1_DISTANCE = 10
 SEN1_PROMINENCE = 0.1
+SIG_DISTANCE = 10
+SIG_PROMINENCE = 0.1
 VTHR = -13.0 # dB
 XSGM = 6.0 # day
 LSGM = 30.0 # m
@@ -50,8 +52,10 @@ parser.add_option('-X','--xmax',default=None,type='int',help='Max X index (exclu
 parser.add_option('-y','--ymin',default=None,type='int',help='Min Y index (inclusive, %default)')
 parser.add_option('-Y','--ymax',default=None,type='int',help='Max Y index (exclusive, %default)')
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
-parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minimum peak distance in day for Sentinel-1 (%default)')
+parser.add_option('--sen1_distance',default=SEN1_DISTANCE,type='int',help='Minimum peak distance in tstp for Sentinel-1 (%default)')
 parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help='Minimum prominence in dB for Sentinel-1 (%default)')
+parser.add_option('--sig_distance',default=SIG_DISTANCE,type='int',help='Minimum peak distance in tstp for synthesized signal (%default)')
+parser.add_option('--sig_prominence',default=SIG_PROMINENCE,type='float',help='Minimum prominence in dB for synthesized signal (%default)')
 parser.add_option('-v','--vthr',default=VTHR,type='float',help='Threshold (max value) of minimum VH in dB (%default)')
 parser.add_option('-w','--xsgm',default=XSGM,type='float',help='Standard deviation of gaussian in day (%default)')
 parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviation of gaussian in m (%default)')
@@ -305,7 +309,7 @@ with open(opts.json_fnam,'w') as json_file:
 k1_offset = int(opts.tstr/opts.tstp+(-0.1 if opts.tstr < 0.0 else 0.1))
 k2_offset = int(opts.tend/opts.tstp+(-0.1 if opts.tend < 0.0 else 0.1))+1
 xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+0.1*opts.tstp,opts.tstp)
-cnd = (xx >= nmin) & (xx <= nmax)
+cnd = (xx > nmin-1.0e-6) & (xx < nmax+1.0e-6)
 xc_indx = np.where(cnd)[0]
 if xc_indx.size < 3:
     raise ValueError('Error, not enough data, xc_indx.size={}'.format(xc_indx.size))
@@ -345,8 +349,8 @@ for i in range(opts.ymin,opts.ymax):
                         ypek_sid[sid].append(opts.vthr-vmin)
                 else:
                     xtmp = xx[k]+opts.offset
-                    if xtmp < nmin or xtmp > nmax:
-                        continue
+                    #if xtmp < nmin or xtmp > nmax:
+                    #    continue
                     k1 = max(k+k1_offset,0)
                     k2 = min(k+k2_offset,xx.size)
                     vmin = yy[k1:k2].mean()
@@ -374,20 +378,24 @@ for i in range(ngrd):
         exec('lengs.append(leng_{}[i])'.format(nn))
     inds = np.array(inds)
     lengs = np.array(lengs)
-    yy = np.zeros_like(xx)
-    for xi,yi in zip(xpek_sid[i],ypek_sid[i]):
-        ytmp = yi*np.exp(-0.5*np.square((xx-xi)/opts.xsgm))
-        yy += ytmp
+    ys = np.zeros_like(xx)
+    for xj,yj in zip(xpek_sid[i],ypek_sid[i]):
+        ytmp = yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+        ys += ytmp
     for j,leng in zip(inds,lengs):
         fact = np.exp(-0.5*np.square(leng/opts.lsgm))
         for xj,yj in zip(xpek_sid[j],ypek_sid[j]):
             ytmp = yj*fact*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
-            yy += ytmp
-    k = np.argmax(yy)
-    if xx[k] < nmin or xx[k] > nmax:
-        continue
-    output_data[0,indy,indx] = xx[k]
-    output_data[1,indy,indx] = yy[k]
+            ys += ytmp
+    max_peaks,properties = find_peaks(ys,distance=opts.sig_distance,prominence=opts.sig_prominence)
+    if opts.early:
+        max_peaks = np.append(max_peaks,xc_indx_1)
+    xp = xx[max_peaks]
+    yp = ys[max_peaks]
+    yp[(xp < nmin-1.0e-6) | (xp > nmax+1.0e-6)] = -1.0e10
+    k = np.argmax(yp)
+    output_data[0,indy,indx] = xp[k]
+    output_data[1,indy,indx] = yp[k]
 if opts.npy_fnam is not None:
     np.save(opts.npy_fnam,output_data)
 
