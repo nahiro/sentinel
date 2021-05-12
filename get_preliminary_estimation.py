@@ -17,6 +17,7 @@ WRKDIR = os.path.join(HOME,'Work','SATREPS','Transplanting_date')
 END = datetime.now().strftime('%Y%m%d')
 SITES = ['Cihea','Bojongsoang']
 OFFSETS = ['Cihea:-9.0','Bojongsoang:0.0']
+VERSIONS = ['Cihea:v1.0','Bojongsoang:v1.0']
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -27,6 +28,7 @@ parser.add_option('-s','--str',default=None,help='Start date of estimation in th
 parser.add_option('-e','--end',default=END,help='End date of estimation in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
 parser.add_option('--offsets',default=None,action='append',help='Offset of transplanting date, for example, Cihea:-9.0 ({})'.format(OFFSETS))
+parser.add_option('--versions',default=None,action='append',help='Version of transplanting estimation, for example, Cihea:v1.0 ({})'.format(VERSIONS))
 parser.add_option('--test',default=False,action='store_true',help='Test mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
@@ -34,12 +36,20 @@ if opts.sites is None:
     opts.sites = SITES
 if opts.offsets is None:
     opts.offsets = OFFSETS
+if opts.versions is None:
+    opts.versions = VERSIONS
 offset = {}
 for s in opts.offsets:
     m = re.search('([^:]+):([^:]+)',s)
     if not m:
         raise ValueError('Error in offset >>> '+s)
     offset.update({m.group(1).lower():float(m.group(2))})
+version = {}
+for s in opts.versions:
+    m = re.search('([^:]+):([^:]+)',s)
+    if not m:
+        raise ValueError('Error in version >>> '+s)
+    version.update({m.group(1).lower():m.group(2)})
 
 dtims = {}
 for site in opts.sites:
@@ -73,7 +83,7 @@ for site in opts.sites:
             break
         dstr = d.strftime('%Y%m%d')
         #sys.stderr.write(dstr+'\n')
-        wrkdir = os.path.join(opts.wrkdir,site,'preliminary',dstr)
+        wrkdir = os.path.join(opts.wrkdir,site,'preliminary',version[site_low],dstr)
         if not os.path.exists(wrkdir):
             os.makedirs(wrkdir)
         if not os.path.isdir(wrkdir):
@@ -238,6 +248,7 @@ for site in opts.sites:
                     command += ' --level test'
                 else:
                     command += ' --level preliminary'
+                command += ' --version {}'+version[site_low]
                 command += ' --overwrite'
                 command += ' '+' '.join(file_list)
                 call(command,shell=True)
@@ -249,6 +260,7 @@ for site in opts.sites:
                     command += ' --level test'
                 else:
                     command += ' --level preliminary'
+                command += ' --version {}'+version[site_low]
                 command += ' --overwrite'
                 command += ' '+' '.join(file_list)
                 call(command,shell=True)
