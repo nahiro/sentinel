@@ -17,7 +17,7 @@ WRKDIR = os.path.join(HOME,'Work','SATREPS','Transplanting_date')
 END = datetime.now().strftime('%Y%m%d')
 SITES = ['Cihea','Bojongsoang']
 OFFSETS = ['Cihea:-9.0','Bojongsoang:0.0']
-VERSIONS = ['Cihea:v1.0','Bojongsoang:v1.0']
+VERSIONS = ['Cihea:v1.1','Bojongsoang:v1.0']
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
