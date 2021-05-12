@@ -73,6 +73,7 @@ for site,start in zip(opts.sites,dmaxs):
     gnams.update({site:[]})
     command = 'python'
     command += ' '+os.path.join(opts.scrdir,'sentinel_download.py')
+    command += ' -U https://scihub.copernicus.eu/dhus'
     command += ' --geometry '+fnam
     command += ' --log '+os.path.join(datdir,site.lower()+'.log')
     command += ' --producttyp GRD'
