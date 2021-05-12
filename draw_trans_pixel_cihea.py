@@ -13,11 +13,6 @@ import osr
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import cartopy.io.shapereader as shpreader
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-from matplotlib.colors import ListedColormap,LinearSegmentedColormap,to_rgba
-from matplotlib.dates import date2num,num2date
-from matplotlib.path import Path
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
@@ -55,6 +50,15 @@ parser.add_option('--debug',default=False,action='store_true',help='Debug mode (
 (opts,args) = parser.parse_args()
 if not opts.debug:
     warnings.simplefilter('ignore')
+
+if opts.batch:
+    import matplotlib
+    matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.colors import ListedColormap,LinearSegmentedColormap,to_rgba
+from matplotlib.dates import date2num,num2date
+from matplotlib.path import Path
 
 def transform_wgs84_to_utm(longitude,latitude):
     utm_zone = (int(1+(longitude.mean()+180.0)/6.0))
