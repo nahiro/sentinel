@@ -248,7 +248,7 @@ for site in opts.sites:
                     command += ' --level test'
                 else:
                     command += ' --level preliminary'
-                command += ' --version {}'+version[site_low]
+                command += ' --version '+version[site_low]
                 command += ' --overwrite'
                 command += ' '+' '.join(file_list)
                 call(command,shell=True)
@@ -260,7 +260,7 @@ for site in opts.sites:
                     command += ' --level test'
                 else:
                     command += ' --level preliminary'
-                command += ' --version {}'+version[site_low]
+                command += ' --version '+version[site_low]
                 command += ' --overwrite'
                 command += ' '+' '.join(file_list)
                 call(command,shell=True)
