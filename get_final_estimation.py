@@ -45,13 +45,13 @@ for s in opts.offsets:
     m = re.search('([^:]+):([^:]+)',s)
     if not m:
         raise ValueError('Error in offset >>> '+s)
-    offset.update({m.group(1):float(m.group(2))})
+    offset.update({m.group(1).lower():float(m.group(2))})
 version = {}
 for s in opts.versions:
     m = re.search('([^:]+):([^:]+)',s)
     if not m:
         raise ValueError('Error in version >>> '+s)
-    version.update({m.group(1):m.group(2)})
+    version.update({m.group(1).lower():m.group(2)})
 
 d1 = datetime.strptime(opts.str,'%Y%m%d')
 d2 = datetime.strptime(opts.end,'%Y%m%d')
@@ -66,11 +66,12 @@ if d1 > d2:
 
 topdir = os.getcwd()
 for site in opts.sites:
+    site_low = site.lower()
     d = d1
     while d <= d2:
         dstr = d.strftime('%Y%m%d')
         #sys.stderr.write(dstr+'\n')
-        wrkdir = os.path.join(opts.wrkdir,site,'final',version[site],dstr)
+        wrkdir = os.path.join(opts.wrkdir,site,'final',version[site_low],dstr)
         if not os.path.exists(wrkdir):
             os.makedirs(wrkdir)
         if not os.path.isdir(wrkdir):
@@ -78,18 +79,18 @@ for site in opts.sites:
         os.chdir(wrkdir)
         file_list = []
         try:
-            if site.lower() == 'cihea':
+            if site_low == 'cihea':
                 t1 = datetime(d.year,d.month,1) # the first day of the month
-                tmin = (t1-relativedelta(months=3)).strftime('%Y%m%d')
-                tmax = (t1-timedelta(days=1)).strftime('%Y%m%d')
-                data_tmin = (t1-relativedelta(months=5)).strftime('%Y%m%d')
+                tmin = (t1-relativedelta(months=4)).strftime('%Y%m%d')
+                tmax = (t1-relativedelta(months=1)-timedelta(days=1)).strftime('%Y%m%d')
+                data_tmin = (t1-relativedelta(months=6)).strftime('%Y%m%d')
                 data_tmax = dstr
-                jsn_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.json'.format(site,dstr))
-                tif_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.tif'.format(site,dstr))
-                shp_bnam = os.path.join(wrkdir,'trans_date_{}_{}_final'.format(site,dstr))
+                jsn_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.json'.format(site_low,dstr))
+                tif_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.tif'.format(site_low,dstr))
+                shp_bnam = os.path.join(wrkdir,'trans_date_{}_{}_final'.format(site_low,dstr))
                 shp_fnam = shp_bnam+'.shp'
-                trans_pixel_image = os.path.join(wrkdir,'trans_pixel_{}_{}_final.pdf'.format(site,dstr))
-                trans_field_image = os.path.join(wrkdir,'trans_field_{}_{}_final.pdf'.format(site,dstr))
+                trans_pixel_image = os.path.join(wrkdir,'trans_pixel_{}_{}_final.pdf'.format(site_low,dstr))
+                trans_field_image = os.path.join(wrkdir,'trans_field_{}_{}_final.pdf'.format(site_low,dstr))
                 command = 'python'
                 command += ' '+os.path.join(opts.scrdir,'calc_trans_date.py')
                 #command += ' -x 600 -X 900 -y 680 -Y 1030'
@@ -97,7 +98,7 @@ for site in opts.sites:
                 command += ' --tmax '+tmax
                 command += ' --data_tmin '+data_tmin
                 command += ' --data_tmax '+data_tmax
-                command += ' --offset {:.4f}'.format(offset[site])
+                command += ' --offset {:.4f}'.format(offset[site_low])
                 command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
                 command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0_speckle')
                 command += ' --search_key resample'
@@ -117,7 +118,7 @@ for site in opts.sites:
                     command += ' --outnam '+shp_bnam
                     call(command,shell=True)
                     command = 'python'
-                    command += ' '+os.path.join(opts.scrdir,'draw_trans_pixel_{}.py'.format(site.lower()))
+                    command += ' '+os.path.join(opts.scrdir,'draw_trans_pixel_{}.py'.format(site_low))
                     command += ' --tmin '+tmin
                     command += ' --tmax '+tmax
                     command += ' --pmin 0'
@@ -137,7 +138,7 @@ for site in opts.sites:
                     file_list.append(shp_bnam+'.prj')
                     file_list.append(shp_bnam+'.shx')
                     command = 'python'
-                    command += ' '+os.path.join(opts.scrdir,'draw_trans_field_{}.py'.format(site.lower()))
+                    command += ' '+os.path.join(opts.scrdir,'draw_trans_field_{}.py'.format(site_low))
                     command += ' --tmin '+tmin
                     command += ' --tmax '+tmax
                     command += ' --pmin 0'
@@ -150,26 +151,26 @@ for site in opts.sites:
                     call(command,shell=True)
                     if os.path.exists(trans_field_image):
                         file_list.append(trans_field_image)
-            elif site.lower() == 'bojongsoang':
+            elif site_low == 'bojongsoang':
                 t1 = datetime(d.year,d.month,1) # the first day of the month
                 tmin = (t1-relativedelta(months=5)).strftime('%Y%m%d')
                 tmax = (t1-relativedelta(months=2)-timedelta(days=1)).strftime('%Y%m%d')
                 data_tmin = (t1-relativedelta(months=11)).strftime('%Y%m%d')
                 data_tmax = dstr
-                jsn_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.json'.format(site,dstr))
-                shp_bnam = os.path.join(wrkdir,'trans_date_{}_{}_final'.format(site,dstr))
+                jsn_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.json'.format(site_low,dstr))
+                shp_bnam = os.path.join(wrkdir,'trans_date_{}_{}_final'.format(site_low,dstr))
                 shp_fnam = shp_bnam+'.shp'
-                fpi_s_field_image = os.path.join(wrkdir,'fpi_s_field_{}_{}_final.pdf'.format(site,dstr))
+                fpi_s_field_image = os.path.join(wrkdir,'fpi_s_field_{}_{}_final.pdf'.format(site_low,dstr))
                 trans_field_image = []
                 for ican in range(3):
-                    trans_field_image.append(os.path.join(wrkdir,'trans_field_{}_{}_{}_final.pdf'.format(site,dstr,ican+1)))
+                    trans_field_image.append(os.path.join(wrkdir,'trans_field_{}_{}_{}_final.pdf'.format(site_low,dstr,ican+1)))
                 command = 'python'
                 command += ' '+os.path.join(opts.scrdir,'calc_trans_date_fi.py')
                 command += ' --tmin '+tmin
                 command += ' --tmax '+tmax
                 command += ' --data_tmin '+data_tmin
                 command += ' --data_tmax '+data_tmax
-                command += ' --offset {:.4f}'.format(offset[site])
+                command += ' --offset {:.4f}'.format(offset[site_low])
                 command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
                 command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0_speckle')
                 command += ' --search_key resample'
@@ -190,7 +191,7 @@ for site in opts.sites:
                     file_list.append(shp_bnam+'.prj')
                     file_list.append(shp_bnam+'.shx')
                     command = 'python'
-                    command += ' '+os.path.join(opts.scrdir,'draw_fpi_field_{}.py'.format(site.lower()))
+                    command += ' '+os.path.join(opts.scrdir,'draw_fpi_field_{}.py'.format(site_low))
                     command += ' --title {}'.format(tmin)
                     command += ' --trans_fnam '+shp_fnam
                     command += ' --output_fnam '+fpi_s_field_image
@@ -201,7 +202,7 @@ for site in opts.sites:
                         file_list.append(fpi_s_field_image)
                     for ican in range(3):
                         command = 'python'
-                        command += ' '+os.path.join(opts.scrdir,'draw_trans_field_{}.py'.format(site.lower()))
+                        command += ' '+os.path.join(opts.scrdir,'draw_trans_field_{}.py'.format(site_low))
                         command += ' --tmin '+tmin
                         command += ' --tmax '+tmax
                         command += ' --pmin 0'
@@ -226,7 +227,7 @@ for site in opts.sites:
                     command += ' --level test'
                 else:
                     command += ' --level final'
-                command += ' --version {}'+version[site]
+                command += ' --version {}'+version[site_low]
                 command += ' --overwrite'
                 command += ' '+' '.join(file_list)
                 call(command,shell=True)
@@ -238,7 +239,7 @@ for site in opts.sites:
                     command += ' --level test'
                 else:
                     command += ' --level final'
-                command += ' --version {}'+version[site]
+                command += ' --version {}'+version[site_low]
                 command += ' --overwrite'
                 command += ' '+' '.join(file_list)
                 call(command,shell=True)
