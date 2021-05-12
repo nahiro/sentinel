@@ -392,10 +392,14 @@ for i in range(ngrd):
     max_peaks,properties = find_peaks(ys,distance=opts.sig_distance,prominence=opts.sig_prominence)
     if opts.early:
         max_peaks = np.append(max_peaks,xc_indx_1)
+    if len(max_peaks) < 1:
+        continue
     xp = xx[max_peaks]
     yp = ys[max_peaks]
     yp[(xp < nmin-1.0e-6) | (xp > nmax+1.0e-6)] = -1.0e10
     k = np.argmax(yp)
+    if yp[k] < -1.0e2:
+        continue
     output_data[0,indy,indx] = xp[k]
     output_data[1,indy,indx] = yp[k]
 if opts.npy_fnam is not None:
