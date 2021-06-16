@@ -6,8 +6,8 @@ n_nearest = 120
 
 xstp = 10.0
 ystp = -10.0
-xmin,xmax,ymin,ymax = (743800.0,756800.0,9236000.0,9251800.0)
-xg,yg = np.meshgrid(np.arange(xmin,xmax+0.1*xstp,xstp),np.arange(ymax,ymin-0.1*ystp,ystp))
+xmin,xmax,ymin,ymax = (743805.0,757305.0,9235815.0,9251805.0)
+xg,yg = np.meshgrid(np.arange(xmin,xmax+0.1*xstp,xstp),np.arange(ymax,ymin+0.1*ystp,ystp))
 ngrd = xg.size
 nx = xg.shape[1]
 ny = xg.shape[0]
