@@ -152,6 +152,13 @@ for i in range(len(uuids)):
         dnam = path
     fnam = os.path.join(dnam,names[i]+'.zip')
     gnam = os.path.join(fnam+'.request')
+    if os.path.exists(fnam):
+        fsiz = os.path.getsize(fnam)
+        if fsiz == sizes[i]:
+            if os.path.exists(gnam):
+                os.remove(gnam)
+            sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
+            continue
     if stats[i]: # Online
         sys.stderr.write('###### Already online >>> {}\n'.format(fnam))
         if os.path.exists(gnam):
