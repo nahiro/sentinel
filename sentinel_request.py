@@ -42,6 +42,7 @@ parser.add_option('-w','--check_time',default=CHECK_TIME,type='int',help='Wait t
 parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait time to request next data in sec (%default)')
 parser.add_option('-R','--retry_time',default=RETRY_TIME,type='int',help='Wait time to request the same data again in sec (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
+parser.add_option('-Y','--sort_year',default=False,action='store_true',help='Sort files by year. (%default)')
 parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
@@ -137,7 +138,19 @@ api.session.close() # has any effect?
 
 path = '.' if opts.path is None else opts.path
 for i in range(len(uuids)):
-    fnam = os.path.join(path,names[i]+'.zip')
+    if opts.sort_year:
+        m = re.search('^\S+[^\d]_('+'\d'*4+')'+'\d'*4+'T'+'\d'*6+'_',names[i])
+        if not m:
+            raise ValueError('Error in file name >>> '+names[i])
+        year = m.group(1)
+        dnam = os.path.join(path,year)
+        if not os.path.exists(dnam):
+            os.makedirs(dnam)
+        if not os.path.isdir(dnam):
+            raise IOError('Error, no such directory >>> '+dnam)
+    else:
+        dnam = path
+    fnam = os.path.join(dnam,names[i]+'.zip')
     gnam = os.path.join(fnam+'.request')
     if stats[i]: # Online
         sys.stderr.write('###### Already online >>> {}\n'.format(fnam))
@@ -160,8 +173,7 @@ for i in range(len(uuids)):
         command += ' --password {}'.format(opts.password)
     if opts.url is not None:
         command += ' --url {}'.format(opts.url)
-    if opts.path is not None:
-        command += ' --path {}'.format(opts.path)
+    command += ' --path {}'.format(dnam)
     if not opts.checksum:
         command += ' --no-checksum'
     for ntry in range(opts.max_retry): # loop to request 1 file
