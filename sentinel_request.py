@@ -43,7 +43,7 @@ parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait tim
 parser.add_option('-R','--retry_time',default=RETRY_TIME,type='int',help='Wait time to request the same data again in sec (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-Y','--sort_year',default=False,action='store_true',help='Sort files by year. (%default)')
-parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
+#parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
 parser.add_option('-V','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
@@ -98,8 +98,8 @@ if opts.path is not None:
     command += ' --path {}'.format(opts.path)
 if opts.query is not None:
     command += ' --query {}'.format(opts.query)
-if not opts.checksum:
-    command += ' --no-checksum'
+#if not opts.checksum:
+#    command += ' --no-checksum'
 if opts.footprints:
     command += ' --footprints'
 if opts.version:
@@ -181,8 +181,8 @@ for i in range(len(uuids)):
     if opts.url is not None:
         command += ' --url {}'.format(opts.url)
     command += ' --path {}'.format(dnam)
-    if not opts.checksum:
-        command += ' --no-checksum'
+    #if not opts.checksum:
+    #    command += ' --no-checksum'
     for ntry in range(opts.max_retry): # loop to request 1 file
         # Start a process
         p = None
