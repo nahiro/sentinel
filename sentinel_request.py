@@ -105,8 +105,10 @@ if opts.footprints:
 if opts.version:
     command += ' --version'
 sys.stderr.write(command+'\n')
+sys.stderr.flush()
 out = check_output(command+' 2>&1',shell=True).decode()
 sys.stderr.write(out+'\n')
+sys.stderr.flush()
 if opts.version:
     sys.exit()
 
@@ -134,6 +136,7 @@ for i,uuid in enumerate(uuids):
     sizes.append(size)
     stats.append(stat)
     sys.stderr.write('{:4d} {:40s} {:70s} {:10d} {:7s}\n'.format(i+1,uuid,name,size,'Online' if stat else 'Offline'))
+    sys.stderr.flush()
 api.session.close() # has any effect?
 
 path = '.' if opts.path is None else opts.path
@@ -158,9 +161,11 @@ for i in range(len(uuids)):
             if os.path.exists(gnam):
                 os.remove(gnam)
             sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
+            sys.stderr.flush()
             continue
     if stats[i]: # Online
         sys.stderr.write('###### Already online >>> {}\n'.format(fnam))
+        sys.stderr.flush()
         if os.path.exists(gnam):
             os.remove(gnam)
         continue
@@ -168,6 +173,7 @@ for i in range(len(uuids)):
         diff = time.time()-os.path.getmtime(gnam)
         if diff < opts.retry_time:
             sys.stderr.write('###### Already requested >>> {}\n'.format(fnam))
+            sys.stderr.flush()
             continue
         else:
             os.remove(gnam)
@@ -197,6 +203,7 @@ for i in range(len(uuids)):
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Error in request >>> {}\n'.format(fnam))
+                sys.stderr.flush()
                 continue
             while True: # loop to terminate the process
                 if p.poll() is not None: # the process has terminated
@@ -207,14 +214,18 @@ for i in range(len(uuids)):
                 time.sleep(opts.check_time)
             result = p.poll()
             sys.stderr.write('\n')
+            sys.stderr.flush()
             if result is None: # the process hasn't terminated yet.
                 sys.stderr.write('Timeout\n')
+                sys.stderr.flush()
             elif result != 0:
                 sys.stderr.write('###### Not requested >>> {}\n'.format(fnam))
+                sys.stderr.flush()
             else:
                 with open(gnam,'w') as fp:
                     fp.write('{}'.format(time.time()))
                 sys.stderr.write('###### Successfully requested >>> {}\n'.format(fnam))
+                sys.stderr.flush()
                 break
             kill_process()
         else:
@@ -226,6 +237,7 @@ for i in range(len(uuids)):
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Error in request >>> {}\n'.format(fnam))
+                sys.stderr.flush()
                 continue
             try:
                 out,err = p.communicate(timeout=opts.timeout)
@@ -235,6 +247,7 @@ for i in range(len(uuids)):
                 out,err = p.communicate()
                 result = None
             sys.stderr.write('\n')
+            sys.stderr.flush()
             for line in err.decode().splitlines():
                 line_lower = line.lower()
                 if re.search('raise ',line_lower):
@@ -243,25 +256,35 @@ for i in range(len(uuids)):
                     continue
                 elif re.search('will ',line_lower):
                     sys.stderr.write(line+'\n')
+                    sys.stderr.flush()
                 elif re.search('download ',line_lower):
                     sys.stderr.write(line+'\n')
+                    sys.stderr.flush()
                 elif re.search('triggering ',line_lower):
                     sys.stderr.write(line+'\n')
+                    sys.stderr.flush()
                 elif re.search('requests ',line_lower):
                     sys.stderr.write(line+'\n')
+                    sys.stderr.flush()
                 elif re.search('accept',line_lower):
                     sys.stderr.write(line+'\n')
+                    sys.stderr.flush()
                 elif re.search('quota',line_lower):
                     sys.stderr.write(line+'\n')
+                    sys.stderr.flush()
             if result is None:
                 sys.stderr.write('Timeout\n')
+                sys.stderr.flush()
             elif result != 0:
                 sys.stderr.write('###### Not requested >>> {}\n'.format(fnam))
+                sys.stderr.flush()
             else:
                 with open(gnam,'w') as fp:
                     fp.write('{}'.format(time.time()))
                 sys.stderr.write('###### Successfully requested >>> {}\n'.format(fnam))
+                sys.stderr.flush()
                 break
         process_id = None
         sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
+        sys.stderr.flush()
         time.sleep(opts.wait_time)

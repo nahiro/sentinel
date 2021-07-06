@@ -112,8 +112,10 @@ if opts.footprints:
 if opts.version:
     command += ' --version'
 sys.stderr.write(command+'\n')
+sys.stderr.flush()
 out = check_output(command+' 2>&1',shell=True).decode()
 sys.stderr.write(out+'\n')
+sys.stderr.flush()
 if opts.version:
     sys.exit()
 
@@ -141,6 +143,7 @@ for i,uuid in enumerate(uuids):
     sizes.append(size)
     stats.append(stat)
     sys.stderr.write('{:4d} {:40s} {:70s} {:10d} {:7s}\n'.format(i+1,uuid,name,size,'Online' if stat else 'Offline'))
+    sys.stderr.flush()
 api.session.close() # has any effect?
 
 if opts.download:
@@ -166,6 +169,7 @@ if opts.download:
             fsiz = os.path.getsize(fnam)
             if fsiz == sizes[i]:
                 sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
+                sys.stderr.flush()
                 continue
         gnam = os.path.join(fnam+'.request')
         if opts.url is not None:
@@ -180,6 +184,7 @@ if opts.download:
                     os.remove(gnam)
                 break
             sys.stderr.write('Offline. Wait for {} sec >>> {}\n'.format(opts.online_check_time,fnam))
+            sys.stderr.flush()
             time.sleep(opts.online_check_time)
             continue
         api.session.close() # has any effect?
@@ -211,6 +216,7 @@ if opts.download:
                 else:
                     if fsiz == sizes[i]:
                         sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
+                        sys.stderr.flush()
                         if opts.log is not None:
                             with open(opts.log,'a') as fp:
                                 fp.write(fnam+'\n')
@@ -235,6 +241,7 @@ if opts.download:
                 process_id = p.pid
             except Exception:
                 sys.stderr.write('Failed to run the command. Wait for {} sec\n'.format(opts.wait_time))
+                sys.stderr.flush()
                 time.sleep(opts.wait_time)
                 continue
             while True: # loop to terminate the process
@@ -253,18 +260,25 @@ if opts.download:
                                         continue
                                     elif re.search('will ',line_lower):
                                         sys.stderr.write(line)
+                                        sys.stderr.flush()
                                     elif re.search('triggering ',line_lower):
                                         sys.stderr.write(line)
+                                        sys.stderr.flush()
                                     elif re.search('requests ',line_lower):
                                         sys.stderr.write(line)
+                                        sys.stderr.flush()
                                     elif re.search('accept',line_lower):
                                         sys.stderr.write(line)
+                                        sys.stderr.flush()
                                     elif re.search('quota',line_lower):
                                         sys.stderr.write(line)
+                                        sys.stderr.flush()
                                     elif re.search('downloading ',line_lower):
                                         sys.stderr.write(line)
+                                        sys.stderr.flush()
                                     elif re.search('downloading:',line_lower):
                                         sys.stderr.write(line.rstrip()+'\033[0K\r')
+                                        sys.stderr.flush()
                                     sys.stderr.flush()
                                     timer.cancel()
                                     timer = threading.Timer(opts.timeout,_thread.interrupt_main)
@@ -287,10 +301,12 @@ if opts.download:
                 time.sleep(opts.download_check_time)
             if p.poll() is None: # the process hasn't terminated yet.
                 sys.stderr.write('\nTimeout\n')
+                sys.stderr.flush()
             kill_process()
             if opts.quiet:
                 out,err = p.communicate()
                 sys.stderr.write('\n')
+                sys.stderr.flush()
                 for line in err.splitlines():
                     line_lower = line.lower()
                     if re.search('raise ',line_lower):
@@ -299,16 +315,23 @@ if opts.download:
                         continue
                     elif re.search('will ',line_lower):
                         sys.stderr.write(line+'\n')
+                        sys.stderr.flush()
                     elif re.search('triggering ',line_lower):
                         sys.stderr.write(line+'\n')
+                        sys.stderr.flush()
                     elif re.search('requests ',line_lower):
                         sys.stderr.write(line+'\n')
+                        sys.stderr.flush()
                     elif re.search('accept',line_lower):
                         sys.stderr.write(line+'\n')
+                        sys.stderr.flush()
                     elif re.search('quota',line_lower):
                         sys.stderr.write(line+'\n')
+                        sys.stderr.flush()
                     elif re.search('downloading ',line_lower):
                         sys.stderr.write(line+'\n')
+                        sys.stderr.flush()
             process_id = None
             sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
+            sys.stderr.flush()
             time.sleep(opts.wait_time)
