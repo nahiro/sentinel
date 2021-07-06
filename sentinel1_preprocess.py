@@ -14,7 +14,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 DATDIR = os.curdir
 ORIGIN_X = 743805.0 # pixel center
 ORIGIN_Y = 9236005.0 # pixel center
-POLYGON_CIHEA = 'POLYGON((107.201 -6.910,107.367 -6.910,107.367 -6.760,107.201 -6.760,107.201 -6.910))' # Cihea
+POLYGON_CIHEA = 'POLYGON((107.201 -6.910,107.367 -6.910,107.367 -6.750,107.201 -6.750,107.201 -6.910))' # Cihea
 POLYGON_BOJONGSOANG = 'POLYGON((107.54 -7.04,107.75 -7.04,107.75 -6.95,107.54 -6.95,107.54 -7.04))' # Bojongsoang
 XY_STEP = 10.0
 EPSG = 32748 # UTM zone 48S
