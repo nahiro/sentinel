@@ -48,7 +48,7 @@ parser.add_option('-O','--online_check_time',default=ONLINE_CHECK_TIME,type='int
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
 parser.add_option('-Y','--sort_year',default=False,action='store_true',help='Sort files by year. (%default)')
-#parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
+parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
 parser.add_option('-Q','--quiet',default=False,action='store_true',help='Quiet mode (%default)')
@@ -105,8 +105,8 @@ if opts.query is not None:
     command += ' --query {}'.format(opts.query)
 #if opts.download:
 #    command += ' --download'
-#if not opts.checksum:
-#    command += ' --no-checksum'
+if not opts.checksum:
+    command += ' --no-checksum'
 if opts.footprints:
     command += ' --footprints'
 if opts.version:
@@ -195,8 +195,8 @@ if opts.download:
         if opts.url is not None:
             command += ' --url {}'.format(opts.url)
         command += ' --path {}'.format(dnam)
-        #if not opts.checksum:
-        #    command += ' --no-checksum'
+        if not opts.checksum:
+            command += ' --no-checksum'
         for ntry in range(opts.max_retry): # loop to download 1 file
             # Exit if gnam does not exist and fnam with expected size exists
             if os.path.exists(fnam):
