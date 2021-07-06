@@ -10,10 +10,15 @@ from snappy import Product,ProductIO,ProductUtils,GPF,HashMap,WKTReader,jpy
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
+SITE = 'Cihea'
+POLYGON_CIHEA = 'POLYGON((107.201 -6.910,107.367 -6.910,107.367 -6.750,107.201 -6.750,107.201 -6.910))' # Cihea
+POLYGON_BOJONGSOANG = 'POLYGON((107.54 -7.04,107.75 -7.04,107.75 -6.95,107.54 -6.95,107.54 -7.04))' # Bojongsoang
 RESOLUTION = 10 # m
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('--site',default=SITE,help='Site name for preset coordinates (%default)')
+parser.add_option('--polygon',default=None,help='Polygon of ROI in WKT format (%default)')
 parser.add_option('-r','--resolution',default=RESOLUTION,type='int',help='Spatial resolution in m (%default)')
 parser.add_option('-G','--geotiff',default=False,action='store_true',help='GeoTiff mode (%default)')
 parser.set_usage('Usage: %prog input_fnam [options]')
@@ -37,6 +42,14 @@ else:
 if os.path.exists(output_fnam):
     sys.exit()
 
+if opts.site is not None:
+    if opts.site.lower() == 'cihea':
+        opts.polygon = POLYGON_CIHEA
+    elif opts.site.lower() == 'bojongsoang':
+        opts.polygon = POLYGON_BOJONGSOANG
+    else:
+        raise ValueError('Error, unknown site >>> '+opts.site)
+
 # Get snappy Operators
 GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
 # Read original product
@@ -53,8 +66,7 @@ params.put('targetResolution',opts.resolution)
 data_tmp = GPF.createProduct('Resample',params,data)
 data = data_tmp
 # Subset
-wkt = "POLYGON((107.201 -6.910,107.367 -6.910,107.367 -6.750,107.201 -6.750,107.201 -6.910))" # Cihea
-#wkt = "POLYGON((107.54 -7.04,107.75 -7.04,107.75 -6.95,107.54 -6.95,107.54 -7.04))" # Bojongsoang
+wkt = opts.polygon
 geom = WKTReader().read(wkt)
 params = HashMap()
 params.put('copyMetadata',True)
