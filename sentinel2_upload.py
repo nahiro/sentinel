@@ -53,7 +53,7 @@ for input_fnam in fnams:
     bnam,enam = os.path.splitext(unam)
     if enam != '.ZIP':
         continue
-    m = re.search('([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)',unam)
+    m = re.search('([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)',bnam)
     if not m:
         continue
     if m.group(1) != 'S2A' and m.group(1) != 'S2B':
