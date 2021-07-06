@@ -76,7 +76,7 @@ if not opts.skip_orbit:
         data_tmp = data
     data = data_tmp
 # Subset (SubsetOp.java)
-WKTReader = jpy.get_type('com.vividsolutions.jts.io.WKTReader')
+#WKTReader = jpy.get_type('com.vividsolutions.jts.io.WKTReader')
 wkt = opts.polygon
 geom = WKTReader().read(wkt)
 params = HashMap()
