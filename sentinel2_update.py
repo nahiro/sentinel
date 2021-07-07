@@ -83,6 +83,7 @@ for site,start in zip(opts.sites,dmaxs):
     command += ' --download'
     command += ' --sort_year'
     sys.stderr.write(command+'\n')
+    sys.stderr.flush()
     call(command,shell=True)
     d1 = datetime.strptime(start,'%Y%m%d')
     d2 = datetime.strptime(opts.end,'%Y%m%d')

@@ -60,6 +60,7 @@ for input_fnam in fnams:
         continue
     if m.group(2) != 'IW' or m.group(3) != 'GRDH' or m.group(4) != '1SDV':
         sys.stderr.write('Warning, skipping file >>> '+fnam+'\n')
+        sys.stderr.flush()
         continue
     d1 = datetime.strptime(m.group(5),'%Y%m%dT%H%M%S')
     d2 = datetime.strptime(m.group(6),'%Y%m%dT%H%M%S')
@@ -81,16 +82,20 @@ for input_fnam in fnams:
         if f['title'].upper() == unam:
             if opts.overwrite:
                 sys.stderr.write('File exists, delete   >>> '+f['title']+'\n')
+                sys.stderr.flush()
                 f.Delete()
             else:
                 sys.stderr.write('File exists, skip     >>> '+f['title']+'\n')
+                sys.stderr.flush()
                 flag = False # no need to upload
                 break
         else:
             sys.stderr.write('Warning, different file for the same date >>> '+f['title']+'\n')
+            sys.stderr.flush()
     if flag: # upload file
         f = drive.CreateFile({'parents':[{'id':folder_year['id']}]})
         f.SetContentFile(input_fnam)
         f['title'] = upload_fnam
         f.Upload()
         sys.stderr.write('Successfully uploaded >>> '+fnam+'\n')
+        sys.stderr.flush()
