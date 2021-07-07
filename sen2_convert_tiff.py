@@ -13,6 +13,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('-b','--band',default=None,type='int',action='append',help='Band# (%default)')
 parser.add_option('-G','--geotiff',default=False,action='store_true',help='GeoTiff mode (%default)')
 parser.set_usage('Usage: %prog input_fnam [options]')
 (opts,args) = parser.parse_args()
@@ -42,6 +43,15 @@ if safe_flag:
     data = ProductIO.readProduct(os.path.join(input_fnam,'MTD_MSIL2A.xml'))
 else:
     data = ProductIO.readProduct(input_fnam)
+if opts.band is not None:
+    band_list = list(data.getBandNames())
+    bands = []
+    for band in opts.band:
+        bands.append(band_list[band])
+    params = HashMap()
+    params.put('sourceBands',','.join(bands))
+    data_tmp = GPF.createProduct('BandSelect',params,data)
+    data = data_tmp
 if opts.geotiff:
     ProductIO.writeProduct(data,output_fnam,'GeoTiff')
 else:
