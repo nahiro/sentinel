@@ -159,7 +159,10 @@ for i,uuid in enumerate(uuids):
             command += ' --quiet'
         command += ' --output-document -'
         command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
-        out = check_output(command,shell=True,stderr=PIPE).decode()
+        try:
+            call(command,shell=True)
+        except Exception:
+            pass
 
 if opts.download:
     path = '.' if opts.path is None else opts.path
@@ -245,7 +248,10 @@ if opts.download:
         command += ' --output-document '+gnam
         command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuids[i])
         for ntry in range(opts.max_retry): # loop to download 1 file
-            call(command,shell=True)
+            try:
+                call(command,shell=True)
+            except Exception:
+                pass
             # Rename if gnam with expected size exists
             if os.path.exists(gnam):
                 gsiz = os.path.getsize(gnam)
