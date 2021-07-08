@@ -45,7 +45,7 @@ parser.add_option('-O','--online_check_time',default=ONLINE_CHECK_TIME,type='int
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
 parser.add_option('-Y','--sort_year',default=False,action='store_true',help='Sort files by year. (%default)')
-parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
+parser.add_option('-C','--no_checksum',default=False,action='store_true',help='Do NOT verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
 parser.add_option('-f','--footprints',default=False,action='store_true',help='Create a geojson file search_footprints.geojson with footprints and metadata of the returned products. (%default)')
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
 parser.add_option('-Q','--quiet',default=False,action='store_true',help='Quiet mode (%default)')
@@ -85,8 +85,8 @@ if opts.path is not None:
     command += ' --path {}'.format(opts.path)
 if opts.query is not None:
     command += ' --query {}'.format(opts.query)
-if not opts.checksum:
-    command += ' --no-checksum'
+#if opts.no_checksum:
+#    command += ' --no-checksum'
 if opts.footprints:
     command += ' --footprints'
 if opts.version:
@@ -193,7 +193,7 @@ if opts.download:
         if os.path.exists(fnam):
             fsiz = os.path.getsize(fnam)
             if fsiz == sizes[i]:
-                if opts.checksum:
+                if not opts.no_checksum:
                     with open(fnam,'rb') as fp:
                         md5 = hashlib.md5(fp.read()).hexdigest()
                     if md5 != md5s[i]:
@@ -267,7 +267,7 @@ if opts.download:
             if os.path.exists(fnam):
                 fsiz = os.path.getsize(fnam)
                 if fsiz == sizes[i]:
-                    if opts.checksum:
+                    if not opts.no_checksum:
                         with open(fnam,'rb') as fp:
                             md5 = hashlib.md5(fp.read()).hexdigest()
                         if md5 != md5s[i]:
