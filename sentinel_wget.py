@@ -157,8 +157,9 @@ for i,uuid in enumerate(uuids):
         command += ' --continue'
         if opts.quiet:
             command += ' --quiet'
-        command += ' --output-document '+gnam
+        command += ' --output-document -'
         command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
+        out = check_output(command,shell=True,stderr=PIPE).decode()
 
 if opts.download:
     path = '.' if opts.path is None else opts.path
