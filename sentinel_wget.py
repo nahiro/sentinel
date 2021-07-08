@@ -17,6 +17,7 @@ PASSWORD = os.environ.get('DHUS_PASSWORD')
 URL = os.environ.get('DHUS_URL')
 if URL is None:
     URL = 'https://scihub.copernicus.eu/dhus'
+WAIT_TIME = 60
 ONLINE_CHECK_TIME = 300
 MAX_RETRY = 10
 
@@ -39,6 +40,7 @@ parser.add_option('-l','--limit',default=None,type='int',help='Maximum number of
 parser.add_option('-L','--log',default=None,help='Set the log file name.')
 parser.add_option('-P','--path',default=None,help='Set the path where the files will be saved.')
 parser.add_option('-q','--query',default=None,help='Extra search keywords you want to use in the query. Separate keywords with comma. Example: \'producttype=GRD,polarisationmode=HH\'.')
+parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait time to download data in sec (%default)')
 parser.add_option('-O','--online_check_time',default=ONLINE_CHECK_TIME,type='int',help='Wait time to check online data in sec (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
@@ -268,3 +270,6 @@ if opts.download:
                     if os.path.exists(gnam):
                         os.remove(gnam)
                     break
+            sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
+            sys.stderr.flush()
+            time.sleep(opts.wait_time)
