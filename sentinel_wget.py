@@ -4,26 +4,20 @@ import psutil
 import sys
 import re
 import time
-import select
-import _thread
-import threading
-import signal
-import atexit
 import numpy as np
+import xml.etree.ElementTree as ET
+from collections import OrderedDict
 from datetime import datetime
 from glob import glob
-from subprocess import Popen,check_output,PIPE
-from sentinelsat import SentinelAPI
+from subprocess import Popen,check_output,PIPE,STDOUT
 from optparse import OptionParser,IndentedHelpFormatter
 
-TIMEOUT = 60
-DOWNLOAD_CHECK_TIME = 10
-ONLINE_CHECK_TIME = 300
-WAIT_TIME = 10
-MAX_RETRY = 100
+# Defaults
+SERVER = 'https://scihub.copernicus.eu/dhus'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('--server',default=SERVER,help='Server URL (%default)')
 parser.add_option('-u','--user',default=None,help='Username (or environment variable DHUS_USER is set)')
 parser.add_option('-p','--password',default=None,help='Password (or environment variable DHUS_PASSWORD is set)')
 parser.add_option('-U','--url',default=None,help='API URL (or environment variable DHUS_URL is set) (%default)')
@@ -41,11 +35,6 @@ parser.add_option('-l','--limit',default=None,type='int',help='Maximum number of
 parser.add_option('-L','--log',default=None,help='Set the log file name.')
 parser.add_option('-P','--path',default=None,help='Set the path where the files will be saved.')
 parser.add_option('-q','--query',default=None,help='Extra search keywords you want to use in the query. Separate keywords with comma. Example: \'producttype=GRD,polarisationmode=HH\'.')
-parser.add_option('-T','--timeout',default=TIMEOUT,type='float',help='Timeout to download data in sec (%default)')
-parser.add_option('-w','--download_check_time',default=DOWNLOAD_CHECK_TIME,type='int',help='Wait time to check downloaded data in sec (%default)')
-parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait time to download data in sec (%default)')
-parser.add_option('-O','--online_check_time',default=ONLINE_CHECK_TIME,type='int',help='Wait time to check online data in sec (%default)')
-parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
 parser.add_option('-Y','--sort_year',default=False,action='store_true',help='Sort files by year. (%default)')
 parser.add_option('-C','--checksum',default=False,action='store_true',help='Verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
@@ -53,22 +42,6 @@ parser.add_option('-f','--footprints',default=False,action='store_true',help='Cr
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
 parser.add_option('-Q','--quiet',default=False,action='store_true',help='Quiet mode (%default)')
 (opts,args) = parser.parse_args()
-
-process_id = None
-def kill_process():
-    if process_id is not None:
-        if not psutil.pid_exists(process_id):
-            return
-        sys.stderr.write('KILL PROCESS\n')
-        if os.name.lower() != 'posix':
-            parent = psutil.Process(process_id)
-            children = parent.children(recursive=True)
-            for child in children:
-                child.kill()
-            parent.kill()
-        else:
-            os.killpg(os.getpgid(process_id),signal.SIGTERM)
-atexit.register(kill_process)
 
 command = 'sentinelsat'
 if opts.user is not None:
@@ -103,8 +76,6 @@ if opts.path is not None:
     command += ' --path {}'.format(opts.path)
 if opts.query is not None:
     command += ' --query {}'.format(opts.query)
-#if opts.download:
-#    command += ' --download'
 if not opts.checksum:
     command += ' --no-checksum'
 if opts.footprints:
@@ -113,7 +84,8 @@ if opts.version:
     command += ' --version'
 sys.stderr.write(command+'\n')
 sys.stderr.flush()
-out = check_output(command+' 2>&1',shell=True).decode()
+#out = check_output(command,shell=True,stderr=PIPE).decode()
+out = check_output(command,shell=True,stderr=STDOUT).decode()
 sys.stderr.write(out+'\n')
 sys.stderr.flush()
 if opts.version:
@@ -130,22 +102,39 @@ for line in out.splitlines():
 names = []
 sizes = []
 stats = []
-if opts.url is not None:
-    api = SentinelAPI(opts.user,opts.password,opts.url)
-else:
-    api = SentinelAPI(opts.user,opts.password)
 for i,uuid in enumerate(uuids):
-    out = api.get_product_odata(uuid)
-    name = out['title']
-    size = out['size']
-    stat = out['Online']
+    command = 'wget'
+    command += ' --no-check-certificate'
+    command += ' --output-document -'
+    command += ' "'+opts.server+'/odata/v1/Products(\'{}\')"'.format(uuid)
+    out = check_output(command,shell=True,stderr=PIPE).decode()
+    root = ET.fromstring(out)
+    child = None
+    for value in root:
+        prefix,has_namespace,postfix = value.tag.rpartition('}')
+        if postfix.lower() == 'properties':
+            child = value
+            break
+    tags = OrderedDict()
+    for value in child:
+        prefix,has_namespace,postfix = value.tag.rpartition('}')
+        if len(value) > 0:
+            tags[postfix] = OrderedDict()
+            for value_2 in value:
+                prefix_2,has_namespace_2,postfix_2 = value_2.tag.rpartition('}')
+                tags[postfix][postfix_2] = value_2.text
+        else:
+            tags[postfix] = value.text
+    name = tags['Name']
+    size = int(tags['ContentLength'])
+    stat = eval(tags['Online'].capitalize())
     names.append(name)
     sizes.append(size)
     stats.append(stat)
     sys.stderr.write('{:4d} {:40s} {:70s} {:10d} {:7s}\n'.format(i+1,uuid,name,size,'Online' if stat else 'Offline'))
     sys.stderr.flush()
-api.session.close() # has any effect?
 
+"""
 if opts.download:
     path = '.' if opts.path is None else opts.path
     for i in range(len(uuids)):
@@ -190,7 +179,7 @@ if opts.download:
         api.session.close() # has any effect?
         # Download data
         gnam = os.path.join(fnam+'.incomplete')
-        command = 'sentinelsat'
+        command = 'sentinel_wget.py'
         command += ' --download'
         command += ' --uuid {}'.format(uuids[i])
         if opts.user is not None:
@@ -245,50 +234,6 @@ if opts.download:
                 time.sleep(opts.wait_time)
                 continue
             while True: # loop to terminate the process
-                if opts.quiet:
-                    while True:
-                        try:
-                            timer = threading.Timer(opts.timeout,_thread.interrupt_main)
-                            timer.start()
-                            while p.stderr in select.select([p.stderr],[],[],opts.download_check_time)[0]:
-                                line = p.stderr.readline()
-                                if line:
-                                    line_lower = line.lower()
-                                    if re.search('raise ',line_lower):
-                                        continue
-                                    elif re.search('sentinelapiltaerror',line_lower):
-                                        continue
-                                    elif re.search('will ',line_lower):
-                                        sys.stderr.write(line)
-                                        sys.stderr.flush()
-                                    elif re.search('triggering ',line_lower):
-                                        sys.stderr.write(line)
-                                        sys.stderr.flush()
-                                    elif re.search('requests ',line_lower):
-                                        sys.stderr.write(line)
-                                        sys.stderr.flush()
-                                    elif re.search('accept',line_lower):
-                                        sys.stderr.write(line)
-                                        sys.stderr.flush()
-                                    elif re.search('quota',line_lower):
-                                        sys.stderr.write(line)
-                                        sys.stderr.flush()
-                                    elif re.search('downloading ',line_lower):
-                                        sys.stderr.write(line)
-                                        sys.stderr.flush()
-                                    elif re.search('downloading:',line_lower):
-                                        sys.stderr.write(line.rstrip()+'\033[0K\r')
-                                        sys.stderr.flush()
-                                    sys.stderr.flush()
-                                    timer.cancel()
-                                    timer = threading.Timer(opts.timeout,_thread.interrupt_main)
-                                    timer.start()
-                                else:
-                                    break
-                            timer.cancel()
-                        except KeyboardInterrupt:
-                            pass
-                        break
                 # Exit if fnam exists or gnam exists and its size does not change for opts.timeout seconds
                 if p.poll() is not None: # the process has terminated
                     break
@@ -307,31 +252,4 @@ if opts.download:
                 out,err = p.communicate()
                 sys.stderr.write('\n')
                 sys.stderr.flush()
-                for line in err.splitlines():
-                    line_lower = line.lower()
-                    if re.search('raise ',line_lower):
-                        continue
-                    elif re.search('sentinelapiltaerror',line_lower):
-                        continue
-                    elif re.search('will ',line_lower):
-                        sys.stderr.write(line+'\n')
-                        sys.stderr.flush()
-                    elif re.search('triggering ',line_lower):
-                        sys.stderr.write(line+'\n')
-                        sys.stderr.flush()
-                    elif re.search('requests ',line_lower):
-                        sys.stderr.write(line+'\n')
-                        sys.stderr.flush()
-                    elif re.search('accept',line_lower):
-                        sys.stderr.write(line+'\n')
-                        sys.stderr.flush()
-                    elif re.search('quota',line_lower):
-                        sys.stderr.write(line+'\n')
-                        sys.stderr.flush()
-                    elif re.search('downloading ',line_lower):
-                        sys.stderr.write(line+'\n')
-                        sys.stderr.flush()
-            process_id = None
-            sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
-            sys.stderr.flush()
-            time.sleep(opts.wait_time)
+"""
