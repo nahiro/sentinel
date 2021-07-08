@@ -199,7 +199,7 @@ if opts.download:
                     os.remove(gnam)
                 continue
         # Wait online
-        while True:
+        while not stats[i]:
             command = 'wget'
             command += ' --no-check-certificate'
             command += ' --output-document -'
