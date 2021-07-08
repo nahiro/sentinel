@@ -189,7 +189,7 @@ if opts.download:
             if fsiz == sizes[i]:
                 if opts.checksum:
                     with open(fnam,'rb') as fp:
-                        md5 = hashlib.md5(f.read()).hexdigest()
+                        md5 = hashlib.md5(fp.read()).hexdigest()
                     if md5 != md5s[i]:
                         sys.stderr.write('Warning, md5={}, md5s[{}]={} >>> {}\n'.format(md5,i,md5s[i],fnam))
                         sys.stderr.flush()
@@ -258,7 +258,7 @@ if opts.download:
                 if fsiz == sizes[i]:
                     if opts.checksum:
                         with open(fnam,'rb') as fp:
-                            md5 = hashlib.md5(f.read()).hexdigest()
+                            md5 = hashlib.md5(fp.read()).hexdigest()
                         if md5 != md5s[i]:
                             sys.stderr.write('Warning, md5={}, md5s[{}]={} >>> {}\n'.format(md5,i,md5s[i],fnam))
                             sys.stderr.flush()
