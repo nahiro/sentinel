@@ -17,9 +17,9 @@ PASSWORD = os.environ.get('DHUS_PASSWORD')
 URL = os.environ.get('DHUS_URL')
 if URL is None:
     URL = 'https://scihub.copernicus.eu/dhus'
-WAIT_TIME = 60
+WAIT_TIME = 300
 ONLINE_CHECK_TIME = 300
-MAX_RETRY = 10
+MAX_RETRY = 100
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -146,8 +146,9 @@ for i,uuid in enumerate(uuids):
     md5s.append(md5)
     sys.stderr.write('{:4d} {:40s} {:70s} {:10d} {:7s}\n'.format(i+1,uuid,name,size,'Online' if stat else 'Offline'))
     sys.stderr.flush()
+    """
     # If offline, order products from the historical archives
-    if not stat:
+    if opts.download and not stat:
         command = 'wget'
         if opts.user is not None:
             command += ' --user {}'.format(opts.user)
@@ -163,6 +164,7 @@ for i,uuid in enumerate(uuids):
             call(command,shell=True)
         except Exception:
             pass
+    """
 
 if opts.download:
     path = '.' if opts.path is None else opts.path
@@ -202,6 +204,7 @@ if opts.download:
                 if os.path.exists(gnam):
                     os.remove(gnam)
                 continue
+        """
         # Wait online
         while not stats[i]:
             command = 'wget'
@@ -235,6 +238,7 @@ if opts.download:
             sys.stderr.flush()
             time.sleep(opts.online_check_time)
             continue
+        """
         # Download data
         command = 'wget'
         if opts.user is not None:
