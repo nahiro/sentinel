@@ -4,10 +4,11 @@ import psutil
 import sys
 import re
 import time
+import hashlib
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 from datetime import datetime
-from subprocess import check_output,PIPE,STDOUT
+from subprocess import call,check_output,PIPE,STDOUT
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
@@ -107,11 +108,12 @@ for line in out.splitlines():
 names = []
 sizes = []
 stats = []
+md5s = []
 for i,uuid in enumerate(uuids):
     command = 'wget'
     command += ' --no-check-certificate'
     command += ' --output-document -'
-    command += ' "'+opts.server+'/odata/v1/Products(\'{}\')"'.format(uuid)
+    command += ' "'+opts.url+'/odata/v1/Products(\'{}\')"'.format(uuid)
     out = check_output(command,shell=True,stderr=PIPE).decode()
     root = ET.fromstring(out)
     child = None
@@ -135,9 +137,11 @@ for i,uuid in enumerate(uuids):
     name = tags['Name']
     size = int(tags['ContentLength'])
     stat = eval(tags['Online'].capitalize())
+    md5 = tags['Checksum']['Value']
     names.append(name)
     sizes.append(size)
     stats.append(stat)
+    md5s.append(md5)
     sys.stderr.write('{:4d} {:40s} {:70s} {:10d} {:7s}\n'.format(i+1,uuid,name,size,'Online' if stat else 'Offline'))
     sys.stderr.flush()
     # If offline, order products from the historical archives
@@ -152,7 +156,7 @@ for i,uuid in enumerate(uuids):
         if opts.quiet:
             command += ' --quiet'
         command += ' --output-document '+gnam
-        command += ' "'+opts.server+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
+        command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
 
 if opts.download:
     path = '.' if opts.path is None else opts.path
@@ -174,13 +178,19 @@ if opts.download:
         gnam = os.path.join(fnam+'.incomplete')
         # Rename if gnam with expected size exists
         if os.path.exists(gnam):
-            fsiz = os.path.getsize(gnam)
-            if fsiz == sizes[i]:
+            gsiz = os.path.getsize(gnam)
+            if gsiz == sizes[i]:
                 os.rename(gnam,fnam)
         # Skip if fnam with expected size exists
         if os.path.exists(fnam):
             fsiz = os.path.getsize(fnam)
             if fsiz == sizes[i]:
+                if opts.checksum:
+                    with open(fnam,'rb') as fp:
+                        md5 = hashlib.md5(f.read()).hexdigest()
+                    if md5 != md5s[i]:
+                        sys.stderr.write('Warning, md5={}, md5s[{}]={} >>> {}\n'.format(md5,i,md5s[i],fnam))
+                        sys.stderr.flush()
                 sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
                 sys.stderr.flush()
                 if os.path.exists(gnam):
@@ -191,7 +201,7 @@ if opts.download:
             command = 'wget'
             command += ' --no-check-certificate'
             command += ' --output-document -'
-            command += ' "'+opts.server+'/odata/v1/Products(\'{}\')"'.format(uuids[i])
+            command += ' "'+opts.url+'/odata/v1/Products(\'{}\')"'.format(uuids[i])
             out = check_output(command,shell=True,stderr=PIPE).decode()
             root = ET.fromstring(out)
             child = None
@@ -230,25 +240,31 @@ if opts.download:
         if opts.quiet:
             command += ' --quiet'
         command += ' --output-document '+gnam
-        command += ' "'+opts.server+'/odata/v1/Products(\'{}\')/\$value"'.format(uuids[i])
+        command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuids[i])
         for ntry in range(opts.max_retry): # loop to download 1 file
-            # Exit if gnam does not exist and fnam with expected size exists
+            call(command,shell=True)
+            # Rename if gnam with expected size exists
+            if os.path.exists(gnam):
+                gsiz = os.path.getsize(gnam)
+                if gsiz == sizes[i]:
+                    os.rename(gnam,fnam)
+                elif gsiz > sizes[i]:
+                    os.remove(gnam)
+            # Exit if fnam with expected size exists
             if os.path.exists(fnam):
                 fsiz = os.path.getsize(fnam)
-                if os.path.exists(gnam):
-                    gsiz = os.path.getsize(gnam)
-                    if gsiz > fsiz:
-                        os.remove(fnam)
-                    else:
+                if fsiz == sizes[i]:
+                    if opts.checksum:
+                        with open(fnam,'rb') as fp:
+                            md5 = hashlib.md5(f.read()).hexdigest()
+                        if md5 != md5s[i]:
+                            sys.stderr.write('Warning, md5={}, md5s[{}]={} >>> {}\n'.format(md5,i,md5s[i],fnam))
+                            sys.stderr.flush()
+                    sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
+                    sys.stderr.flush()
+                    if opts.log is not None:
+                        with open(opts.log,'a') as fp:
+                            fp.write(fnam+'\n')
+                    if os.path.exists(gnam):
                         os.remove(gnam)
-                        os.rename(fnam,gnam)
-                else:
-                    if fsiz == sizes[i]:
-                        sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
-                        sys.stderr.flush()
-                        if opts.log is not None:
-                            with open(opts.log,'a') as fp:
-                                fp.write(fnam+'\n')
-                        break
-                    else:
-                        os.rename(fnam,gnam)
+                    break
