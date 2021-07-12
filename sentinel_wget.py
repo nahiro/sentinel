@@ -18,6 +18,7 @@ if URL is None:
 WAIT_TIME = 300
 ONLINE_CHECK_TIME = 300
 MAX_RETRY = 100
+N_REQUEST = 3
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -41,6 +42,7 @@ parser.add_option('-q','--query',default=None,help='Extra search keywords you wa
 parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait time to download data in sec (%default)')
 parser.add_option('-O','--online_check_time',default=ONLINE_CHECK_TIME,type='int',help='Wait time to check online data in sec (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
+parser.add_option('-R','--n_request',default=N_REQUEST,type='int',help='Number of requests in advance (%default)')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
 parser.add_option('-Y','--sort_year',default=False,action='store_true',help='Sort files by year. (%default)')
 parser.add_option('-C','--no_checksum',default=False,action='store_true',help='Do NOT verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
@@ -85,6 +87,12 @@ def query_data(uuid):
     return name,size,stat,md5
 
 def download_data(uuid,dst):
+    dnam = os.path.dirname(dst)
+    if dnam: # != ''
+        if not os.path.exists(dnam):
+            os.makedirs(dnam)
+        if not os.path.isdir(dnam):
+            raise IOError('Error, no such directory >>> '+dnam)
     command = 'wget'
     #command += ' --content-disposition'
     command += ' --continue'
@@ -171,13 +179,11 @@ for i,uuid in enumerate(uuids):
     md5s.append(md5)
     sys.stderr.write('{:4d} {:40s} {:70s} {:10d} {:7s}\n'.format(i+1,uuid,name,size,'Online' if stat else 'Offline'))
     sys.stderr.flush()
-    """
-    # If offline, order products from the historical archives
-    if opts.download and not stat:
-        download_data(uuid,'-')
-    """
 
 if opts.download:
+    # Make download list
+    fnams = []
+    download_list = []
     path = '.' if opts.path is None else opts.path
     for i in range(len(uuids)):
         # Check data availability
@@ -187,14 +193,40 @@ if opts.download:
                 raise ValueError('Error in file name >>> '+names[i])
             year = m.group(1)
             dnam = os.path.join(path,year)
-            if not os.path.exists(dnam):
-                os.makedirs(dnam)
-            if not os.path.isdir(dnam):
-                raise IOError('Error, no such directory >>> '+dnam)
         else:
             dnam = path
         fnam = os.path.join(dnam,names[i]+'.zip')
-        gnam = os.path.join(fnam+'.incomplete')
+        gnam = fnam+'.incomplete'
+        fnams.append(fnam)
+        flag = False
+        if os.path.exists(fnam) and os.path.getsize(fnam) == sizes[i]:
+            flag = True
+        if os.path.exists(gnam) and os.path.getsize(gnam) == sizes[i]:
+            flag = True
+        if not flag:
+            download_list.append((uuids[i],fnam))
+    # Request data in advance
+    for i in range(max(opts.n_request,len(download_list))):
+        uuid = download_list[i][0]
+        fnam = download_list[i][1]
+        gnam = fnam+'.incomplete'
+        name,size,stat,md5 = query_data(uuid)
+        if not stat:
+            download_data(uuid,gnam)
+    for i in range(len(uuids)):
+        # Request data in advance
+        if fnams[i] in download_list:
+            j = download_list.index(fnams[i])+opts.n_request
+            if j < len(download_list):
+                uuid = download_list[j][0]
+                fnam = download_list[j][1]
+                gnam = fnam+'.incomplete'
+                name,size,stat,md5 = query_data(uuid)
+                if not stat:
+                    download_data(uuid,gnam)
+        uuid = uuids[i]
+        fnam = fnams[i]
+        gnam = fnam+'.incomplete'
         # Rename if gnam with expected size exists
         if os.path.exists(gnam):
             gsiz = os.path.getsize(gnam)
@@ -215,20 +247,23 @@ if opts.download:
                 if os.path.exists(gnam):
                     os.remove(gnam)
                 continue
-        """
         # Wait online
-        while not stats[i]:
+        ntry = 0
+        while True:
             name,size,stat,md5 = query_data(uuid)
             if stat: # Online
                 break
             sys.stderr.write('Offline. Wait for {} sec >>> {}\n'.format(opts.online_check_time,fnam))
             sys.stderr.flush()
+            # Request data
+            if ntry%opts.max_retry == 0:
+                download_data(uuid,gnam)
             time.sleep(opts.online_check_time)
+            ntry += 1
             continue
-        """
         # Download data
         for ntry in range(opts.max_retry): # loop to download 1 file
-            download_data(uuids[i],gnam)
+            download_data(uuid,gnam)
             # Rename if gnam with expected size exists
             if os.path.exists(gnam):
                 gsiz = os.path.getsize(gnam)
