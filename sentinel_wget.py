@@ -12,8 +12,6 @@ from subprocess import call,check_output,PIPE,STDOUT
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
-USER = os.environ.get('DHUS_USER')
-PASSWORD = os.environ.get('DHUS_PASSWORD')
 URL = os.environ.get('DHUS_URL')
 if URL is None:
     URL = 'https://scihub.copernicus.eu/dhus'
@@ -23,8 +21,8 @@ MAX_RETRY = 100
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.add_option('-u','--user',default=USER,help='Username (or environment variable DHUS_USER is set)')
-parser.add_option('-p','--password',default=PASSWORD,help='Password (or environment variable DHUS_PASSWORD is set)')
+parser.add_option('-u','--user',default=None,help='Username (or environment variable DHUS_USER is set)')
+parser.add_option('-p','--password',default=None,help='Password (or environment variable DHUS_PASSWORD is set)')
 parser.add_option('-U','--url',default=URL,help='API URL (or environment variable DHUS_URL is set)')
 parser.add_option('-s','--start',default=None,help='Start date of the query in the format YYYYMMDD.')
 parser.add_option('-e','--end',default=None,help='End date of the query in the format YYYYMMDD.')
@@ -50,6 +48,60 @@ parser.add_option('-f','--footprints',default=False,action='store_true',help='Cr
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
 parser.add_option('-Q','--quiet',default=False,action='store_true',help='Quiet mode (%default)')
 (opts,args) = parser.parse_args()
+
+def query_data(uuid):
+    command = 'wget'
+    command += ' --no-check-certificate'
+    if opts.user is not None:
+        command += ' --user {}'.format(opts.user)
+    if opts.password is not None:
+        command += ' --password {}'.format(opts.password)
+    command += ' --output-document -'
+    command += ' "'+opts.url+'/odata/v1/Products(\'{}\')"'.format(uuid)
+    out = check_output(command,shell=True,stderr=PIPE).decode()
+    root = ET.fromstring(out)
+    child = None
+    for value in root:
+        prefix,has_namespace,postfix = value.tag.rpartition('}')
+        if postfix.lower() == 'properties':
+            child = value
+            break
+    if child is None:
+        raise ValueError('Error, faild in finding properies >>> {}'.format(uuid))
+    tags = OrderedDict()
+    for value in child:
+        prefix,has_namespace,postfix = value.tag.rpartition('}')
+        if len(value) > 0:
+            tags[postfix] = OrderedDict()
+            for value_2 in value:
+                prefix_2,has_namespace_2,postfix_2 = value_2.tag.rpartition('}')
+                tags[postfix][postfix_2] = value_2.text
+        else:
+            tags[postfix] = value.text
+    name = tags['Name']
+    size = int(tags['ContentLength'])
+    stat = eval(tags['Online'].capitalize())
+    md5 = tags['Checksum']['Value']
+    return name,size,stat,md5
+
+def download_data(uuid,dst):
+    command = 'wget'
+    #command += ' --content-disposition'
+    command += ' --continue'
+    if opts.user is not None:
+        command += ' --user {}'.format(opts.user)
+    if opts.password is not None:
+        command += ' --password {}'.format(opts.password)
+    if opts.quiet:
+        command += ' --quiet'
+    command += ' --output-document '+dst
+    command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
+    try:
+        call(command,shell=True)
+        ret = 0
+    except Exception:
+        ret = -1
+    return ret
 
 # Query products
 command = 'sentinelsat'
@@ -112,34 +164,7 @@ sizes = []
 stats = []
 md5s = []
 for i,uuid in enumerate(uuids):
-    command = 'wget'
-    command += ' --no-check-certificate'
-    command += ' --output-document -'
-    command += ' "'+opts.url+'/odata/v1/Products(\'{}\')"'.format(uuid)
-    out = check_output(command,shell=True,stderr=PIPE).decode()
-    root = ET.fromstring(out)
-    child = None
-    for value in root:
-        prefix,has_namespace,postfix = value.tag.rpartition('}')
-        if postfix.lower() == 'properties':
-            child = value
-            break
-    if child is None:
-        raise ValueError('Error, faild in finding properies >>> {}'.format(uuid))
-    tags = OrderedDict()
-    for value in child:
-        prefix,has_namespace,postfix = value.tag.rpartition('}')
-        if len(value) > 0:
-            tags[postfix] = OrderedDict()
-            for value_2 in value:
-                prefix_2,has_namespace_2,postfix_2 = value_2.tag.rpartition('}')
-                tags[postfix][postfix_2] = value_2.text
-        else:
-            tags[postfix] = value.text
-    name = tags['Name']
-    size = int(tags['ContentLength'])
-    stat = eval(tags['Online'].capitalize())
-    md5 = tags['Checksum']['Value']
+    name,size,stat,md5 = query_data(uuid)
     names.append(name)
     sizes.append(size)
     stats.append(stat)
@@ -149,21 +174,7 @@ for i,uuid in enumerate(uuids):
     """
     # If offline, order products from the historical archives
     if opts.download and not stat:
-        command = 'wget'
-        if opts.user is not None:
-            command += ' --user {}'.format(opts.user)
-        if opts.password is not None:
-            command += ' --password {}'.format(opts.password)
-        command += ' --content-disposition'
-        command += ' --continue'
-        if opts.quiet:
-            command += ' --quiet'
-        command += ' --output-document -'
-        command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
-        try:
-            call(command,shell=True)
-        except Exception:
-            pass
+        download_data(uuid,'-')
     """
 
 if opts.download:
@@ -207,31 +218,7 @@ if opts.download:
         """
         # Wait online
         while not stats[i]:
-            command = 'wget'
-            command += ' --no-check-certificate'
-            command += ' --output-document -'
-            command += ' "'+opts.url+'/odata/v1/Products(\'{}\')"'.format(uuids[i])
-            out = check_output(command,shell=True,stderr=PIPE).decode()
-            root = ET.fromstring(out)
-            child = None
-            for value in root:
-                prefix,has_namespace,postfix = value.tag.rpartition('}')
-                if postfix.lower() == 'properties':
-                    child = value
-                    break
-            if child is None:
-                raise ValueError('Error, faild in finding properies >>> {}'.format(uuids[i]))
-            tags = OrderedDict()
-            for value in child:
-                prefix,has_namespace,postfix = value.tag.rpartition('}')
-                if len(value) > 0:
-                    tags[postfix] = OrderedDict()
-                    for value_2 in value:
-                        prefix_2,has_namespace_2,postfix_2 = value_2.tag.rpartition('}')
-                        tags[postfix][postfix_2] = value_2.text
-                else:
-                    tags[postfix] = value.text
-            stat = eval(tags['Online'].capitalize())
+            name,size,stat,md5 = query_data(uuid)
             if stat: # Online
                 break
             sys.stderr.write('Offline. Wait for {} sec >>> {}\n'.format(opts.online_check_time,fnam))
@@ -240,22 +227,8 @@ if opts.download:
             continue
         """
         # Download data
-        command = 'wget'
-        if opts.user is not None:
-            command += ' --user {}'.format(opts.user)
-        if opts.password is not None:
-            command += ' --password {}'.format(opts.password)
-        command += ' --content-disposition'
-        command += ' --continue'
-        if opts.quiet:
-            command += ' --quiet'
-        command += ' --output-document '+gnam
-        command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuids[i])
         for ntry in range(opts.max_retry): # loop to download 1 file
-            try:
-                call(command,shell=True)
-            except Exception:
-                pass
+            download_data(uuids[i],gnam)
             # Rename if gnam with expected size exists
             if os.path.exists(gnam):
                 gsiz = os.path.getsize(gnam)
