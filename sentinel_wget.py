@@ -206,7 +206,7 @@ if opts.download:
         if not flag:
             download_list.append((uuids[i],fnam))
     # Request data in advance
-    for i in range(max(opts.n_request,len(download_list))):
+    for i in range(min(opts.n_request,len(download_list))):
         uuid = download_list[i][0]
         fnam = download_list[i][1]
         gnam = fnam+'.incomplete'
