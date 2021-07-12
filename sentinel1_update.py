@@ -72,7 +72,7 @@ for site,start in zip(opts.sites,dmaxs):
         raise IOError('No such file >>> '+fnam)
     gnams.update({site:[]})
     command = 'python'
-    command += ' '+os.path.join(opts.scrdir,'sentinel_download.py')
+    command += ' '+os.path.join(opts.scrdir,'sentinel_wget.py')
     command += ' -U https://scihub.copernicus.eu/dhus'
     command += ' --geometry '+fnam
     command += ' --log '+os.path.join(datdir,site.lower()+'.log')
