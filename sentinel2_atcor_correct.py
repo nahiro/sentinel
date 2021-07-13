@@ -10,10 +10,13 @@ from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
 BAND = '4'
+AREA_FNAM = 'pixel_area_block.dat'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('--band',default=BAND,help='Target band (%default)')
+parser.add_option('--area_fnam',default=AREA_FNAM,help='Pixel area file name (%default)')
+parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if not opts.debug:
@@ -24,12 +27,11 @@ if opts.band.upper() == 'NDVI':
 else:
     band_s = 'b'+opts.band
 
-area_fnam = 'pixel_area_block.dat'
 object_ids = []
 blocks = []
 inds = []
 areas = []
-with open(area_fnam,'r') as fp:
+with open(opts.area_fnam,'r') as fp:
     for line in fp:
         item = line.split()
         if len(item) < 3 or item[0] == '#':
@@ -50,9 +52,8 @@ object_ids = np.array(object_ids)
 blocks = np.array(blocks)
 nobject = object_ids.size
 
-band_fnam = '../band_names.txt'
 band_list = []
-with open(band_fnam,'r') as fp:
+with open(opts.band_fnam,'r') as fp:
     for line in fp:
         item = line.split()
         if len(item) != 2:
