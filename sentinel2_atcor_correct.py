@@ -20,8 +20,7 @@ parser.add_option('--band',default=BAND,help='Target band (%default)')
 parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
 parser.add_option('--area_fnam',default=AREA_FNAM,help='Pixel area file name (%default)')
-parser.add_option('--factor_fnam',default=None,help='Factor file name (%default)')
-parser.add_option('--offset_fnam',default=None,help='Offset file name (%default)')
+parser.add_option('--param_fnam',default=None,help='Atcor parameter file name (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -38,17 +37,17 @@ if opts.band.upper() == 'NDVI':
     band_s = 'ndvi'
 else:
     band_s = 'band'+opts.band
-if opts.factor_fnam is None:
-    opts.factor_fnam = 'atcor_{}_factor_{}.npy'.format(band_s,dstr)
-if not os.path.exists(opts.factor_fnam):
-    raise IOError('Error, no such file >>> '+opts.factor_fnam)
-else:
-    factor = np.load(opts.factor_fnam)
-offset = np.load(os.path.join(datdir,'atcor_{}_offset_{}.npy'.format(band_s,dstr)))
+if opts.param_fnam is None:
+    opts.param_fnam = 'atcor_param_{}_{}.npz'.format(band_s,dstr)
+if not os.path.exists(opts.param_fnam):
+    raise IOError('Error, no such file >>> '+opts.param_fnam)
+param = np.load(opts.param_fnam)
+factor = param['factor']
+offset = param['offset']
+npar = factor.size
 
 ds = gdal.Open(input_fnam)
 data = ds.ReadAsArray()
-
 band_list = []
 if opts.band_fnam is not None:
     with open(opts.band_fnam,'r') as fp:
@@ -62,18 +61,28 @@ if opts.band_fnam is not None:
 else:
     for i in range(ds.RasterCount):
         band = ds.GetRasterBand(i+1)
-        band_list.append(band.GetDescription())
+        band_name = band.GetDescription()
+        if not band_name:
+            raise ValueError('Error, faild to read band name >>> {}'.format(input_fnam))
+        band_list.append(band_name)
 ds = None
 if opts.band.upper() == 'NDVI':
-    band4_index = band_list.index('B4')
-    band8_index = band_list.index('B8')
-else:
-    band_index = band_list.index('B{}'.format(opts.band))
-if opts.band.upper() == 'NDVI':
+    band_name = 'B4'
+    if not band_name in band_list:
+        raise ValueError('Error, faild to search index for {}'.format(band_name))
+    band4_index = band_list.index(band_name)
     b4_img = data[band4_index].flatten()
+    band_name = 'B8'
+    if not band_name in band_list:
+        raise ValueError('Error, faild to search index for {}'.format(band_name))
+    band8_index = band_list.index(band_name)
     b8_img = data[band8_index].flatten()
     data_img = (b8_img-b4_img)/(b8_img+b4_img)
 else:
+    band_name = 'B{}'.format(opts.band)
+    if not band_name in band_list:
+        raise ValueError('Error, faild to search index for {}'.format(band_name))
+    band_index = band_list.index(band_name)
     data_img = data[band_index].flatten()*1.0e-4
 
 object_ids = []
