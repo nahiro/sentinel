@@ -35,15 +35,15 @@ dstr = m.group(1)
 if not opts.debug:
     warnings.simplefilter('ignore')
 if opts.band.upper() == 'NDVI':
-    band_s = 'ndvi'
+    band_l = 'ndvi'
 else:
-    band_s = 'band'+opts.band
+    band_l = 'band'+opts.band
 if opts.param_fnam is None:
-    opts.param_fnam = 'atcor_param_{}_{}.npz'.format(band_s,dstr)
+    opts.param_fnam = 'atcor_param_{}_{}.npz'.format(band_l,dstr)
 if not os.path.exists(opts.param_fnam):
     raise IOError('Error, no such file >>> '+opts.param_fnam)
 if opts.output_fnam is None:
-    opts.output_fnam = 'atcor_data_{}_{}.npz'.format(band_s,dstr)
+    opts.output_fnam = 'atcor_data_{}_{}.npz'.format(band_l,dstr)
 param = np.load(opts.param_fnam)
 factor = param['factor']
 offset = param['offset']

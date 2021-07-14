@@ -50,7 +50,6 @@ ntim = np.load(os.path.join(opts.datdir,'ntim.npy'))
 if opts.band.upper() == 'NDVI':
     band_l = opts.band.lower()
     band_u = opts.band.upper()
-    band_s = 'nv'
     if opts.vthr is None:
         opts.vthr = 0.1
     if opts.ax1_xmin is None:
@@ -68,7 +67,6 @@ if opts.band.upper() == 'NDVI':
 else:
     band_l = 'band'+opts.band
     band_u = 'Band'+opts.band
-    band_s = 'b'+opts.band
     if opts.vthr is None:
         opts.vthr = 0.02
     if opts.ax1_xmin is None:
@@ -84,11 +82,11 @@ else:
     if opts.ax1_zmax is None:
         opts.ax1_zmax = 0.035
 if opts.fig_fnam is None:
-    opts.fig_fnam = 'sentinel2_atcor_'+band_s+'.pdf'
+    opts.fig_fnam = 'sentinel2_atcor_'+band_l+'.pdf'
 
 data_x_all = np.load(os.path.join(opts.datdir,band_l+'.npy'))
-data_y_all = np.load(os.path.join(opts.datdir,band_s+'_mean.npy'))
-data_z_all = np.load(os.path.join(opts.datdir,band_s+'_std.npy'))
+data_y_all = np.load(os.path.join(opts.datdir,band_l+'_mean.npy'))
+data_z_all = np.load(os.path.join(opts.datdir,band_l+'_std.npy'))
 nearest_inds = np.load(opts.inds_fnam)
 nobject = len(nearest_inds)
 
@@ -186,6 +184,6 @@ for indt in range(ntim.size):
     factor = np.array(factor)
     offset = np.array(offset)
     rmse = np.array(rmse)
-    np.save('atcor_{}_factor_{}.npy'.format(band_s,dstr),factor)
-    np.save('atcor_{}_offset_{}.npy'.format(band_s,dstr),offset)
-    np.save('atcor_{}_rmse_{}.npy'.format(band_s,dstr),rmse)
+    np.save('atcor_{}_factor_{}.npy'.format(band_l,dstr),factor)
+    np.save('atcor_{}_offset_{}.npy'.format(band_l,dstr),offset)
+    np.save('atcor_{}_rmse_{}.npy'.format(band_l,dstr),rmse)
