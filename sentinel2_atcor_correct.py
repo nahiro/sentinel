@@ -21,6 +21,7 @@ parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
 parser.add_option('--area_fnam',default=AREA_FNAM,help='Pixel area file name (%default)')
 parser.add_option('--param_fnam',default=None,help='Atcor parameter file name (%default)')
+parser.add_option('-o','--output_fnam',default=None,help='Output NPZ name (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -41,6 +42,8 @@ if opts.param_fnam is None:
     opts.param_fnam = 'atcor_param_{}_{}.npz'.format(band_s,dstr)
 if not os.path.exists(opts.param_fnam):
     raise IOError('Error, no such file >>> '+opts.param_fnam)
+if opts.output_fnam is None:
+    opts.output_fnam = 'atcor_data_{}_{}.npz'.format(band_s,dstr)
 param = np.load(opts.param_fnam)
 factor = param['factor']
 offset = param['offset']
@@ -109,6 +112,8 @@ with open(opts.area_fnam,'r') as fp:
 object_ids = np.array(object_ids)
 blocks = np.array(blocks)
 nobject = object_ids.size
+if nobject != npar:
+    raise ValueError('Error, nobject={}, npar={}'.format(nobject,npar))
 
 data_org = []
 for iobj in range(nobject):
@@ -125,3 +130,4 @@ for iobj in range(nobject):
         data_org.append(data_weighted_stats.mean)
 data_org = np.array(data_org)
 data_cor = data_org*factor+offset
+np.save(opts.output_fnam,data_org=data_org,data_cor=data_cor)
