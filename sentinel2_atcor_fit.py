@@ -38,6 +38,7 @@ parser.add_option('--mask_fnam',default=None,help='Mask file name (%default)')
 parser.add_option('--stat_fnam',default=None,help='Statistic file name (%default)')
 parser.add_option('--inds_fnam',default=INDS_FNAM,help='Index file name (%default)')
 parser.add_option('-F','--fig_fnam',default=None,help='Output figure name for debug (%default)')
+parser.add_option('-o','--output_fnam',default=None,help='Output NPZ name (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:

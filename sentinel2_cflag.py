@@ -87,4 +87,4 @@ for iobj in range(nobject):
     flag = np.array(flag)
     cloud_flag.append(flag)
 cloud_flag = np.array(cloud_flag)
-np.savez(opts.output_fnam,ntim=ntim,cloud_flag=cloud_flag)
+np.savez(opts.output_fnam,ntim=ntim,cloud_flag=cloud_flag.swapaxes(0,1))
