@@ -33,6 +33,11 @@ NDVI_PROMINENCE = 0.002
 NDVI2_DISTANCE = 1.0
 NDVI2_PROMINENCE = 0.001
 DATDIR = os.curdir
+HOME = os.environ.get('HOME')
+if HOME is None:
+    HOME = os.environ.get('HOMEPATH')
+SHP_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','Bojongsoang','Bojongsoang')
+OUT_FNAM = os.path.join('.','transplanting_date')
 ndvi_min = -0.4
 ndvi_max = 1.1
 NDVI_MEAN = 0.355
@@ -61,8 +66,10 @@ parser.add_option('--ndvi_prominence',default=NDVI_PROMINENCE,type='float',help=
 parser.add_option('--ndvi2_distance',default=NDVI2_DISTANCE,type='int',help='Minimum peak distance in day for NDVI'' (%default)')
 parser.add_option('--ndvi2_prominence',default=NDVI2_PROMINENCE,type='float',help='Minimum prominence of NDVI'' for Sentinel-2 (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
+parser.add_option('--shp_fnam',default=SHP_FNAM,help='Input shapefile name (%default)')
 parser.add_option('--cflag_fnam',default=None,help='Cloud flag file name (%default)')
-parser.add_option('-o','--output_fnam',default=None,help='Output NPZ name (%default)')
+parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
+parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
 parser.add_option('-F','--fig_fnam',default=None,help='Output figure name for debug (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
@@ -102,9 +109,9 @@ for y in range(dmin.year,dmax.year+1):
         d = datetime(y,m,1)
         ticks.append(date2num(d))
 
-data = np.load(opts.cflag_fnam)
-cloud_ntim = data['ntim']
-cloud_flag = data['cloud_flag']
+cloud_data = np.load(opts.cflag_fnam)
+cloud_ntim = cloud_data['ntim']
+cloud_flag = cloud_data['cloud_flag']
 
 ndvi_dtim = []
 ndvi_data = []
@@ -148,8 +155,9 @@ if opts.debug:
     plt.subplots_adjust(left=0.12,right=0.88,bottom=0.12,top=0.80,hspace=0.5)
     if not opts.batch:
         pdf = PdfPages(opts.fig_fnam)
+nb = 18 # (trans_dN,d2_N,s1_N,s2_N,s3_N,st_N)x3
+output_data = np.full((nb,nobject),np.nan)
 for iobj in range(nobject):
-#for i in [120]:
     object_id = iobj+1
     zi = ndvi_data[:,iobj] # NDVI
     cnd = ~np.isnan(zi)
@@ -262,33 +270,38 @@ for iobj in range(nobject):
     xans = []
     yans = []
     cval = sval.copy()
+    for ic in range(xest.size):
+        if not ic in can_inds:
+            cval[ic] = -5.0e10
     indv = np.argsort(cval)[::-1]
     if cval[indv[0]] > -10.0:
-        xans.append(xest[indv[0]])
-        yans.append(yest[indv[0]])
+        ix = np.argmin(np.abs(xx-xest[indv[0]]))
+        output_data[0,iobj] = xest[indv[0]]
+        output_data[1,iobj] = yest[indv[0]]
+        output_data[2,iobj] = ss1[ix]
+        output_data[3,iobj] = ss2[ix]
+        output_data[4,iobj] = ss3[ix]
+        output_data[5,iobj] = ss[ix]
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         cval[cnd] = -2.0e10
         indv = np.argsort(cval)[::-1]
-    else:
-        xans.append(np.nan)
-        yans.append(np.nan)
     if cval[indv[0]] > -10.0:
-        xans.append(xest[indv[0]])
-        yans.append(yest[indv[0]])
+        output_data[ 6,iobj] = xest[indv[0]]
+        output_data[ 7,iobj] = yest[indv[0]]
+        output_data[ 8,iobj] = ss1[ix]
+        output_data[ 9,iobj] = ss2[ix]
+        output_data[10,iobj] = ss3[ix]
+        output_data[11,iobj] = ss[ix]
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         cval[cnd] = -3.0e10
         indv = np.argsort(cval)[::-1]
-    else:
-        xans.append(np.nan)
-        yans.append(np.nan)
     if cval[indv[0]] > -10.0:
-        xans.append(xest[indv[0]])
-        yans.append(yest[indv[0]])
-    else:
-        xans.append(np.nan)
-        yans.append(np.nan)
-    xans = np.array(xans)
-    yans = np.array(yans)
+        output_data[12,iobj] = xest[indv[0]]
+        output_data[13,iobj] = yest[indv[0]]
+        output_data[14,iobj] = ss1[ix]
+        output_data[15,iobj] = ss2[ix]
+        output_data[16,iobj] = ss3[ix]
+        output_data[17,iobj] = ss[ix]
 
     if opts.debug:
         fig.clear()
@@ -321,14 +334,14 @@ for iobj in range(nobject):
                 ix = np.argmin(np.abs(xx-xest[ic]))
                 #ax1.plot(xest[ic],yest[ic],'*',color=cols[iv%len(cols)])
                 ax1.text(xx[ix],ss[ix]+0.6,'{}'.format(iv+1),ha='center',va='bottom',size=16)
-        ax1.plot(xans[2],yans[2],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
-        ax1.plot(xans[1],yans[1],'o',ms=20,mfc='none',color=cols[1],mew=2,zorder=9)
-        ax1.plot(xans[0],yans[0],'o',ms=20,mfc='none',color=cols[0],mew=2,zorder=9)
-        l12 = ax1.vlines(xans[2],ndvi_min,yans[2],color='orange',label='T$_{est3}$',zorder=10)
-        l11 = ax1.vlines(xans[1],ndvi_min,yans[1],color=cols[1],label='T$_{est2}$',zorder=10)
-        l10 = ax1.vlines(xans[0],ndvi_min,yans[0],color=cols[0],label='T$_{est1}$',zorder=10)
-        #ax1.plot(xans[0],yans[0],'r*',ms=10)
-        #ax1.plot(xans[1],yans[1],'m*',ms=10)
+        ax1.plot(output_data[12,iobj],output_data[13,iobj],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
+        ax1.plot(output_data[ 6,iobj],output_data[ 7,iobj],'o',ms=20,mfc='none',color=cols[1],mew=2,zorder=9)
+        ax1.plot(output_data[ 0,iobj],output_data[ 1,iobj],'o',ms=20,mfc='none',color=cols[0],mew=2,zorder=9)
+        l12 = ax1.vlines(output_data[12,iobj],ndvi_min,output_data[13,iobj],color='orange',label='T$_{est3}$',zorder=10)
+        l11 = ax1.vlines(output_data[ 6,iobj],ndvi_min,output_data[ 7,iobj],color=cols[1],label='T$_{est2}$',zorder=10)
+        l10 = ax1.vlines(output_data[ 0,iobj],ndvi_min,output_data[ 1,iobj],color=cols[0],label='T$_{est1}$',zorder=10)
+        #ax1.plot(output_data[ 0,iobj],output_data[ 1,iobj],'r*',ms=10)
+        #ax1.plot(output_data[ 6,iobj],output_data[ 7,iobj],'m*',ms=10)
 
         ax1.set_title('OBJECTID= {}'.format(object_id),y=1.15,x=0.5)
         ax1.set_xlim(xx.min(),xx.max())
@@ -357,3 +370,32 @@ for iobj in range(nobject):
 if opts.debug:
     if not opts.batch:
         pdf.close()
+
+if opts.npy_fnam is not None:
+    np.save(opts.npy_fnam,output_data)
+
+r = shapefile.Reader(opts.shp_fnam)
+if len(r) != nobject:
+    raise ValueError('Error, len(r)={}, nobject={}'.format(len(r),nobject))
+w = shapefile.Writer(opts.out_fnam)
+w.shapeType = shapefile.POLYGON
+w.fields = r.fields[1:] # skip first deletion field
+for i in range(3):
+    w.field('trans_d{}'.format(i+1),'F',13,6)
+    w.field('trans_t{}'.format(i+1),'C',10,0)
+    w.field('d2_{}'.format(i+1),'F',13,6)
+    w.field('s1_{}'.format(i+1),'F',13,6)
+    w.field('s2_{}'.format(i+1),'F',13,6)
+    w.field('s3_{}'.format(i+1),'F',13,6)
+    w.field('st_{}'.format(i+1),'F',13,6)
+for iobj,shaperec in enumerate(r.iterShapeRecords()):
+    rec = shaperec.record
+    shp = shaperec.shape
+    data_list = list(output_data[:,iobj])
+    for i in range(3):
+        data_list.insert(i*7+1,'N/A' if np.isnan(output_data[i*6,iobj]) else num2date(np.round(output_data[i*6,iobj])+0.1).strftime('%Y/%m/%d'))
+    rec.extend(data_list)
+    w.shape(shp)
+    w.record(*rec)
+w.close()
+shutil.copy2(opts.shp_fnam+'.prj',opts.out_fnam+'.prj')
