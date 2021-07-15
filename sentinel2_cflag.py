@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+import os
+import sys
+import re
+from glob import glob
+from datetime import datetime
 import numpy as np
 from matplotlib.dates import num2date
 from csaps import csaps
@@ -11,16 +16,24 @@ TMAX = '20190615'
 SMOOTH = 0.005
 VTHR1 = 0.06
 VTHR2 = 0.1
+DATDIR = os.curdir
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.add_option('-s','--tmin',default=TMIN,help='Min date of transplanting in the format YYYYMMDD (%default)')
-parser.add_option('-e','--tmax',default=TMAX,help='Max date of transplanting in the format YYYYMMDD (%default)')
+parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMMDD (%default)')
+parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
 parser.add_option('-v','--vthr1',default=VTHR1,type='float',help='Threshold 1 (%default)')
 parser.add_option('-V','--vthr2',default=VTHR2,type='float',help='Threshold 2 (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
+parser.add_option('-o','--output_fnam',default=None,help='Output NPZ name (%default)')
 (opts,args) = parser.parse_args()
+
+dmin = datetime.strptime(opts.tmin,'%Y%m%d')
+dmax = datetime.strptime(opts.tmax,'%Y%m%d')
+
+if opts.output_fnam is None:
+    opts.output_fnam = 'cloud_flag_{:%Y%m%d}_{:%Y%m%d}.npz'.format(dmin,dmax)
 
 dtim = []
 data = []
@@ -41,7 +54,7 @@ for fnam in fs:
         nobject = dtmp[0].size
     elif dtmp[0].size != nobject:
         raise ValueError('Error, dtmp[0].size={}, nobject={}'.format(dtmp[0].size,nobject))
-    dtim.append(datetime.strptime(dstr,'%Y%m%d'))
+    dtim.append(d)
     data.append(dtmp[i])
 dtim = np.array(dtim)
 data = np.array(data)
@@ -74,4 +87,4 @@ for iobj in range(nobject):
     flag = np.array(flag)
     cloud_flag.append(flag)
 cloud_flag = np.array(cloud_flag)
-np.save('cloud_flag.npy',cloud_flag)
+np.savez(opts.output_fnam,ntim=ntim,cloud_flag=cloud_flag)
