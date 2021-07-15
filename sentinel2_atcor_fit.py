@@ -28,9 +28,9 @@ parser.set_usage('Usage: %prog input_fnam [options]')
 parser.add_option('-b','--band',default=BAND,help='Target band (%default)')
 parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
-parser.add_option('-r','--rthr',default=RTHR,type='float',help='Relative threshold to remove outliers (%default)')
 parser.add_option('-v','--vthr',default=None,type='float',help='Absolute threshold to remove outliers (%default)')
-parser.add_option('--mthr',default=MTHR,type='float',help='Multiplying factor of vthr (%default)')
+parser.add_option('-r','--rthr',default=RTHR,type='float',help='Relative threshold for 2-step outlier removal (%default)')
+parser.add_option('--mthr',default=MTHR,type='float',help='Multiplying factor of vthr for 2-step outlier removal (%default)')
 parser.add_option('--ax1_xmin',default=None,type='float',help='Axis1 X min (%default)')
 parser.add_option('--ax1_xmax',default=None,type='float',help='Axis1 X max (%default)')
 parser.add_option('--ax1_ymin',default=None,type='float',help='Axis1 Y min (%default)')
@@ -42,6 +42,7 @@ parser.add_option('--stat_fnam',default=None,help='Statistic file name (%default
 parser.add_option('--inds_fnam',default=INDS_FNAM,help='Index file name (%default)')
 parser.add_option('-F','--fig_fnam',default=None,help='Output figure name for debug (%default)')
 parser.add_option('-o','--output_fnam',default=None,help='Output NPZ name (%default)')
+parser.add_option('--outlier_remove2',default=False,action='store_true',help='2-step outlier removal mode (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -169,7 +170,10 @@ for i in range(nobject):
     data_x = data_x_all[indx]
     data_y = data_y_all[indx]
     data_z = data_z_all[indx]
-    cnd1 = ~np.isnan(data_x) & (np.abs(data_x-data_y) < (np.abs(data_y)*opts.rthr).clip(min=opts.vthr*opts.mthr))
+    if opts.outlier_remove2:
+        cnd1 = ~np.isnan(data_x) & (np.abs(data_x-data_y) < (np.abs(data_y)*opts.rthr).clip(min=opts.vthr*opts.mthr))
+    else:
+        cnd1 = ~np.isnan(data_x)
     xcnd = data_x[cnd1]
     ycnd = data_y[cnd1]
     zcnd = data_z[cnd1]
