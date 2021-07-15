@@ -117,7 +117,7 @@ ndvi_dtim = []
 ndvi_data = []
 ndvi_flag = []
 nobject = None
-fs = sorted(glob(os.path.join(opts.datdir,'^atcor_data_ndvi_'+'[0-9]'*8+'\.npz')))
+fs = sorted(glob(os.path.join(opts.datdir,'^atcor_data_ndvi_'+'[0-9]'*8+'.npz')))
 for fnam in fs:
     f = os.path.basename(fnam)
     m = re.search('^atcor_data_ndvi_('+'\d'*8+')\.npz',f)
@@ -130,16 +130,17 @@ for fnam in fs:
     sys.stderr.write(f+' '+dstr+'\n')
     dtmp = np.load(fnam)['data_cor']
     if nobject is None:
-        nobject = dtmp[0].size
-        if nobject != cloud_flag.shape[]
-    elif dtmp[0].size != nobject:
-        raise ValueError('Error, dtmp[0].size={}, nobject={}'.format(dtmp[0].size,nobject))
+        nobject = dtmp.size
+        if nobject != cloud_flag.shape[1]:
+            raise ValueError('Error, nobject={}, cloud_flag.shape[0]={}'.format(nobject,cloud_flag.shape[1]))
+    elif dtmp.size != nobject:
+        raise ValueError('Error, dtmp.size={}, nobject={}'.format(dtmp.size,nobject))
     t = date2num(d)
     indt = np.argmin(np.abs(cloud_ntim-t))
     if np.abs(cloud_ntim[indt]-t) > 1.0e-4:
         raise ValueError('Error in finding cflag for {:%Y%m%d}'.format(d))
     ndvi_dtim.append(d)
-    ndvi_data.append(dtmp[i])
+    ndvi_data.append(dtmp)
     ndvi_flag.append(cloud_flag[indt])
 ndvi_dtim = np.array(ndvi_dtim)
 ndvi_data = np.array(ndvi_data)

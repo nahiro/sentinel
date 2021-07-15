@@ -38,10 +38,10 @@ if opts.output_fnam is None:
 dtim = []
 data = []
 nobject = None
-fs = sorted(glob(os.path.join(opts.datdir,'[0-9]'*8+'_ndvi_correct.npz')))
+fs = sorted(glob(os.path.join(opts.datdir,'^atcor_data_ndvi_'+'[0-9]'*8+'.npz')))
 for fnam in fs:
     f = os.path.basename(fnam)
-    m = re.search('^('+'\d'*8+')_ndvi_correct\.npz',f)
+    m = re.search('^atcor_data_ndvi_('+'\d'*8+')\.npz',f)
     if not m:
         raise ValueError('Error in finding date >>> '+f)
     dstr = m.group(1)
