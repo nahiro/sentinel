@@ -130,4 +130,4 @@ for iobj in range(nobject):
         data_org.append(data_weighted_stats.mean)
 data_org = np.array(data_org)
 data_cor = data_org*factor+offset
-np.save(opts.output_fnam,data_org=data_org,data_cor=data_cor)
+np.savez(opts.output_fnam,data_org=data_org,data_cor=data_cor)
