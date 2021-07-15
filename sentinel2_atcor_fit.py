@@ -17,6 +17,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
 BAND = '4'
+BAND_COL = 1
 RTHR = 1.0
 MTHR = 2.0
 INDS_FNAM = 'nearest_inds_1000.npy'
@@ -25,6 +26,8 @@ INDS_FNAM = 'nearest_inds_1000.npy'
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog input_fnam [options]')
 parser.add_option('-b','--band',default=BAND,help='Target band (%default)')
+parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
+parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
 parser.add_option('-r','--rthr',default=RTHR,type='float',help='Relative threshold to remove outliers (%default)')
 parser.add_option('-v','--vthr',default=None,type='float',help='Absolute threshold to remove outliers (%default)')
 parser.add_option('--mthr',default=MTHR,type='float',help='Multiplying factor of vthr (%default)')
@@ -95,7 +98,7 @@ data_z_all = stat['std']
 nearest_inds = np.load(opts.inds_fnam)
 nobject = len(nearest_inds)
 
-ds = gdal.Open(mask_fnam)
+ds = gdal.Open(opts.mask_fnam)
 mask = ds.ReadAsArray()
 ds = None
 mask_shape = mask.shape
