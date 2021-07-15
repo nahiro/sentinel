@@ -3,25 +3,59 @@ import numpy as np
 from matplotlib.dates import num2date
 from csaps import csaps
 from scipy.interpolate import splrep,splev
+from optparse import OptionParser,IndentedHelpFormatter
 
-p_smooth = 0.005
-vthr1 = 0.06
-vthr2 = 0.1
+# Default values
+TMIN = '20190315'
+TMAX = '20190615'
+SMOOTH = 0.005
+VTHR1 = 0.06
+VTHR2 = 0.1
 
-nv_cor = np.load('atcor_nv_corrected.npy')
-ntim = np.load('../ntim.npy')
-dtim = num2date(ntim)
+# Read options
+parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('-s','--tmin',default=TMIN,help='Min date of transplanting in the format YYYYMMDD (%default)')
+parser.add_option('-e','--tmax',default=TMAX,help='Max date of transplanting in the format YYYYMMDD (%default)')
+parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
+parser.add_option('-v','--vthr1',default=VTHR1,type='float',help='Threshold 1 (%default)')
+parser.add_option('-V','--vthr2',default=VTHR2,type='float',help='Threshold 2 (%default)')
+parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
+(opts,args) = parser.parse_args()
+
+dtim = []
+data = []
+nobject = None
+fs = sorted(glob(os.path.join(opts.datdir,'^atcor_data_ndvi_'+'[0-9]'*8+'\.npz')))
+for fnam in fs:
+    f = os.path.basename(fnam)
+    m = re.search('^atcor_data_ndvi_('+'\d'*8+')\.npz',f)
+    if not m:
+        raise ValueError('Error in finding date >>> '+f)
+    dstr = m.group(1)
+    d = datetime.strptime(dstr,'%Y%m%d')
+    if d < dmin or d > dmax:
+        continue
+    sys.stderr.write(f+' '+dstr+'\n')
+    dtmp = np.load(fnam)['data_cor']
+    if nobject is None:
+        nobject = dtmp[0].size
+    elif dtmp[0].size != nobject:
+        raise ValueError('Error, dtmp[0].size={}, nobject={}'.format(dtmp[0].size,nobject))
+    dtim.append(datetime.strptime(dstr,'%Y%m%d'))
+    data.append(dtmp[i])
+dtim = np.array(dtim)
+data = np.array(data)
+ntim = date2num(dtim)
 xorg = ntim.copy()
-nobject = nv_cor.shape[1]
 
 cloud_flag = []
 for iobj in range(nobject):
     object_id = iobj+1
-    yorg = nv_cor[:,iobj]
-    ysmo = csaps(xorg,yorg,xorg,smooth=p_smooth)
+    yorg = data[:,iobj]
+    ysmo = csaps(xorg,yorg,xorg,smooth=opts.smooth)
     inds = []
     for itim in range(xorg.size):
-        if yorg[itim] < ysmo[itim]-vthr1:
+        if yorg[itim] < ysmo[itim]-opts.vthr1:
             inds.append(itim)
     inds = np.array(inds)
     if inds.size > 0:
@@ -30,10 +64,10 @@ for iobj in range(nobject):
     else:
         xinp = xorg.copy()
         yinp = yorg.copy()
-    yref = csaps(xinp,yinp,xorg,smooth=p_smooth)
+    yref = csaps(xinp,yinp,xorg,smooth=opts.smooth)
     flag = []
     for itim in range(ntim.size):
-        if (np.abs(yorg[itim]-yref[itim]) > vthr2):
+        if (np.abs(yorg[itim]-yref[itim]) > opts.vthr2):
             flag.append(True)
         else:
             flag.append(False)
