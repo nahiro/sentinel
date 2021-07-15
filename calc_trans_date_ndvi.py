@@ -102,9 +102,6 @@ for y in range(dmin.year,dmax.year+1):
         d = datetime(y,m,1)
         ticks.append(date2num(d))
 
-ndvi_flag = np.load('cloud_flag.npy').swapaxes(0,1)
-ndvi_data[ndvi_flag] = np.nan
-nobject = ndvi_data.shape[1]
 data = np.load(opts.cflag_fnam)
 cloud_ntim = data['ntim']
 cloud_flag = data['cloud_flag']
@@ -130,19 +127,27 @@ for fnam in fs:
         if nobject != cloud_flag.shape[]
     elif dtmp[0].size != nobject:
         raise ValueError('Error, dtmp[0].size={}, nobject={}'.format(dtmp[0].size,nobject))
+    t = date2num(d)
+    indt = np.argmin(np.abs(cloud_ntim-t))
+    if np.abs(cloud_ntim[indt]-t) > 1.0e-4:
+        raise ValueError('Error in finding cflag for {:%Y%m%d}'.format(d))
     ndvi_dtim.append(d)
     ndvi_data.append(dtmp[i])
+    ndvi_flag.append(cloud_flag[indt])
 ndvi_dtim = np.array(ndvi_dtim)
 ndvi_data = np.array(ndvi_data)
+ndvi_flag = np.array(ndvi_flag)
 ndvi_ntim = date2num(ndvi_dtim)
+ndvi_data[ndvi_flag] = np.nan
 
 xx = np.arange(np.floor(data_nmin),np.ceil(data_nmax)+0.1*opts.tstp,opts.tstp)
-if not opts.batch:
-    plt.interactive(True)
-fig = plt.figure(1,facecolor='w')
-plt.subplots_adjust(left=0.12,right=0.88,bottom=0.12,top=0.80,hspace=0.5)
-if not opts.batch:
-    pdf = PdfPages('example_estimation_early.pdf')
+if opts.debug:
+    if not opts.batch:
+        plt.interactive(True)
+    fig = plt.figure(1,facecolor='w')
+    plt.subplots_adjust(left=0.12,right=0.88,bottom=0.12,top=0.80,hspace=0.5)
+    if not opts.batch:
+        pdf = PdfPages(opts.fig_fnam)
 for iobj in range(nobject):
 #for i in [120]:
     object_id = iobj+1
