@@ -5,7 +5,7 @@ import re
 from glob import glob
 from datetime import datetime
 import numpy as np
-from matplotlib.dates import num2date
+from matplotlib.dates import date2num
 from csaps import csaps
 from scipy.interpolate import splrep,splev
 from optparse import OptionParser,IndentedHelpFormatter
@@ -38,24 +38,24 @@ if opts.output_fnam is None:
 dtim = []
 data = []
 nobject = None
-fs = sorted(glob(os.path.join(opts.datdir,'^atcor_data_ndvi_'+'[0-9]'*8+'\.npz')))
+fs = sorted(glob(os.path.join(opts.datdir,'[0-9]'*8+'_ndvi_correct.npz')))
 for fnam in fs:
     f = os.path.basename(fnam)
-    m = re.search('^atcor_data_ndvi_('+'\d'*8+')\.npz',f)
+    m = re.search('^('+'\d'*8+')_ndvi_correct\.npz',f)
     if not m:
         raise ValueError('Error in finding date >>> '+f)
     dstr = m.group(1)
     d = datetime.strptime(dstr,'%Y%m%d')
     if d < dmin or d > dmax:
         continue
-    sys.stderr.write(f+' '+dstr+'\n')
+    #sys.stderr.write(f+' '+dstr+'\n')
     dtmp = np.load(fnam)['data_cor']
     if nobject is None:
-        nobject = dtmp[0].size
-    elif dtmp[0].size != nobject:
-        raise ValueError('Error, dtmp[0].size={}, nobject={}'.format(dtmp[0].size,nobject))
+        nobject = dtmp.size
+    elif dtmp.size != nobject:
+        raise ValueError('Error, dtmp.size={}, nobject={}'.format(dtmp.size,nobject))
     dtim.append(d)
-    data.append(dtmp[i])
+    data.append(dtmp)
 dtim = np.array(dtim)
 data = np.array(data)
 ntim = date2num(dtim)
