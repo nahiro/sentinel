@@ -16,6 +16,7 @@ URL = os.environ.get('DHUS_URL')
 if URL is None:
     URL = 'https://scihub.copernicus.eu/dhus'
 WAIT_TIME = 300
+QUERY_WAIT_TIME = 60
 ONLINE_CHECK_TIME = 300
 MAX_RETRY = 100
 N_REQUEST = 3
@@ -40,6 +41,7 @@ parser.add_option('-L','--log',default=None,help='Set the log file name.')
 parser.add_option('-P','--path',default=None,help='Set the path where the files will be saved.')
 parser.add_option('-q','--query',default=None,help='Extra search keywords you want to use in the query. Separate keywords with comma. Example: \'producttype=GRD,polarisationmode=HH\'.')
 parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait time to download data in sec (%default)')
+parser.add_option('--query_wait_time',default=QUERY_WAIT_TIME,type='int',help='Wait time to query data in sec (%default)')
 parser.add_option('-O','--online_check_time',default=ONLINE_CHECK_TIME,type='int',help='Wait time to check online data in sec (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-R','--n_request',default=N_REQUEST,type='int',help='Number of requests in advance (%default)')
@@ -60,7 +62,14 @@ def query_data(uuid):
         command += ' --password {}'.format(opts.password)
     command += ' --output-document -'
     command += ' "'+opts.url+'/odata/v1/Products(\'{}\')"'.format(uuid)
-    out = check_output(command,shell=True,stderr=PIPE).decode()
+    while True:
+        try:
+            out = check_output(command,shell=True,stderr=PIPE).decode()
+            break
+        except Exception:
+            sys.stderr.write('Query failed. Wait for {} sec.\n'.format(opts.query_wait_time))
+            sys.stderr.flush()
+            time.sleep(opts.query_wait_time)
     root = ET.fromstring(out)
     child = None
     for value in root:
