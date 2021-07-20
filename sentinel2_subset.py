@@ -10,6 +10,7 @@ from snappy import Product,ProductIO,ProductUtils,GPF,HashMap,WKTReader,jpy
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
+DATDIR = os.curdir
 SITE = 'Cihea'
 POLYGON_CIHEA = 'POLYGON((107.201 -6.910,107.367 -6.910,107.367 -6.750,107.201 -6.750,107.201 -6.910))' # Cihea
 POLYGON_BOJONGSOANG = 'POLYGON((107.54 -7.04,107.75 -7.04,107.75 -6.95,107.54 -6.95,107.54 -7.04))' # Bojongsoang
@@ -17,6 +18,7 @@ RESOLUTION = 10 # m
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('-D','--datdir',default=DATDIR,help='Output data directory (%default)')
 parser.add_option('--site',default=SITE,help='Site name for preset coordinates (%default)')
 parser.add_option('--polygon',default=None,help='Polygon of ROI in WKT format (%default)')
 parser.add_option('-r','--resolution',default=RESOLUTION,type='int',help='Spatial resolution in m (%default)')
@@ -36,9 +38,9 @@ if not m:
     safe_flag = True
 dstr = m.group(1)[:8]
 if opts.geotiff:
-    output_fnam = '{}.tif'.format(dstr)
+    output_fnam = os.path.join(opts.datdir,'{}.tif'.format(dstr))
 else:
-    output_fnam = '{}.dim'.format(dstr)
+    output_fnam = os.path.join(opts.datdir,'{}.dim'.format(dstr))
 if os.path.exists(output_fnam):
     sys.exit()
 

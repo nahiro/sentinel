@@ -22,8 +22,8 @@ EPSG = 32748 # UTM zone 48S
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog input_fnam [options]')
-parser.add_option('--site',default=None,help='Site name for preset coordinates (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Output data directory (%default)')
+parser.add_option('--site',default=None,help='Site name for preset coordinates (%default)')
 parser.add_option('--polygon',default=None,help='Polygon of ROI in WKT format (%default)')
 parser.add_option('-g','--gamma0',default=False,action='store_true',help='Output gamma0 instead of sigma0 (%default)')
 parser.add_option('--skip_orbit',default=False,action='store_true',help='Do not apply orbit file (%default)')
