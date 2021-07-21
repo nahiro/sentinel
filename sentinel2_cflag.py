@@ -17,36 +17,43 @@ SMOOTH = 0.005
 VTHR1 = 0.06
 VTHR2 = 0.1
 DATDIR = os.curdir
+OUTDIR = os.curdir
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMMDD (%default)')
-parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
+parser.add_option('-s','--tmin',default=TMIN,help='Min date of output data in the format YYYYMMDD (%default)')
+parser.add_option('-e','--tmax',default=TMAX,help='Max date of output data in the format YYYYMMDD (%default)')
+parser.add_option('--data_tmin',default=None,help='Min date of input data in the format YYYYMMDD (%default)')
+parser.add_option('--data_tmax',default=None,help='Max date of input data in the format YYYYMMDD (%default)')
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
 parser.add_option('-v','--vthr1',default=VTHR1,type='float',help='Threshold 1 (%default)')
 parser.add_option('-V','--vthr2',default=VTHR2,type='float',help='Threshold 2 (%default)')
+parser.add_option('--search_key',default=None,help='Search key for input data (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
-parser.add_option('-o','--output_fnam',default=None,help='Output NPZ name (%default)')
+parser.add_option('-O','--outdir',default=OUTDIR,help='Output data directory (%default)')
 (opts,args) = parser.parse_args()
 
 dmin = datetime.strptime(opts.tmin,'%Y%m%d')
 dmax = datetime.strptime(opts.tmax,'%Y%m%d')
-
-if opts.output_fnam is None:
-    opts.output_fnam = 'cloud_flag_{:%Y%m%d}_{:%Y%m%d}.npz'.format(dmin,dmax)
+data_dmin = datetime.strptime(opts.data_tmin,'%Y%m%d')
+data_dmax = datetime.strptime(opts.data_tmax,'%Y%m%d')
 
 dtim = []
 data = []
 nobject = None
-fs = sorted(glob(os.path.join(opts.datdir,'^atcor_data_ndvi_'+'[0-9]'*8+'.npz')))
+fs = sorted(glob(os.path.join(opts.datdir,'*'+'[0-9]'*8+'*.npz')))
 for fnam in fs:
     f = os.path.basename(fnam)
-    m = re.search('^atcor_data_ndvi_('+'\d'*8+')\.npz',f)
+    if opts.search_key is not None and not re.search(opts.search_key,f):
+        continue
+    m = re.search('\D('+'\d'*8+')\D',f)
     if not m:
-        raise ValueError('Error in finding date >>> '+f)
+        m = re.search('^('+'\d'*8+')\D',f)
+        if not m:
+            raise ValueError('Error in finding date >>> '+f)
     dstr = m.group(1)
     d = datetime.strptime(dstr,'%Y%m%d')
-    if d < dmin or d > dmax:
+    if d < data_dmin or d > data_dmax:
         continue
     #sys.stderr.write(f+' '+dstr+'\n')
     dtmp = np.load(fnam)['data_cor']
@@ -86,5 +93,10 @@ for iobj in range(nobject):
             flag.append(False)
     flag = np.array(flag)
     cloud_flag.append(flag)
-cloud_flag = np.array(cloud_flag)
-np.savez(opts.output_fnam,ntim=ntim,cloud_flag=cloud_flag.swapaxes(0,1))
+cloud_flag = np.array(cloud_flag).swapaxes(0,1)
+
+for i in range(dtim.size):
+    d = dtim[i]
+    if d < dmin or d > dmax:
+        continue
+    np.save(os.path.join(opts.outdir,'{:%Y%m%d}_cflag.npy'.format(d)),cloud_flag[i])
