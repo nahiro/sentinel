@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 import os
 import sys
+import shutil
 import re
 import warnings
 from glob import glob
 from datetime import datetime
 import gdal
 import osr
+import shapefile
 import numpy as np
 import cartopy.io.shapereader as shpreader
 from csaps import csaps
@@ -117,10 +119,10 @@ ndvi_dtim = []
 ndvi_data = []
 ndvi_flag = []
 nobject = None
-fs = sorted(glob(os.path.join(opts.datdir,'^atcor_data_ndvi_'+'[0-9]'*8+'.npz')))
+fs = sorted(glob(os.path.join(opts.datdir,'[0-9]'*8+'_ndvi_correct.npz')))
 for fnam in fs:
     f = os.path.basename(fnam)
-    m = re.search('^atcor_data_ndvi_('+'\d'*8+')\.npz',f)
+    m = re.search('^('+'\d'*8+')_ndvi_correct\.npz',f)
     if not m:
         raise ValueError('Error in finding date >>> '+f)
     dstr = m.group(1)
@@ -278,30 +280,32 @@ for iobj in range(nobject):
     if cval[indv[0]] > -10.0:
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[0,iobj] = xest[indv[0]]
-        output_data[1,iobj] = yest[indv[0]]
-        output_data[2,iobj] = ss1[ix]
-        output_data[3,iobj] = ss2[ix]
-        output_data[4,iobj] = ss3[ix]
+        output_data[1,iobj] = zz[ix]
+        output_data[2,iobj] = g1[ix]
+        output_data[3,iobj] = g2[ix]
+        output_data[4,iobj] = zz_inc[ix]
         output_data[5,iobj] = ss[ix]
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         cval[cnd] = -2.0e10
         indv = np.argsort(cval)[::-1]
     if cval[indv[0]] > -10.0:
+        ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[ 6,iobj] = xest[indv[0]]
-        output_data[ 7,iobj] = yest[indv[0]]
-        output_data[ 8,iobj] = ss1[ix]
-        output_data[ 9,iobj] = ss2[ix]
-        output_data[10,iobj] = ss3[ix]
+        output_data[ 7,iobj] = zz[ix]
+        output_data[ 8,iobj] = g1[ix]
+        output_data[ 9,iobj] = g2[ix]
+        output_data[10,iobj] = zz_inc[ix]
         output_data[11,iobj] = ss[ix]
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         cval[cnd] = -3.0e10
         indv = np.argsort(cval)[::-1]
     if cval[indv[0]] > -10.0:
+        ix = np.argmin(np.abs(xx-xest[indv[0]]))
         output_data[12,iobj] = xest[indv[0]]
-        output_data[13,iobj] = yest[indv[0]]
-        output_data[14,iobj] = ss1[ix]
-        output_data[15,iobj] = ss2[ix]
-        output_data[16,iobj] = ss3[ix]
+        output_data[13,iobj] = zz[ix]
+        output_data[14,iobj] = g1[ix]
+        output_data[15,iobj] = g2[ix]
+        output_data[16,iobj] = zz_inc[ix]
         output_data[17,iobj] = ss[ix]
 
     if opts.debug:
@@ -335,12 +339,12 @@ for iobj in range(nobject):
                 ix = np.argmin(np.abs(xx-xest[ic]))
                 #ax1.plot(xest[ic],yest[ic],'*',color=cols[iv%len(cols)])
                 ax1.text(xx[ix],ss[ix]+0.6,'{}'.format(iv+1),ha='center',va='bottom',size=16)
-        ax1.plot(output_data[12,iobj],output_data[13,iobj],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
-        ax1.plot(output_data[ 6,iobj],output_data[ 7,iobj],'o',ms=20,mfc='none',color=cols[1],mew=2,zorder=9)
-        ax1.plot(output_data[ 0,iobj],output_data[ 1,iobj],'o',ms=20,mfc='none',color=cols[0],mew=2,zorder=9)
-        l12 = ax1.vlines(output_data[12,iobj],ndvi_min,output_data[13,iobj],color='orange',label='T$_{est3}$',zorder=10)
-        l11 = ax1.vlines(output_data[ 6,iobj],ndvi_min,output_data[ 7,iobj],color=cols[1],label='T$_{est2}$',zorder=10)
-        l10 = ax1.vlines(output_data[ 0,iobj],ndvi_min,output_data[ 1,iobj],color=cols[0],label='T$_{est1}$',zorder=10)
+        ax1.plot(output_data[12,iobj],output_data[15,iobj],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
+        ax1.plot(output_data[ 6,iobj],output_data[ 9,iobj],'o',ms=20,mfc='none',color=cols[1],mew=2,zorder=9)
+        ax1.plot(output_data[ 0,iobj],output_data[ 3,iobj],'o',ms=20,mfc='none',color=cols[0],mew=2,zorder=9)
+        l12 = ax1.vlines(output_data[12,iobj],ndvi_min,output_data[15,iobj],color='orange',label='T$_{est3}$',zorder=10)
+        l11 = ax1.vlines(output_data[ 6,iobj],ndvi_min,output_data[ 9,iobj],color=cols[1],label='T$_{est2}$',zorder=10)
+        l10 = ax1.vlines(output_data[ 0,iobj],ndvi_min,output_data[ 3,iobj],color=cols[0],label='T$_{est1}$',zorder=10)
         #ax1.plot(output_data[ 0,iobj],output_data[ 1,iobj],'r*',ms=10)
         #ax1.plot(output_data[ 6,iobj],output_data[ 7,iobj],'m*',ms=10)
 
@@ -384,10 +388,10 @@ w.fields = r.fields[1:] # skip first deletion field
 for i in range(3):
     w.field('trans_d{}'.format(i+1),'F',13,6)
     w.field('trans_t{}'.format(i+1),'C',10,0)
-    w.field('d2_{}'.format(i+1),'F',13,6)
-    w.field('s1_{}'.format(i+1),'F',13,6)
-    w.field('s2_{}'.format(i+1),'F',13,6)
-    w.field('s3_{}'.format(i+1),'F',13,6)
+    w.field('ndvi0_{}'.format(i+1),'F',13,6)
+    w.field('ndvi1_{}'.format(i+1),'F',13,6)
+    w.field('ndvi2_{}'.format(i+1),'F',13,6)
+    w.field('ndvi3_{}'.format(i+1),'F',13,6)
     w.field('st_{}'.format(i+1),'F',13,6)
 for iobj,shaperec in enumerate(r.iterShapeRecords()):
     rec = shaperec.record
