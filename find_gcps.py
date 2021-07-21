@@ -23,7 +23,7 @@ RTHR = 0.3
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.set_usage('Usage: %prog reference_georeferenced_image target_georeferenced_image [options]')
+parser.set_usage('Usage: %prog target_georeferenced_image reference_georeferenced_image [options]')
 parser.add_option('-b','--ref_band',default=REF_BAND,type='int',help='Reference band# (%default)')
 parser.add_option('-B','--trg_band',default=TRG_BAND,type='int',help='Target band# (%default)')
 parser.add_option('--ref_multi_band',default=None,type='int',action='append',help='Reference multi-band number (%default)')
@@ -54,8 +54,8 @@ parser.add_option('-d','--debug',default=False,action='store_true',help='Debug m
 if len(args) < 2:
     parser.print_help()
     sys.exit(0)
-ref_fnam = args[0]
-trg_fnam = args[1]
+trg_fnam = args[0]
+ref_fnam = args[1]
 
 def residuals(p,refx,refy,refz,trgx,trgy,trgz,pmax):
     if opts.debug:
