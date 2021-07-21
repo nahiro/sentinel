@@ -200,49 +200,47 @@ for site in opts.sites:
                 continue
         if os.path.exists(gnam):
             atcor_dstrs.append(dstr)
-    # Cflag
-    cflag_dstrs = []
-    for dstr in atcor_dstrs:
-        fnam = os.path.join(datdir,'resample',dstr+'_geocor_resample.tif')
-        gnam = os.path.join(datdir,'atcor',dstr+'_ndvi_correct.npz')
-        fit_fnam = os.path.join(datdir,'atcor',dstr+'_ndvi_fit.npz')
-        if not os.path.exists(gnam):
-            command = 'python'
-            command += ' '+os.path.join(scrdir,'sentinel2_cflag.py')
-            command += ' --tmin 20180209'
-            command += ' --tmax 20200807'
-            command += ' --datdir '+srcdir
-            print(command)
-            call(command,shell=True)
-
-
     for dstr in dstrs:
-        fnam = os.path.join(datdir,'sigma0_speckle',dstr+'.tif')
-        command = 'python'
-        command += ' '+os.path.join(opts.scrdir,'sentinel_resample.py')
-        command += ' '+fnam
-        command += ' --datdir '+os.path.join(datdir,'sigma0_speckle')
-        command += ' --site '+site
-        command += ' --read_comments'
-        call(command,shell=True)
+        # Cflag
         dtim = datetime.strptime(dstr,'%Y%m%d')
+        tmin = (dtim+timedelta(months=-6)).strftime('%Y%m%d')
+        tmax = dtim.strftime('%Y%m%d')
+        data_tmin = (dtim+timedelta(years=-1)).strftime('%Y%m%d')
+        data_tmax = dtim.strftime('%Y%m%d')
+        command = 'python'
+        command += ' '+os.path.join(scrdir,'sentinel2_cflag.py')
+        command += ' --tmin '+tmin
+        command += ' --tmax '+tmax
+        command += ' --data_tmin '+data_tmin
+        command += ' --data_tmax '+data_tmax
+        command += ' --datdir '+os.path.join(datdir,'atcor')
+        command += ' --outdir '+os.path.join(datdir,'cflag')
+        try:
+            call(command,shell=True)
+        except Exception:
+            continue
+        # Preliminary estimation
         d1 = (dtim+timedelta(days=-1)).strftime('%Y%m%d')
         d2 = (dtim+timedelta(days=+1)).strftime('%Y%m%d')
         command = 'python'
-        command += ' '+os.path.join(opts.scrdir,'get_preliminary_estimation.py')
+        command += ' '+os.path.join(opts.scrdir,'get_preliminary_estimation2.py')
         command += ' --scrdir '+opts.scrdir
         command += ' --datdir '+opts.datdir
         command += ' --str '+d1
         command += ' --end '+d2
         command += ' --sites '+site
-        call(command,shell=True)
+        try:
+            call(command,shell=True)
+        except Exception:
+            continue
     if os.path.exists(log):
         os.remove(log)
 
 if datetime.now().day == opts.date_final:
+    # Final estimation
     for site in opts.sites:
         command = 'python'
-        command += ' '+os.path.join(opts.scrdir,'get_final_estimation.py')
+        command += ' '+os.path.join(opts.scrdir,'get_final_estimation2.py')
         command += ' --scrdir '+opts.scrdir
         command += ' --datdir '+opts.datdir
         command += ' --sites '+site
