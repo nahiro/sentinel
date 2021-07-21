@@ -68,6 +68,7 @@ parser.add_option('--ndvi_prominence',default=NDVI_PROMINENCE,type='float',help=
 parser.add_option('--ndvi2_distance',default=NDVI2_DISTANCE,type='int',help='Minimum peak distance in day for NDVI'' (%default)')
 parser.add_option('--ndvi2_prominence',default=NDVI2_PROMINENCE,type='float',help='Minimum prominence of NDVI'' for Sentinel-2 (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
+parser.add_option('--search_key',default=None,help='Search key for input data (%default)')
 parser.add_option('--shp_fnam',default=SHP_FNAM,help='Input shapefile name (%default)')
 parser.add_option('--cflag_fnam',default=None,help='Cloud flag file name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
@@ -119,12 +120,16 @@ ndvi_dtim = []
 ndvi_data = []
 ndvi_flag = []
 nobject = None
-fs = sorted(glob(os.path.join(opts.datdir,'[0-9]'*8+'_ndvi_correct.npz')))
+fs = sorted(glob(os.path.join(opts.datdir,'*'+'[0-9]'*8+'*.npz')))
 for fnam in fs:
     f = os.path.basename(fnam)
-    m = re.search('^('+'\d'*8+')_ndvi_correct\.npz',f)
+    if opts.search_key is not None and not re.search(opts.search_key,f):
+        continue
+    m = re.search('\D('+'\d'*8+')\D',f)
     if not m:
-        raise ValueError('Error in finding date >>> '+f)
+        m = re.search('^('+'\d'*8+')\D',f)
+        if not m:
+            raise ValueError('Error in finding date >>> '+f)
     dstr = m.group(1)
     d = datetime.strptime(dstr,'%Y%m%d')
     if d < dmin or d > dmax:
