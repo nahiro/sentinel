@@ -106,7 +106,7 @@ for site in opts.sites:
         ref_fnam = os.path.join(opts.wrkdir,site,'geocor_reference.tif')
         dat_fnam = os.path.join(datdir,'geocor',dstr+'_geocor.dat')
         sel_fnam = os.path.join(datdir,'geocor',dstr+'_geocor_selected.dat')
-        if not os.path.exists(trg_fnam):
+        if not os.path.exists(gnam):
             command = 'python'
             command += ' '+os.path.join(opts.scrdir,'find_gcps.py')
             command += ' '+fnam
@@ -122,7 +122,7 @@ for site in opts.sites:
             except Exception:
                 continue
             command = 'python'
-            command += ' '+os.path.join(opts.scrdir,'select_gcp.py')
+            command += ' '+os.path.join(opts.scrdir,'select_gcps.py')
             command += ' '+dat_fnam
             command += ' --datdir '+os.path.dirname(dat_fnam)
             command += ' --replace'
@@ -140,13 +140,80 @@ for site in opts.sites:
             command += ' --out_fnam '+gnam
             command += ' --tr 10.0'
             command += ' --use_gcps '+sel_fnam # use
-            call(command,shell=True)
+            try:
+                call(command,shell=True)
+            except Exception:
+                continue
         if os.path.exists(sel_fnam):
             os.rename(sel_fnam,dat_fnam)
         if os.path.exists(gnam):
             geocor_dstrs.append(dstr)
-
-
+    # Resample
+    resample_dstrs = []
+    for dstr in geocor_dstrs:
+        fnam = os.path.join(datdir,'geocor',dstr+'_geocor.tif')
+        gnam = os.path.join(datdir,'resample',dstr+'_geocor_resample.tif')
+        if not os.path.exists(gnam):
+            command = 'python'
+            command += ' '+os.path.join(opts.scrdir,'sentinel_resample.py')
+            command += ' '+fnam
+            command += ' --datdir '+os.path.join(datdir,'resample')
+            command += ' --site '+site
+            command += ' --read_comments'
+            command += ' --band_fnam '+os.path.join(wrkdir,site,'band_names.txt')
+            try:
+                call(command,shell=True)
+            except Exception:
+                continue
+        if os.path.exists(gnam):
+            resample_dstrs.append(dstr)
+    # Atcor
+    atcor_dstrs = []
+    for dstr in resample_dstrs:
+        fnam = os.path.join(datdir,'resample',dstr+'_geocor_resample.tif')
+        gnam = os.path.join(datdir,'atcor',dstr+'_ndvi_correct.npz')
+        fit_fnam = os.path.join(datdir,'atcor',dstr+'_ndvi_fit.npz')
+        if not os.path.exists(gnam):
+            command = 'python'
+            command += ' '+os.path.join(scrdir,'sentinel2_atcor_fit.py')
+            command += ' '+fnam
+            command += ' --band ndvi'
+            command += ' --mask_fnam '+os.path.join(wrkdir,site,'atcor_mask.tif')
+            command += ' --stat_fnam '+os.path.join(wrkdir,site,'ndvi_stat.npz')
+            command += ' --inds_fnam '+os.path.join(wrkdir,site,'nearest_inds_1000.npy')
+            command += ' --output_fnam '+fit_fnam
+            call(command,shell=True)
+            try:
+                call(command,shell=True)
+            except Exception:
+                continue
+            command = 'python'
+            command += ' '+os.path.join(scrdir,'sentinel2_atcor_correct.py')
+            command += ' '+fnam
+            command += ' --band ndvi'
+            command += ' --area_fnam '+os.path.join(wrkdir,site,'pixel_area_block.dat')
+            command += ' --param_fnam '+fit_fnam
+            command += ' --output_fnam '+gnam
+            try:
+                call(command,shell=True)
+            except Exception:
+                continue
+        if os.path.exists(gnam):
+            atcor_dstrs.append(dstr)
+    # Cflag
+    cflag_dstrs = []
+    for dstr in atcor_dstrs:
+        fnam = os.path.join(datdir,'resample',dstr+'_geocor_resample.tif')
+        gnam = os.path.join(datdir,'atcor',dstr+'_ndvi_correct.npz')
+        fit_fnam = os.path.join(datdir,'atcor',dstr+'_ndvi_fit.npz')
+        if not os.path.exists(gnam):
+            command = 'python'
+            command += ' '+os.path.join(scrdir,'sentinel2_cflag.py')
+            command += ' --tmin 20180209'
+            command += ' --tmax 20200807'
+            command += ' --datdir '+srcdir
+            print(command)
+            call(command,shell=True)
 
 
     for dstr in dstrs:
