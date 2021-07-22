@@ -2,8 +2,10 @@
 import os
 import sys
 import shutil
+import zipfile
 import re
 from datetime import datetime,timedelta
+from dateutil.relativedelta import relativedelta
 from subprocess import call
 from optparse import OptionParser,IndentedHelpFormatter
 
@@ -51,7 +53,25 @@ for site in opts.sites:
     call(command,shell=True)
     fnams = []
     dstrs = []
-    if os.path.exists(log):
+    if opts.str is not None and opts.end is not None:
+        dmin = datetime.strptime(opts.str,'%Y%m%d')
+        dmax = datetime.strptime(opts.end,'%Y%m%d')
+        for year in range(dmin.year,dmax.year+1):
+            dnam = os.path.join(datdir,'{:04d}'.format(year))
+            if not os.path.isdir(dnam):
+                continue
+            for f in sorted(os.listdir(dnam)):
+                m = re.search('^S2[AB]_MSIL2A_('+'\d'*8+')T\S+\.zip$',f)
+                if not m:
+                    continue
+                dstr = m.group(1)
+                d = datetime.strptime(dstr,'%Y%m%d')
+                if d < dmin or d > dmax:
+                    continue
+                fnam = os.path.join(dnam,f)
+                fnams.append(fnam)
+                dstrs.append(dstr)
+    elif os.path.exists(log):
         with open(log,'r') as fp:
             for line in fp:
                 item = line.split()
@@ -78,7 +98,13 @@ for site in opts.sites:
             if not os.path.exists(rnam):
                 try:
                     with zipfile.ZipFile(fnam,'r') as z:
-                        z.extractall(dnam)
+                        for d in z.namelist():
+                            dnam = os.path.dirname(d)
+                            if re.search('\.SAFE$',dnam):
+                                if os.path.basename(rnam) != dnam:
+                                    raise ValueError('Error, rnam={}, dnam={}'.format(rnam,dnam))
+                                break
+                        z.extractall(os.path.dirname(fnam))
                     unzip_flag = True
                 except Exception:
                     continue
@@ -87,7 +113,7 @@ for site in opts.sites:
             command += ' '+rnam
             command += ' --datdir '+os.path.join(datdir,'subset')
             command += ' --site '+site
-            command += ' --resolution 10.0'
+            command += ' --resolution 10'
             command += ' --geotiff'
             call(command,shell=True)
             if unzip_flag:
@@ -111,9 +137,9 @@ for site in opts.sites:
             command += ' '+os.path.join(opts.scrdir,'find_gcps.py')
             command += ' '+fnam
             command += ' '+ref_fnam
-            command += ' --ref_band {}' # Red band
-            command += ' --trg_band {}' # Red band
-            command += ' --ref_data_min {}' # for WorldView data
+            command += ' --ref_band 4' # Red band
+            command += ' --trg_band 3' # Red band
+            command += ' --ref_data_min 1.0e-5' # for WorldView data
             command += ' --exp'
             try:
                 out = check_output(command,shell=True).decode()
@@ -135,8 +161,8 @@ for site in opts.sites:
             command += ' '+os.path.join(opts.scrdir,'auto_geocor.py')
             command += ' '+fnam
             command += ' '+ref_fnam
-            command += ' --ref_band {}' # Red band
-            command += ' --trg_band {}' # Red band
+            command += ' --ref_band 4' # Red band
+            command += ' --trg_band 3' # Red band
             command += ' --out_fnam '+gnam
             command += ' --tr 10.0'
             command += ' --use_gcps '+sel_fnam # use
@@ -175,7 +201,7 @@ for site in opts.sites:
         fit_fnam = os.path.join(datdir,'atcor',dstr+'_ndvi_fit.npz')
         if not os.path.exists(gnam):
             command = 'python'
-            command += ' '+os.path.join(scrdir,'sentinel2_atcor_fit.py')
+            command += ' '+os.path.join(opts.scrdir,'sentinel2_atcor_fit.py')
             command += ' '+fnam
             command += ' --band ndvi'
             command += ' --mask_fnam '+os.path.join(wrkdir,site,'atcor_mask.tif')
@@ -188,7 +214,7 @@ for site in opts.sites:
             except Exception:
                 continue
             command = 'python'
-            command += ' '+os.path.join(scrdir,'sentinel2_atcor_correct.py')
+            command += ' '+os.path.join(opts.scrdir,'sentinel2_atcor_correct.py')
             command += ' '+fnam
             command += ' --band ndvi'
             command += ' --area_fnam '+os.path.join(wrkdir,site,'pixel_area_block.dat')
@@ -203,12 +229,12 @@ for site in opts.sites:
     for dstr in dstrs:
         # Cflag
         dtim = datetime.strptime(dstr,'%Y%m%d')
-        tmin = (dtim+timedelta(months=-6)).strftime('%Y%m%d')
+        tmin = (dtim+relativedelta(months=-6)).strftime('%Y%m%d')
         tmax = dtim.strftime('%Y%m%d')
-        data_tmin = (dtim+timedelta(years=-1)).strftime('%Y%m%d')
+        data_tmin = (dtim+relativedelta(years=-1)).strftime('%Y%m%d')
         data_tmax = dtim.strftime('%Y%m%d')
         command = 'python'
-        command += ' '+os.path.join(scrdir,'sentinel2_cflag.py')
+        command += ' '+os.path.join(opts.scrdir,'sentinel2_cflag.py')
         command += ' --tmin '+tmin
         command += ' --tmax '+tmax
         command += ' --data_tmin '+data_tmin
