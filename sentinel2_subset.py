@@ -59,7 +59,7 @@ if safe_flag:
     data = ProductIO.readProduct(os.path.join(input_fnam,'MTD_MSIL2A.xml'))
 else:
     data = ProductIO.readProduct(input_fnam)
-# Resample
+# Resample (ResamplingOp.java)
 params = HashMap()
 params.put('sourceProduct',data)
 params.put('upsampling','Bilinear')
@@ -67,7 +67,7 @@ params.put('downsampling','Mean')
 params.put('targetResolution',opts.resolution)
 data_tmp = GPF.createProduct('Resample',params,data)
 data = data_tmp
-# Subset
+# Subset (SubsetOp.java)
 wkt = opts.polygon
 geom = WKTReader().read(wkt)
 params = HashMap()
