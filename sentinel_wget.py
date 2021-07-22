@@ -248,7 +248,7 @@ if opts.download:
                 if not opts.no_checksum:
                     with open(fnam,'rb') as fp:
                         md5 = hashlib.md5(fp.read()).hexdigest()
-                    if md5 != md5s[i]:
+                    if md5.upper() != md5s[i].upper():
                         sys.stderr.write('Warning, md5={}, md5s[{}]={} >>> {}\n'.format(md5,i,md5s[i],fnam))
                         sys.stderr.flush()
                 sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))

@@ -84,7 +84,7 @@ for site,start in zip(opts.sites,dmaxs):
     command += ' --download'
     command += ' --sort_year'
     if site_low == 'bojongsoang':
-        command += ' --query "*48MYT*"'
+        command += ' --query filename="*48MYT*"'
     sys.stderr.write(command+'\n')
     sys.stderr.flush()
     call(command,shell=True)
