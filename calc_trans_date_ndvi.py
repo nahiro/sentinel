@@ -138,8 +138,6 @@ for fnam in fs:
     dtmp = np.load(fnam)['data_cor']
     if nobject is None:
         nobject = dtmp.size
-        if nobject != cloud_flag.shape[1]:
-            raise ValueError('Error, nobject={}, cloud_flag.shape[0]={}'.format(nobject,cloud_flag.shape[1]))
     elif dtmp.size != nobject:
         raise ValueError('Error, dtmp.size={}, nobject={}'.format(dtmp.size,nobject))
     cflag = np.load(gnam)
