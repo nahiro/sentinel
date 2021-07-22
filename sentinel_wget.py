@@ -220,6 +220,8 @@ for i,uuid in enumerate(uuids):
         size_flag = '!'
     else:
         size_flag = ' '
+        size_values[i] = size
+        size_errors[i] = 0
     sys.stderr.write('{:4d} {:40s} {:70s} {:10d} {} ({:>10s}) {:7s}\n'.format(i+1,uuid,name,size,size_flag,size_labels[i],'Online' if stat else 'Offline'))
     sys.stderr.flush()
 
@@ -244,11 +246,11 @@ if opts.download:
         flag = False
         if os.path.exists(fnam):
             fsiz = os.path.getsize(fnam)
-            if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) < size_errors[i]):
+            if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) <= size_errors[i]):
                 flag = True
         if os.path.exists(gnam):
             gsiz = os.path.getsize(gnam)
-            if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) < size_errors[i]):
+            if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) <= size_errors[i]):
                 flag = True
         if not flag:
             download_list.append((uuids[i],fnam))
@@ -277,12 +279,12 @@ if opts.download:
         # Rename if gnam with expected size exists
         if os.path.exists(gnam):
             gsiz = os.path.getsize(gnam)
-            if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) < size_errors[i]):
+            if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) <= size_errors[i]):
                 os.rename(gnam,fnam)
         # Skip if fnam with expected size exists
         if os.path.exists(fnam):
             fsiz = os.path.getsize(fnam)
-            if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) < size_errors[i]):
+            if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) <= size_errors[i]):
                 if not opts.no_checksum:
                     with open(fnam,'rb') as fp:
                         md5 = hashlib.md5(fp.read()).hexdigest()
@@ -314,14 +316,14 @@ if opts.download:
             # Rename if gnam with expected size exists
             if os.path.exists(gnam):
                 gsiz = os.path.getsize(gnam)
-                if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) < size_errors[i]):
+                if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) <= size_errors[i]):
                     os.rename(gnam,fnam)
                 elif gsiz > sizes[i]:
                     os.remove(gnam)
             # Exit if fnam with expected size exists
             if os.path.exists(fnam):
                 fsiz = os.path.getsize(fnam)
-                if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) < size_errors[i]):
+                if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) <= size_errors[i]):
                     if not opts.no_checksum:
                         with open(fnam,'rb') as fp:
                             md5 = hashlib.md5(fp.read()).hexdigest()
