@@ -5,11 +5,17 @@ import sys
 import re
 import time
 import hashlib
+import numpy as np
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 from datetime import datetime
 from subprocess import call,check_output,PIPE,STDOUT
 from optparse import OptionParser,IndentedHelpFormatter
+
+# Constants
+KB = 1024
+MB = KB*1024
+GB = MB*1024
 
 # Defaults
 URL = os.environ.get('DHUS_URL')
@@ -168,12 +174,36 @@ sys.stderr.flush()
 if opts.version:
     sys.exit()
 uuids = []
+size_labels = []
+size_values = []
+size_errors = []
 for line in out.splitlines():
     # Product bb7a7783-f91b-4a35-907d-a6ddb807da73 - Date: 2019-07-09T02:55:59.024Z, Instrument: MSI, Mode: , Satellite: Sentinel-2, Size: 1.09 GB
     m = re.search('Product\s+(\S+)',line)
     if not m:
         continue
-    uuids.append(m.group(1))
+    uuid = m.group(1)
+    m = re.search('Size\s*:\s+(\S+)\s+(\S+)',line)
+    if not m:
+        raise ValueError('Error in finding file size >>> '+line)
+    label = m.group(1)+' '+m.group(2)
+    value = float(m.group(1))
+    unit = m.group(2).upper()
+    if unit == 'KB':
+        value *= KB
+        error = KB//10
+    elif unit == 'MB':
+        value *= MB
+        error = MB//10
+    elif unit == 'GB':
+        value *= GB
+        error = GB//10
+    else:
+        raise ValueError('Error in size unit >>> '+line)
+    uuids.append(uuid)
+    size_labels.append(label)
+    size_values.append(value)
+    size_errors.append(error)
 
 # Get details of products
 names = []
@@ -186,7 +216,11 @@ for i,uuid in enumerate(uuids):
     sizes.append(size)
     stats.append(stat)
     md5s.append(md5)
-    sys.stderr.write('{:4d} {:40s} {:70s} {:10d} {:7s}\n'.format(i+1,uuid,name,size,'Online' if stat else 'Offline'))
+    if np.abs(size-size_values[i]) > size_errors[i]:
+        size_flag = '!'
+    else:
+        size_flag = ' '
+    sys.stderr.write('{:4d} {:40s} {:70s} {:10d} {} ({:>10s}) {:7s}\n'.format(i+1,uuid,name,size,size_flag,size_labels[i],'Online' if stat else 'Offline'))
     sys.stderr.flush()
 
 if opts.download:
@@ -208,10 +242,14 @@ if opts.download:
         gnam = fnam+'.incomplete'
         fnams.append(fnam)
         flag = False
-        if os.path.exists(fnam) and os.path.getsize(fnam) == sizes[i]:
-            flag = True
-        if os.path.exists(gnam) and os.path.getsize(gnam) == sizes[i]:
-            flag = True
+        if os.path.exists(fnam):
+            fsiz = os.path.getsize(fnam)
+            if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) < size_errors[i]):
+                flag = True
+        if os.path.exists(gnam):
+            gsiz = os.path.getsize(gnam)
+            if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) < size_errors[i]):
+                flag = True
         if not flag:
             download_list.append((uuids[i],fnam))
     # Request data in advance
@@ -239,12 +277,12 @@ if opts.download:
         # Rename if gnam with expected size exists
         if os.path.exists(gnam):
             gsiz = os.path.getsize(gnam)
-            if gsiz == sizes[i]:
+            if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) < size_errors[i]):
                 os.rename(gnam,fnam)
         # Skip if fnam with expected size exists
         if os.path.exists(fnam):
             fsiz = os.path.getsize(fnam)
-            if fsiz == sizes[i]:
+            if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) < size_errors[i]):
                 if not opts.no_checksum:
                     with open(fnam,'rb') as fp:
                         md5 = hashlib.md5(fp.read()).hexdigest()
@@ -276,14 +314,14 @@ if opts.download:
             # Rename if gnam with expected size exists
             if os.path.exists(gnam):
                 gsiz = os.path.getsize(gnam)
-                if gsiz == sizes[i]:
+                if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) < size_errors[i]):
                     os.rename(gnam,fnam)
                 elif gsiz > sizes[i]:
                     os.remove(gnam)
             # Exit if fnam with expected size exists
             if os.path.exists(fnam):
                 fsiz = os.path.getsize(fnam)
-                if fsiz == sizes[i]:
+                if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) < size_errors[i]):
                     if not opts.no_checksum:
                         with open(fnam,'rb') as fp:
                             md5 = hashlib.md5(fp.read()).hexdigest()
