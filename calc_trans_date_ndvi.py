@@ -34,10 +34,11 @@ NDVI_DISTANCE = 10
 NDVI_PROMINENCE = 0.002
 NDVI2_DISTANCE = 1.0
 NDVI2_PROMINENCE = 0.001
-DATDIR = os.curdir
 HOME = os.environ.get('HOME')
 if HOME is None:
     HOME = os.environ.get('HOMEPATH')
+DATDIR = os.path.join(HOME,'Work','Sentinel-2','L2A','Bojongsoang','atcor')
+CFLAG_DNAM = os.path.join(HOME,'Work','Sentinel-2','L2A','Bojongsoang','cflag')
 SHP_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','Bojongsoang','Bojongsoang')
 OUT_FNAM = os.path.join('.','transplanting_date')
 ndvi_min = -0.4
@@ -67,10 +68,10 @@ parser.add_option('--ndvi_distance',default=NDVI_DISTANCE,type='int',help='Minim
 parser.add_option('--ndvi_prominence',default=NDVI_PROMINENCE,type='float',help='Minimum prominence of NDVI for Sentinel-2 (%default)')
 parser.add_option('--ndvi2_distance',default=NDVI2_DISTANCE,type='int',help='Minimum peak distance in day for NDVI'' (%default)')
 parser.add_option('--ndvi2_prominence',default=NDVI2_PROMINENCE,type='float',help='Minimum prominence of NDVI'' for Sentinel-2 (%default)')
-parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
 parser.add_option('--search_key',default=None,help='Search key for input data (%default)')
+parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
+parser.add_option('--cflag_dnam',default=CFLAG_DNAM,help='Cloud flag directory name (%default)')
 parser.add_option('--shp_fnam',default=SHP_FNAM,help='Input shapefile name (%default)')
-parser.add_option('--cflag_fnam',default=None,help='Cloud flag file name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
 parser.add_option('-F','--fig_fnam',default=None,help='Output figure name for debug (%default)')
@@ -112,13 +113,8 @@ for y in range(dmin.year,dmax.year+1):
         d = datetime(y,m,1)
         ticks.append(date2num(d))
 
-cloud_data = np.load(opts.cflag_fnam)
-cloud_ntim = cloud_data['ntim']
-cloud_flag = cloud_data['cloud_flag']
-
 ndvi_dtim = []
 ndvi_data = []
-ndvi_flag = []
 nobject = None
 fs = sorted(glob(os.path.join(opts.datdir,'*'+'[0-9]'*8+'*.npz')))
 for fnam in fs:
@@ -134,6 +130,10 @@ for fnam in fs:
     d = datetime.strptime(dstr,'%Y%m%d')
     if d < dmin or d > dmax:
         continue
+    gnam = os.path.join(opts.cflag_dnam,dstr+'_cflag.npy')
+    if not os.path.exists(gnam):
+        sys.stderr.write('Warning, no such file >>> {}\n'.format(gnam))
+        continue
     sys.stderr.write(f+' '+dstr+'\n')
     dtmp = np.load(fnam)['data_cor']
     if nobject is None:
@@ -142,18 +142,15 @@ for fnam in fs:
             raise ValueError('Error, nobject={}, cloud_flag.shape[0]={}'.format(nobject,cloud_flag.shape[1]))
     elif dtmp.size != nobject:
         raise ValueError('Error, dtmp.size={}, nobject={}'.format(dtmp.size,nobject))
-    t = date2num(d)
-    indt = np.argmin(np.abs(cloud_ntim-t))
-    if np.abs(cloud_ntim[indt]-t) > 1.0e-4:
-        raise ValueError('Error in finding cflag for {:%Y%m%d}'.format(d))
+    cflag = np.load(gnam)
+    if cflag.size != nobject:
+        raise ValueError('Error, cflag.size={}, nobject={}'.format(cflag.size,nobject))
+    dtmp[cflag] = np.nan
     ndvi_dtim.append(d)
     ndvi_data.append(dtmp)
-    ndvi_flag.append(cloud_flag[indt])
 ndvi_dtim = np.array(ndvi_dtim)
 ndvi_data = np.array(ndvi_data)
-ndvi_flag = np.array(ndvi_flag)
 ndvi_ntim = date2num(ndvi_dtim)
-ndvi_data[ndvi_flag] = np.nan
 
 xx = np.arange(np.floor(data_nmin),np.ceil(data_nmax)+0.1*opts.tstp,opts.tstp)
 if opts.debug:
