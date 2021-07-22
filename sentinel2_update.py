@@ -66,8 +66,9 @@ if len(dmaxs) != len(opts.sites):
 topdir = os.getcwd()
 gnams = {}
 for site,start in zip(opts.sites,dmaxs):
+    site_low = site.lower()
     datdir = os.path.join(opts.datdir,site)
-    fnam = os.path.join(datdir,site.lower()+'.json')
+    fnam = os.path.join(datdir,site_low+'.json')
     if not os.path.exists(fnam):
         raise IOError('No such file >>> '+fnam)
     gnams.update({site:[]})
@@ -75,13 +76,15 @@ for site,start in zip(opts.sites,dmaxs):
     command += ' '+os.path.join(opts.scrdir,'sentinel_wget.py')
     command += ' -U https://scihub.copernicus.eu/dhus'
     command += ' --geometry '+fnam
-    command += ' --log '+os.path.join(datdir,site.lower()+'.log')
+    command += ' --log '+os.path.join(datdir,site_low+'.log')
     command += ' --producttyp S2MSI2A'
     command += ' --start '+start
     command += ' --end '+opts.end
     command += ' --path '+datdir
     command += ' --download'
     command += ' --sort_year'
+    if site_low == 'bojongsoang':
+        command += ' --query "*48MYT*"'
     sys.stderr.write(command+'\n')
     sys.stderr.flush()
     call(command,shell=True)
