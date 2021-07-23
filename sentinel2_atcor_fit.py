@@ -11,7 +11,7 @@ import numpy as np
 from matplotlib.dates import date2num,num2date
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+from matplotlib.offsetbox import AnchoredText
 from matplotlib.backends.backend_pdf import PdfPages
 from optparse import OptionParser,IndentedHelpFormatter
 

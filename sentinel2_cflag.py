@@ -16,6 +16,7 @@ TMAX = '20190615'
 SMOOTH = 0.005
 VTHR1 = 0.06
 VTHR2 = 0.1
+SEARCH_KEY = 'correct'
 DATDIR = os.curdir
 OUTDIR = os.curdir
 
@@ -28,7 +29,7 @@ parser.add_option('--data_tmax',default=None,help='Max date of input data in the
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
 parser.add_option('-v','--vthr1',default=VTHR1,type='float',help='Threshold 1 (%default)')
 parser.add_option('-V','--vthr2',default=VTHR2,type='float',help='Threshold 2 (%default)')
-parser.add_option('--search_key',default=None,help='Search key for input data (%default)')
+parser.add_option('--search_key',default=SEARCH_KEY,help='Search key for input data (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
 parser.add_option('-O','--outdir',default=OUTDIR,help='Output data directory (%default)')
 (opts,args) = parser.parse_args()
