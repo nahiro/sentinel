@@ -8,6 +8,7 @@ from glob import glob
 from datetime import datetime
 import gdal
 import osr
+import json
 import shapefile
 import numpy as np
 import cartopy.io.shapereader as shpreader
@@ -23,15 +24,10 @@ TMRG = 20.0
 DATA_TMIN = '20190201'
 DATA_TMAX = '20200201'
 TMGN = 15.0 # day
-FACT1 = 0.035
 TSTP = 0.1 # day
 TSTR = -20.0 # day
 TEND = 20.0 # day
 SMOOTH = 0.002
-OFFSET_V = 4.8
-OFFSET_FACT = 1.25
-NDVI_DISTANCE = 10
-NDVI_PROMINENCE = 0.002
 NDVI2_DISTANCE = 1.0
 NDVI2_PROMINENCE = 0.001
 HOME = os.environ.get('HOME')
@@ -40,9 +36,11 @@ if HOME is None:
 DATDIR = os.path.join(HOME,'Work','Sentinel-2','L2A','Bojongsoang','atcor')
 CFLAG_DNAM = os.path.join(HOME,'Work','Sentinel-2','L2A','Bojongsoang','cflag')
 SHP_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','Bojongsoang','Bojongsoang')
+JSON_FNAM = 'output.json'
 OUT_FNAM = os.path.join('.','transplanting_date')
 ndvi_min = -0.4
 ndvi_max = 1.1
+FACT1 = 0.035
 NDVI_MEAN = 0.355
 ndvi_std = 5.929824e-02
 ndvi_inc_mean = 4.564639e-01
@@ -54,25 +52,24 @@ ndvi_dd_std = 4.939033e-02
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-s','--tmin',default=TMIN,help='Min date of transplanting in the format YYYYMMDD (%default)')
 parser.add_option('-e','--tmax',default=TMAX,help='Max date of transplanting in the format YYYYMMDD (%default)')
-parser.add_option('--tmrg',default=TMRG,type='float',help='Marge width in day (%default)')
 parser.add_option('--data_tmin',default=DATA_TMIN,help='Min date of input data in the format YYYYMMDD (%default)')
 parser.add_option('--data_tmax',default=DATA_TMAX,help='Max date of input data in the format YYYYMMDD (%default)')
 parser.add_option('--tmgn',default=TMGN,type='float',help='Margin of input data in day (%default)')
-parser.add_option('--fact1',default=FACT1,type='float',help='Factor for S1 (%default)')
-parser.add_option('--ndvi_mean',default=NDVI_MEAN,type='float',help='NDVI mean for S1 (%default)')
+parser.add_option('--tmrg',default=TMRG,type='float',help='Marge width in day (%default)')
 parser.add_option('--tstp',default=TSTP,type='float',help='Precision of transplanting date in day (%default)')
 parser.add_option('--tstr',default=TSTR,type='float',help='Start day of transplanting period seen from the min. peak (%default)')
 parser.add_option('--tend',default=TEND,type='float',help='End day of transplanting period seen from the min. peak (%default)')
 parser.add_option('-S','--smooth',default=SMOOTH,type='float',help='Smoothing factor from 0 to 1 (%default)')
-parser.add_option('--ndvi_distance',default=NDVI_DISTANCE,type='int',help='Minimum peak distance in day for Sentinel-2 (%default)')
-parser.add_option('--ndvi_prominence',default=NDVI_PROMINENCE,type='float',help='Minimum prominence of NDVI for Sentinel-2 (%default)')
 parser.add_option('--ndvi2_distance',default=NDVI2_DISTANCE,type='int',help='Minimum peak distance in day for NDVI'' (%default)')
 parser.add_option('--ndvi2_prominence',default=NDVI2_PROMINENCE,type='float',help='Minimum prominence of NDVI'' for Sentinel-2 (%default)')
+parser.add_option('--fact1',default=FACT1,type='float',help='Factor for S1 (%default)')
+parser.add_option('--ndvi_mean',default=NDVI_MEAN,type='float',help='NDVI mean for S1 (%default)')
 parser.add_option('--search_key',default=None,help='Search key for input data (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Input data directory (%default)')
 parser.add_option('--cflag_dnam',default=CFLAG_DNAM,help='Cloud flag directory name (%default)')
 parser.add_option('--shp_fnam',default=SHP_FNAM,help='Input shapefile name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
+parser.add_option('-j','--json_fnam',default=JSON_FNAM,help='Output JSON name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
 parser.add_option('-F','--fig_fnam',default=None,help='Output figure name for debug (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
@@ -87,6 +84,23 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.dates import date2num,num2date
 from matplotlib.backends.backend_pdf import PdfPages
+
+data_info = OrderedDict()
+data_info['tmin'] = opts.tmin
+data_info['tmax'] = opts.tmax
+data_info['data_tmin'] = opts.data_tmin
+data_info['data_tmax'] = opts.data_tmax
+data_info['tmgn'] = opts.tmgn
+data_info['tmrg'] = opts.tmrg
+data_info['tstp'] = opts.tstp
+data_info['tstr'] = opts.tstr
+data_info['tend'] = opts.tend
+data_info['smooth'] = opts.smooth
+data_info['ndvi2_distance'] = opts.ndvi2_distance
+data_info['ndvi2_prominence'] = opts.ndvi2_prominence
+data_info['fact1'] = opts.fact1
+data_info['ndvi_mean'] = opts.ndvi_mean
+#data_info['offset'] = opts.offset
 
 nmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 nmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
@@ -149,6 +163,10 @@ for fnam in fs:
 ndvi_dtim = np.array(ndvi_dtim)
 ndvi_data = np.array(ndvi_data)
 ndvi_ntim = date2num(ndvi_dtim)
+data_info['dtim'] = ','.join([d.strftime('%Y%m%d') for d in ndvi_dtim])
+with open(opts.json_fnam,'w') as json_file:
+    json.dump(data_info,json_file,indent=4)
+    json_file.write('\n') # Add newline cause PyJSON does not
 
 xx = np.arange(np.floor(data_nmin),np.ceil(data_nmax)+0.1*opts.tstp,opts.tstp)
 if opts.debug:
