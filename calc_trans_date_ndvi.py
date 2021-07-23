@@ -158,7 +158,7 @@ if opts.debug:
     plt.subplots_adjust(left=0.12,right=0.88,bottom=0.12,top=0.80,hspace=0.5)
     if not opts.batch:
         pdf = PdfPages(opts.fig_fnam)
-nb = 18 # (trans_dN,d2_N,s1_N,s2_N,s3_N,st_N)x3
+nb = 24 # (trans_dN,ndvi_N,ndvi1_N,ndvi2_N,ndvimaxN,signal_N,near_dN,ndat_N)x3
 output_data = np.full((nb,nobject),np.nan)
 for iobj in range(nobject):
     object_id = iobj+1
@@ -166,7 +166,8 @@ for iobj in range(nobject):
     cnd = ~np.isnan(zi)
     if cnd.sum() < 1:
         continue
-    zz = csaps(ndvi_ntim[cnd],zi[cnd],xx,smooth=opts.smooth)
+    ndvi_ntim_cnd = ndvi_ntim[cnd]
+    zz = csaps(ndvi_ntim_cnd,zi[cnd],xx,smooth=opts.smooth)
     g1 = csaps(xx,np.gradient(zz)/np.gradient(xx),xx,smooth=opts.smooth)*100.0
     g2 = np.gradient(g1)/np.gradient(xx)*2.0
     max_peaks,properties = find_peaks(g2,distance=opts.ndvi2_distance,prominence=opts.ndvi2_prominence)
@@ -290,23 +291,23 @@ for iobj in range(nobject):
         indv = np.argsort(cval)[::-1]
     if cval[indv[0]] > -10.0:
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
-        output_data[ 6,iobj] = xest[indv[0]]
-        output_data[ 7,iobj] = zz[ix]
-        output_data[ 8,iobj] = g1[ix]
-        output_data[ 9,iobj] = g2[ix]
-        output_data[10,iobj] = zz_inc[ix]
-        output_data[11,iobj] = ss[ix]
+        output_data[ 8,iobj] = xest[indv[0]]
+        output_data[ 9,iobj] = zz[ix]
+        output_data[10,iobj] = g1[ix]
+        output_data[11,iobj] = g2[ix]
+        output_data[12,iobj] = zz_inc[ix]
+        output_data[13,iobj] = ss[ix]
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         cval[cnd] = -3.0e10
         indv = np.argsort(cval)[::-1]
     if cval[indv[0]] > -10.0:
         ix = np.argmin(np.abs(xx-xest[indv[0]]))
-        output_data[12,iobj] = xest[indv[0]]
-        output_data[13,iobj] = zz[ix]
-        output_data[14,iobj] = g1[ix]
-        output_data[15,iobj] = g2[ix]
-        output_data[16,iobj] = zz_inc[ix]
-        output_data[17,iobj] = ss[ix]
+        output_data[16,iobj] = xest[indv[0]]
+        output_data[17,iobj] = zz[ix]
+        output_data[18,iobj] = g1[ix]
+        output_data[19,iobj] = g2[ix]
+        output_data[20,iobj] = zz_inc[ix]
+        output_data[21,iobj] = ss[ix]
 
     if opts.debug:
         fig.clear()
@@ -339,14 +340,14 @@ for iobj in range(nobject):
                 ix = np.argmin(np.abs(xx-xest[ic]))
                 #ax1.plot(xest[ic],yest[ic],'*',color=cols[iv%len(cols)])
                 ax1.text(xx[ix],ss[ix]+0.6,'{}'.format(iv+1),ha='center',va='bottom',size=16)
-        ax1.plot(output_data[12,iobj],output_data[15,iobj],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
-        ax1.plot(output_data[ 6,iobj],output_data[ 9,iobj],'o',ms=20,mfc='none',color=cols[1],mew=2,zorder=9)
+        ax1.plot(output_data[16,iobj],output_data[19,iobj],'o',ms=20,mfc='none',color='orange',mew=2,zorder=9)
+        ax1.plot(output_data[ 8,iobj],output_data[11,iobj],'o',ms=20,mfc='none',color=cols[1],mew=2,zorder=9)
         ax1.plot(output_data[ 0,iobj],output_data[ 3,iobj],'o',ms=20,mfc='none',color=cols[0],mew=2,zorder=9)
-        l12 = ax1.vlines(output_data[12,iobj],ndvi_min,output_data[15,iobj],color='orange',label='T$_{est3}$',zorder=10)
-        l11 = ax1.vlines(output_data[ 6,iobj],ndvi_min,output_data[ 9,iobj],color=cols[1],label='T$_{est2}$',zorder=10)
+        l12 = ax1.vlines(output_data[16,iobj],ndvi_min,output_data[19,iobj],color='orange',label='T$_{est3}$',zorder=10)
+        l11 = ax1.vlines(output_data[ 8,iobj],ndvi_min,output_data[11,iobj],color=cols[1],label='T$_{est2}$',zorder=10)
         l10 = ax1.vlines(output_data[ 0,iobj],ndvi_min,output_data[ 3,iobj],color=cols[0],label='T$_{est1}$',zorder=10)
         #ax1.plot(output_data[ 0,iobj],output_data[ 1,iobj],'r*',ms=10)
-        #ax1.plot(output_data[ 6,iobj],output_data[ 7,iobj],'m*',ms=10)
+        #ax1.plot(output_data[ 8,iobj],output_data[ 9,iobj],'m*',ms=10)
 
         ax1.set_title('OBJECTID= {}'.format(object_id),y=1.15,x=0.5)
         ax1.set_xlim(xx.min(),xx.max())
@@ -388,17 +389,21 @@ w.fields = r.fields[1:] # skip first deletion field
 for i in range(3):
     w.field('trans_d{}'.format(i+1),'F',13,6)
     w.field('trans_t{}'.format(i+1),'C',10,0)
-    w.field('ndvi0_{}'.format(i+1),'F',13,6)
+    w.field('ndvi_{}'.format(i+1),'F',13,6)
     w.field('ndvi1_{}'.format(i+1),'F',13,6)
     w.field('ndvi2_{}'.format(i+1),'F',13,6)
-    w.field('ndvi3_{}'.format(i+1),'F',13,6)
-    w.field('st_{}'.format(i+1),'F',13,6)
+    w.field('ndvimax{}'.format(i+1),'F',13,6)
+    w.field('signal_{}'.format(i+1),'F',13,6)
+    w.field('near_d{}'.format(i+1),'F',13,6)
+    w.field('ndat_{}'.format(i+1),'N',13,0)
 for iobj,shaperec in enumerate(r.iterShapeRecords()):
     rec = shaperec.record
     shp = shaperec.shape
     data_list = list(output_data[:,iobj])
     for i in range(3):
-        data_list.insert(i*7+1,'N/A' if np.isnan(output_data[i*6,iobj]) else num2date(np.round(output_data[i*6,iobj])+0.1).strftime('%Y/%m/%d'))
+        data_list[i*8+7] = int(output_data[i*8+7,iobj]+0.5)
+    for i in range(3):
+        data_list.insert(i*9+1,'N/A' if np.isnan(output_data[i*8,iobj]) else num2date(np.round(output_data[i*8,iobj])+0.1).strftime('%Y/%m/%d'))
     rec.extend(data_list)
     w.shape(shp)
     w.record(*rec)
