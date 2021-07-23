@@ -28,6 +28,7 @@ OUTPUT_FNAM = 'trans_date_testsite.pdf'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('--site',default=None,help='Site name (%default)')
 parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
 parser.add_option('-p','--pmin',default=PMIN,type='float',help='Min NDVI (%default)')
