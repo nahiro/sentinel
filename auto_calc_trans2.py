@@ -16,7 +16,6 @@ if HOME is None:
     HOME = os.environ.get('HOMEPATH')
 SCRDIR = os.path.join(HOME,'Script')
 DATDIR = os.path.join(HOME,'Work','Sentinel-2','L2A')
-WRKDIR = os.path.join(HOME,'Work','SATREPS','Transplanting_date')
 SITES = ['Bojongsoang']
 DATE_FINAL = 5
 
@@ -24,7 +23,6 @@ DATE_FINAL = 5
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('--scrdir',default=SCRDIR,help='Script directory (%default)')
 parser.add_option('--datdir',default=DATDIR,help='Data directory (%default)')
-parser.add_option('--wrkdir',default=WRKDIR,help='Work directory (%default)')
 parser.add_option('-s','--str',default=None,help='Start date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=None,help='End date in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
@@ -50,7 +48,6 @@ for site in opts.sites:
     if opts.skip_upload:
         command += ' --skip_upload'
     command += ' --sites '+site
-    #sys.stderr.write(command+'\n')
     call(command,shell=True)
     fnams = []
     dstrs = []
@@ -74,10 +71,6 @@ for site in opts.sites:
                 fnams.append(fnam)
                 dstrs.append(dstr)
                 sizes.append(os.path.getsize(fnam))
-        inds = np.argsort(dstrs)[::-1]
-        fnams = [fnams[i] for i in inds]
-        dstrs = [dstrs[i] for i in inds]
-        sizes = [sizes[i] for i in inds]
     elif os.path.exists(log):
         with open(log,'r') as fp:
             for line in fp:
@@ -96,6 +89,10 @@ for site in opts.sites:
                 sizes.append(os.path.getsize(fnam))
     if len(dstrs) < 1:
         continue
+    inds = np.argsort(dstrs)#[::-1]
+    fnams = [fnams[i] for i in inds]
+    dstrs = [dstrs[i] for i in inds]
+    sizes = [sizes[i] for i in inds]
     # Delete duplicates
     dup = [dstr for dstr in set(dstrs) if dstrs.count(dstr) > 1]
     for dstr in dup:
@@ -147,10 +144,10 @@ for site in opts.sites:
     for dstr in subset_dstrs:
         fnam = os.path.join(datdir,'subset',dstr+'.tif')
         gnam = os.path.join(datdir,'geocor',dstr+'_geocor.tif')
-        ref_fnam = os.path.join(opts.wrkdir,site,'geocor_reference.tif')
+        ref_fnam = os.path.join(datdir,'geocor_reference.tif')
         dat_fnam = os.path.join(datdir,'geocor',dstr+'_geocor.dat')
         sel_fnam = os.path.join(datdir,'geocor',dstr+'_geocor_selected.dat')
-        if not os.path.exists(gnam):
+        if not os.path.exists(dat_fnam):
             command = 'python'
             command += ' '+os.path.join(opts.scrdir,'find_gcps.py')
             command += ' '+fnam
@@ -188,8 +185,8 @@ for site in opts.sites:
                 call(command,shell=True)
             except Exception:
                 continue
-        if os.path.exists(sel_fnam):
-            os.rename(sel_fnam,dat_fnam)
+        #if os.path.exists(sel_fnam):
+        #    os.rename(sel_fnam,dat_fnam)
         if os.path.exists(gnam):
             geocor_dstrs.append(dstr)
     # Resample
@@ -204,7 +201,7 @@ for site in opts.sites:
             command += ' --datdir '+os.path.join(datdir,'resample')
             command += ' --site '+site
             command += ' --read_comments'
-            command += ' --band_fnam '+os.path.join(wrkdir,site,'band_names.txt')
+            command += ' --band_fnam '+os.path.join(datdir,'band_names.txt')
             try:
                 call(command,shell=True)
             except Exception:
@@ -222,9 +219,9 @@ for site in opts.sites:
             command += ' '+os.path.join(opts.scrdir,'sentinel2_atcor_fit.py')
             command += ' '+fnam
             command += ' --band ndvi'
-            command += ' --mask_fnam '+os.path.join(wrkdir,site,'atcor_mask.tif')
-            command += ' --stat_fnam '+os.path.join(wrkdir,site,'ndvi_stat.npz')
-            command += ' --inds_fnam '+os.path.join(wrkdir,site,'nearest_inds_1000.npy')
+            command += ' --mask_fnam '+os.path.join(datdir,'atcor_mask.tif')
+            command += ' --stat_fnam '+os.path.join(datdir,'ndvi_stat.npz')
+            command += ' --inds_fnam '+os.path.join(datdir,'nearest_inds_1000.npy')
             command += ' --output_fnam '+fit_fnam
             call(command,shell=True)
             try:
@@ -235,7 +232,7 @@ for site in opts.sites:
             command += ' '+os.path.join(opts.scrdir,'sentinel2_atcor_correct.py')
             command += ' '+fnam
             command += ' --band ndvi'
-            command += ' --area_fnam '+os.path.join(wrkdir,site,'pixel_area_block.dat')
+            command += ' --area_fnam '+os.path.join(datdir,'pixel_area_block.dat')
             command += ' --param_fnam '+fit_fnam
             command += ' --output_fnam '+gnam
             try:
@@ -273,10 +270,10 @@ for site in opts.sites:
         command += ' --str '+d1
         command += ' --end '+d2
         command += ' --sites '+site
-        try:
-            call(command,shell=True)
-        except Exception:
-            continue
+        #try:
+        #    call(command,shell=True)
+        #except Exception:
+        #    continue
     if os.path.exists(log):
         os.remove(log)
 
