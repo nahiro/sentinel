@@ -4,9 +4,10 @@ import sys
 import shutil
 import zipfile
 import re
+import numpy as np
 from datetime import datetime,timedelta
 from dateutil.relativedelta import relativedelta
-from subprocess import call
+from subprocess import call,check_output
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
@@ -53,6 +54,7 @@ for site in opts.sites:
     call(command,shell=True)
     fnams = []
     dstrs = []
+    sizes = []
     if opts.str is not None and opts.end is not None:
         dmin = datetime.strptime(opts.str,'%Y%m%d')
         dmax = datetime.strptime(opts.end,'%Y%m%d')
@@ -71,6 +73,11 @@ for site in opts.sites:
                 fnam = os.path.join(dnam,f)
                 fnams.append(fnam)
                 dstrs.append(dstr)
+                sizes.append(os.path.getsize(fnam))
+        inds = np.argsort(dstrs)[::-1]
+        fnams = [fnams[i] for i in inds]
+        dstrs = [dstrs[i] for i in inds]
+        sizes = [sizes[i] for i in inds]
     elif os.path.exists(log):
         with open(log,'r') as fp:
             for line in fp:
@@ -86,8 +93,19 @@ for site in opts.sites:
                     continue
                 fnams.append(fnam)
                 dstrs.append(m.group(1))
+                sizes.append(os.path.getsize(fnam))
     if len(dstrs) < 1:
         continue
+    # Delete duplicates
+    dup = [dstr for dstr in set(dstrs) if dstrs.count(dstr) > 1]
+    for dstr in dup:
+        inds = np.array([i for i,d in enumerate(dstrs) if d == dstr])
+        fs = [fnams[j] for j in inds[np.argsort([sizes[i] for i in inds])[-2::-1]]]
+        for fnam in fs:
+            i = fnams.index(fnam)
+            del fnams[i]
+            del dstrs[i]
+            del sizes[i]
     # Subset
     subset_dstrs = []
     for fnam,dstr in zip(fnams,dstrs):
