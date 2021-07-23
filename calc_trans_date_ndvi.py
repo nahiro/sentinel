@@ -158,7 +158,8 @@ if opts.debug:
     plt.subplots_adjust(left=0.12,right=0.88,bottom=0.12,top=0.80,hspace=0.5)
     if not opts.batch:
         pdf = PdfPages(opts.fig_fnam)
-nb = 24 # (trans_dN,ndvi_N,ndvi1_N,ndvi2_N,ndvimaxN,signal_N,near_dN,ndat_N)x3
+#nb = 24 # (trans_dN,ndvi_N,ndvi1_N,ndvi2_N,ndvimaxN,signal_N,near_dN,ndat_N)x3
+nb = 24 # (trans_dN,ndvi_N,ndvi1_N,ndvi2_N,ndvimaxN,signal_N,ndat5_N,ndat15_N)x3
 output_data = np.full((nb,nobject),np.nan)
 for iobj in range(nobject):
     object_id = iobj+1
@@ -286,6 +287,12 @@ for iobj in range(nobject):
         output_data[3,iobj] = g2[ix]
         output_data[4,iobj] = zz_inc[ix]
         output_data[5,iobj] = ss[ix]
+        #ix = np.argmin(np.abs(ndvi_ntim_cnd-xest[indv[0]]))
+        #output_data[6,iobj] = ndvi_ntim_cnd[ix]-xest[indv[0]]
+        cnd = np.abs(ndvi_ntim_cnd-xest[indv[0]]) < 5.0+1.0e-4
+        output_data[6,iobj] = float(cnd.sum())
+        cnd = np.abs(ndvi_ntim_cnd-xest[indv[0]]) < 15.0+1.0e-4
+        output_data[7,iobj] = float(cnd.sum())
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         cval[cnd] = -2.0e10
         indv = np.argsort(cval)[::-1]
@@ -297,6 +304,12 @@ for iobj in range(nobject):
         output_data[11,iobj] = g2[ix]
         output_data[12,iobj] = zz_inc[ix]
         output_data[13,iobj] = ss[ix]
+        #ix = np.argmin(np.abs(ndvi_ntim_cnd-xest[indv[0]]))
+        #output_data[14,iobj] = ndvi_ntim_cnd[ix]-xest[indv[0]]
+        cnd = np.abs(ndvi_ntim_cnd-xest[indv[0]]) < 5.0+1.0e-4
+        output_data[14,iobj] = float(cnd.sum())
+        cnd = np.abs(ndvi_ntim_cnd-xest[indv[0]]) < 15.0+1.0e-4
+        output_data[15,iobj] = float(cnd.sum())
         cnd = np.abs(xest-xest[indv[0]]) < 1.0
         cval[cnd] = -3.0e10
         indv = np.argsort(cval)[::-1]
@@ -308,6 +321,12 @@ for iobj in range(nobject):
         output_data[19,iobj] = g2[ix]
         output_data[20,iobj] = zz_inc[ix]
         output_data[21,iobj] = ss[ix]
+        #ix = np.argmin(np.abs(ndvi_ntim_cnd-xest[indv[0]]))
+        #output_data[22,iobj] = ndvi_ntim_cnd[ix]-xest[indv[0]]
+        cnd = np.abs(ndvi_ntim_cnd-xest[indv[0]]) < 5.0+1.0e-4
+        output_data[22,iobj] = float(cnd.sum())
+        cnd = np.abs(ndvi_ntim_cnd-xest[indv[0]]) < 15.0+1.0e-4
+        output_data[23,iobj] = float(cnd.sum())
 
     if opts.debug:
         fig.clear()
@@ -394,13 +413,14 @@ for i in range(3):
     w.field('ndvi2_{}'.format(i+1),'F',13,6)
     w.field('ndvimax{}'.format(i+1),'F',13,6)
     w.field('signal_{}'.format(i+1),'F',13,6)
-    w.field('near_d{}'.format(i+1),'F',13,6)
-    w.field('ndat_{}'.format(i+1),'N',13,0)
+    w.field('ndat5_{}'.format(i+1),'N',13,0)
+    w.field('ndat15_{}'.format(i+1),'N',13,0)
 for iobj,shaperec in enumerate(r.iterShapeRecords()):
     rec = shaperec.record
     shp = shaperec.shape
     data_list = list(output_data[:,iobj])
     for i in range(3):
+        data_list[i*8+6] = int(output_data[i*8+6,iobj]+0.5)
         data_list[i*8+7] = int(output_data[i*8+7,iobj]+0.5)
     for i in range(3):
         data_list.insert(i*9+1,'N/A' if np.isnan(output_data[i*8,iobj]) else num2date(np.round(output_data[i*8,iobj])+0.1).strftime('%Y/%m/%d'))
