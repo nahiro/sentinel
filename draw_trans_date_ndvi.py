@@ -21,6 +21,10 @@ TMIN = '20190501'
 TMAX = '20190915'
 PMIN = 0.0
 PMAX = 0.8
+MMIN = 0
+MMAX = 5
+NMIN = 0
+NMAX = 12
 NCAN = 1
 COORDS_COLOR = '#aaaaaa'
 TRANS_FNAM = os.path.join('.','transplanting_date.shp')
@@ -33,6 +37,10 @@ parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMM
 parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
 parser.add_option('-p','--pmin',default=PMIN,type='float',help='Min NDVI (%default)')
 parser.add_option('-P','--pmax',default=PMAX,type='float',help='Max NDVI (%default)')
+parser.add_option('--mmin',default=MMIN,type='int',help='Min #data within 5 days (%default)')
+parser.add_option('--mmax',default=MMAX,type='int',help='Max #data within 5 days (%default)')
+parser.add_option('--nmin',default=NMIN,type='int',help='Min #data within 15 days (%default)')
+parser.add_option('--nmax',default=NMAX,type='int',help='Max #data within 15 days (%default)')
 parser.add_option('-N','--ncan',default=NCAN,type='int',help='Candidate number between 1 and 3 (%default)')
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape file (%default)')
@@ -89,6 +97,8 @@ if opts.add_coords:
 color = cm.hsv(np.linspace(0.0,1.0,365))
 colors = np.vstack((color,color,color,color,color,color))
 mymap = LinearSegmentedColormap.from_list('my_colormap',colors,N=len(colors)*2)
+cmap5 = cm.get_cmap('jet',opts.mmax-opts.mmin+1)
+cmap15 = cm.get_cmap('jet',opts.nmax-opts.nmin+1)
 
 prj = ccrs.UTM(zone=48,southern_hemisphere=True)
 
@@ -117,9 +127,15 @@ tmin = 1.0e10
 tmax = -1.0e10
 pmin = 1.0e10
 pmax = -1.0e10
+mmin = 1.0e10
+mmax = -1.0e10
+nmin = 1.0e10
+nmax = -1.0e10
 for rec in records:
     t = rec.attributes['trans_d{:d}'.format(opts.ncan)]#+date2num(np.datetime64('0000-12-31'))
-    p = rec.attributes['st_{:d}'.format(opts.ncan)]
+    p = rec.attributes['signal_{:d}'.format(opts.ncan)]
+    m = rec.attributes['ndat5_{:d}'.format(opts.ncan)]
+    n = rec.attributes['ndat15_{:d}'.format(opts.ncan)]
     if t > 1000.0:
         if t < tmin:
             tmin = t
@@ -129,10 +145,22 @@ for rec in records:
             pmin = p
         if p > pmax:
             pmax = p
+        if m < mmin:
+            mmin = m
+        if m > mmax:
+            mmax = m
+        if n < nmin:
+            nmin = n
+        if n > nmax:
+            nmax = n
 sys.stderr.write('tmin: {}\n'.format(num2date(tmin).strftime('%Y%m%d')))
 sys.stderr.write('tmax: {}\n'.format(num2date(tmax).strftime('%Y%m%d')))
 sys.stderr.write('pmin: {}\n'.format(pmin))
 sys.stderr.write('pmax: {}\n'.format(pmax))
+sys.stderr.write('mmin: {}\n'.format(mmin))
+sys.stderr.write('mmax: {}\n'.format(mmax))
+sys.stderr.write('nmin: {}\n'.format(nmin))
+sys.stderr.write('nmax: {}\n'.format(nmax))
 if opts.tmin is not None:
     tmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 if opts.tmax is not None:
@@ -146,9 +174,15 @@ pdif = pmax-pmin
 qmin = 0.0
 qmax = 0.5
 qdif = qmax-qmin
-smin = 0.0
-smax = 0.8
+smin = -0.3
+smax = 0.3
 sdif = smax-smin
+mmin = opts.mmin-0.5
+mmax = opts.mmax+0.5
+mdif = mmax-mmin
+nmin = opts.nmin-0.5
+nmax = opts.nmax+0.5
+ndif = nmax-nmin
 
 values = []
 labels = []
@@ -206,20 +240,24 @@ if opts.early:
     newcolors[indx:,:] = to_rgba('maroon')
 mymap2 = ListedColormap(newcolors)
 
-fig = plt.figure(1,facecolor='w',figsize=(7.6,6.0))
+fig = plt.figure(1,facecolor='w',figsize=(7.6,8.6))
 fig.clear()
 plt.subplots_adjust(top=0.94,bottom=0.06,left=0.030,right=0.96,wspace=0.12,hspace=0.25)
 
-ax1 = plt.subplot(221,projection=prj)
-ax2 = plt.subplot(222,projection=prj)
-ax3 = plt.subplot(223,projection=prj)
-ax4 = plt.subplot(224,projection=prj)
+ax1 = plt.subplot(321,projection=prj)
+ax2 = plt.subplot(322,projection=prj)
+ax3 = plt.subplot(323,projection=prj)
+ax4 = plt.subplot(324,projection=prj)
+ax5 = plt.subplot(325,projection=prj)
+ax6 = plt.subplot(326,projection=prj)
 
 for shp,rec in zip(shapes,records):
     t = rec.attributes['trans_d{:d}'.format(opts.ncan)]#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
-    p = rec.attributes['ndvi0_{:d}'.format(opts.ncan)]
-    q = rec.attributes['ndvi3_{:d}'.format(opts.ncan)]
-    s = rec.attributes['st_{:d}'.format(opts.ncan)]+0.6
+    p = rec.attributes['ndvi_{:d}'.format(opts.ncan)]
+    q = rec.attributes['ndvimax{:d}'.format(opts.ncan)]
+    s = rec.attributes['signal_{:d}'.format(opts.ncan)]
+    m = rec.attributes['ndat5_{:d}'.format(opts.ncan)]
+    n = rec.attributes['ndat15_{:d}'.format(opts.ncan)]
     if not np.isnan(t):
         ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
     if not np.isnan(p):
@@ -228,6 +266,10 @@ for shp,rec in zip(shapes,records):
         ax3.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((q-qmin)/qdif))
     if not np.isnan(s):
         ax4.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((s-smin)/sdif))
+    if not np.isnan(t):
+        ax5.add_geometries(shp,prj,edgecolor='none',facecolor=cmap5((m-mmin)/mdif))
+    if not np.isnan(t):
+        ax6.add_geometries(shp,prj,edgecolor='none',facecolor=cmap15((n-nmin)/ndif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=mymap2)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.00,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))
@@ -236,7 +278,7 @@ ax12.xaxis.set_minor_locator(plt.FixedLocator(ticks))
 #ax1.set_title('(a)')
 for l in ax12.xaxis.get_ticklabels():
     l.set_rotation(30)
-ax12.xaxis.set_label_coords(0.5,-3.2)
+ax12.xaxis.set_label_coords(0.5,-3.0)
 ax12.set_xlabel('Estimated transplanting date (MM/DD)')
 #ax1.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
 
@@ -246,24 +288,40 @@ ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=1.00,pad=0.01).ax
 ax22.minorticks_on()
 #ax2.set_title('(b)')
 ax22.set_xlabel('NDVI at transplanting')
-ax22.xaxis.set_label_coords(0.5,-3.2)
+ax22.xaxis.set_label_coords(0.5,-3.0)
 #ax2.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
 
 im3 = ax3.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=qmin,vmax=qmax,cmap=cm.jet)
 ax32 = plt.colorbar(im3,ax=ax3,orientation='horizontal',shrink=1.00,pad=0.01).ax
 ax32.minorticks_on()
-#ax2.set_title('(b)')
+#ax3.set_title('(c)')
 ax32.set_xlabel('NDVI increase after transplanting')
 ax32.xaxis.set_label_coords(0.5,-2.2)
-#ax2.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+#ax3.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
 
 im4 = ax4.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=smin,vmax=smax,cmap=cm.jet)
 ax42 = plt.colorbar(im4,ax=ax4,orientation='horizontal',shrink=1.00,pad=0.01).ax
 ax42.minorticks_on()
-#ax2.set_title('(b)')
+#ax4.set_title('(d)')
 ax42.set_xlabel('Signal at transplanting')
 ax42.xaxis.set_label_coords(0.5,-2.2)
-#ax2.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+#ax4.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+
+im5 = ax5.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=mmin,vmax=mmax,cmap=cmap5)
+ax52 = plt.colorbar(im5,ax=ax5,orientation='horizontal',ticks=np.arange(opts.mmin,opts.mmax+1,1),shrink=1.00,pad=0.01).ax
+#ax52.minorticks_on()
+#ax5.set_title('(e)')
+ax52.set_xlabel('#Data within $\pm$5 days')
+ax52.xaxis.set_label_coords(0.5,-2.2)
+#ax5.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+
+im6 = ax6.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=nmin,vmax=nmax,cmap=cmap15)
+ax62 = plt.colorbar(im6,ax=ax6,orientation='horizontal',ticks=np.arange(opts.nmin,opts.nmax+1,1),shrink=1.00,pad=0.01).ax
+#ax62.minorticks_on()
+#ax6.set_title('(f)')
+ax62.set_xlabel('#Data within $\pm$15 days')
+ax62.xaxis.set_label_coords(0.5,-2.2)
+#ax6.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
 
 if opts.add_coords:
     ax1.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
@@ -326,6 +384,36 @@ if opts.add_coords:
     ax4.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
     ax4.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
 
+    ax5.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax5.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax5.xaxis.set_label_position('top')
+    ax5.xaxis.tick_top()
+    ax5.yaxis.set_label_position('right')
+    ax5.yaxis.tick_right()
+    plt.setp(ax5.get_xticklabels(),color=opts.coords_color)
+    plt.setp(ax5.get_yticklabels(),color=opts.coords_color)
+    ax5.set_xticks(np.arange(100.0,120.0,0.1))
+    ax5.set_yticks(np.arange(-7.5,-5.5,0.1))
+    ax5.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
+    ax5.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
+    ax5.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
+    ax5.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
+
+    ax6.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax6.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax6.xaxis.set_label_position('top')
+    ax6.xaxis.tick_top()
+    ax6.yaxis.set_label_position('right')
+    ax6.yaxis.tick_right()
+    plt.setp(ax6.get_xticklabels(),color=opts.coords_color)
+    plt.setp(ax6.get_yticklabels(),color=opts.coords_color)
+    ax6.set_xticks(np.arange(100.0,120.0,0.1))
+    ax6.set_yticks(np.arange(-7.5,-5.5,0.1))
+    ax6.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
+    ax6.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
+    ax6.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
+    ax6.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
+
 ax1.set_xlim(xmin,xmax)
 ax1.set_ylim(ymin,ymax)
 ax2.set_xlim(xmin,xmax)
@@ -334,6 +422,10 @@ ax3.set_xlim(xmin,xmax)
 ax3.set_ylim(ymin,ymax)
 ax4.set_xlim(xmin,xmax)
 ax4.set_ylim(ymin,ymax)
+ax5.set_xlim(xmin,xmax)
+ax5.set_ylim(ymin,ymax)
+ax6.set_xlim(xmin,xmax)
+ax6.set_ylim(ymin,ymax)
 if opts.title is not None:
     plt.suptitle(opts.title)
 plt.savefig(opts.output_fnam)

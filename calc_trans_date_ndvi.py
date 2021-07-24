@@ -439,8 +439,8 @@ for iobj,shaperec in enumerate(r.iterShapeRecords()):
     shp = shaperec.shape
     data_list = list(output_data[:,iobj])
     for i in range(3):
-        data_list[i*8+6] = int(output_data[i*8+6,iobj]+0.5)
-        data_list[i*8+7] = int(output_data[i*8+7,iobj]+0.5)
+        data_list[i*8+6] = (0 if np.isnan(output_data[i*8+6,iobj]) else int(output_data[i*8+6,iobj]+0.5))
+        data_list[i*8+7] = (0 if np.isnan(output_data[i*8+7,iobj]) else int(output_data[i*8+7,iobj]+0.5))
     for i in range(3):
         data_list.insert(i*9+1,'N/A' if np.isnan(output_data[i*8,iobj]) else num2date(np.round(output_data[i*8,iobj])+0.1).strftime('%Y/%m/%d'))
     rec.extend(data_list)
