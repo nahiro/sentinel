@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 import os
 import sys
+import shutil
 import re
-import json
-import warnings
 from datetime import datetime,timedelta
-from dateutil.relativedelta import relativedelta
 import numpy as np
+import shapefile
 import cartopy.io.shapereader as shpreader
 from matplotlib.dates import date2num,num2date
 from optparse import OptionParser,IndentedHelpFormatter
@@ -32,7 +31,7 @@ if len(args) < 1:
     parser.print_help()
     sys.exit(0)
 fnams = args
-field_type = opts.field_type.upper()
+field_type = opts.field_type[0].upper()
 if not field_type.upper() in ['C','F','N']:
     raise ValueError('Error in field type >>> '+opts.field_type)
 
@@ -58,6 +57,8 @@ for fnam in fnams:
         raise ValueError('Error, len(dtmp)={}, nobject={}'.format(len(dtmp),nobject))
     dtim.append(d)
     data.append(dtmp)
+dtim = np.array(dtim)
+data = np.array(data)
 
 w = shapefile.Writer(opts.out_fnam)
 w.shapeType = shapefile.POLYGON
@@ -72,7 +73,7 @@ for iobj,shaperec in enumerate(r.iterShapeRecords()):
     elif field_type == 'N':
         data_list = [int(d) for d in data[:,iobj]]
     else:
-        data_list = data[:,iobj]
+        data_list = list(data[:,iobj])
     rec.extend(data_list)
     w.shape(shp)
     w.record(*rec)
