@@ -26,6 +26,7 @@ parser.add_option('-l','--field_length',default=FIELD_LENGTH,type='int',help='Fi
 parser.add_option('-d','--decimal_length',default=DECIMAL_LENGTH,type='int',help='Decimal length (%default)')
 parser.add_option('-s','--shp_fnam',default=None,help='Input shapefile name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
+parser.add_option('-T','--num2date',default=False,action='store_true',help='Convert number to text date (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
     parser.print_help()
@@ -64,7 +65,7 @@ w = shapefile.Writer(opts.out_fnam)
 w.shapeType = shapefile.POLYGON
 w.fields = r.fields[1:] # skip first deletion field
 for i in range(len(dtim)):
-    w.field('{:%Y/%d/%m}'.format(dtim[i]),field_type,opts.field_length,opts.decimal_length)
+    w.field('{:%Y/%m/%d}'.format(dtim[i]),field_type,opts.field_length,opts.decimal_length)
 for iobj,shaperec in enumerate(r.iterShapeRecords()):
     rec = shaperec.record
     shp = shaperec.shape
@@ -73,7 +74,10 @@ for iobj,shaperec in enumerate(r.iterShapeRecords()):
     elif field_type == 'N':
         data_list = [int(d) for d in data[:,iobj]]
     else:
-        data_list = list(data[:,iobj])
+        if opts.num2date:
+            data_list = ['N/A' if np.isnan(d) else num2date(np.round(d)+0.1).strftime('%Y/%m/%d') for d in data[:,iobj]]
+        else:
+            data_list = list(data[:,iobj])
     rec.extend(data_list)
     w.shape(shp)
     w.record(*rec)
