@@ -20,7 +20,7 @@ BAND = '4'
 BAND_COL = 1
 RTHR = 1.0
 MTHR = 2.0
-INDS_FNAM = 'nearest_inds_1000.npy'
+INDS_FNAM = 'nearest_inds.npy'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -94,21 +94,14 @@ if opts.fig_fnam is None:
     opts.fig_fnam = 'sentinel2_atcor_{}_{}.pdf'.format(band_l,dstr)
 
 stat = np.load(opts.stat_fnam)
-data_y_all = stat['mean']
-data_z_all = stat['std']
+data_y_all = stat['mean'].flatten()
+data_z_all = stat['std'].flatten()
 nearest_inds = np.load(opts.inds_fnam)
 nobject = len(nearest_inds)
-
-ds = gdal.Open(opts.mask_fnam)
-mask = ds.ReadAsArray()
-ds = None
-mask_shape = mask.shape
 
 ds = gdal.Open(input_fnam)
 data = ds.ReadAsArray()
 data_shape = data[0].shape
-if data_shape != mask_shape:
-    raise ValueError('Error, data_shape={}, mask_shape={}'.format(data_shape,mask_shape))
 band_list = []
 if opts.band_fnam is not None:
     with open(opts.band_fnam,'r') as fp:
@@ -145,8 +138,17 @@ else:
         raise ValueError('Error, faild to search index for {}'.format(band_name))
     band_index = band_list.index(band_name)
     data_img = data[band_index].flatten()*1.0e-4
-cnd = ~np.isnan(mask.flatten())
-data_x_all = data_img.flatten()[cnd]
+if opts.mask_fnam is not None:
+    ds = gdal.Open(opts.mask_fnam)
+    mask = ds.ReadAsArray()
+    ds = None
+    mask_shape = mask.shape
+    if data_shape != mask_shape:
+        raise ValueError('Error, data_shape={}, mask_shape={}'.format(data_shape,mask_shape))
+    cnd = ~np.isnan(mask.flatten())
+    data_x_all = data_img.flatten()[cnd]
+else:
+    data_x_all = data_img.flatten()
 if data_x_all.shape != data_y_all.shape:
     raise ValueError('Error, data_x_all.shape={}, data_y_all.shape={}'.format(data_x_all.shape,data_y_all.shape))
 
