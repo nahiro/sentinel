@@ -111,6 +111,8 @@ def download_data(uuid,dst):
     command = 'wget'
     #command += ' --content-disposition'
     command += ' --continue'
+    command += ' --progress=dot'
+    command += ' --execute dotbytes=10M'
     if opts.user is not None:
         command += ' --user {}'.format(opts.user)
     if opts.password is not None:
@@ -305,8 +307,7 @@ if opts.download:
             sys.stderr.write('Offline. Wait for {} sec >>> {}\n'.format(opts.online_check_time,fnam))
             sys.stderr.flush()
             # Request data
-            if ntry%opts.max_retry == 0:
-                download_data(uuid,gnam)
+            download_data(uuid,gnam)
             time.sleep(opts.online_check_time)
             ntry += 1
             continue
