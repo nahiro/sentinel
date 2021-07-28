@@ -32,7 +32,7 @@ size_values = []
 size_errors = []
 with open(input_fnam,'r') as fp:
     for line in fp:
-        m = re.search('\s*\d+\s+\S+\s+(S\S+)\s+(\d+)\s*\(\s*([\d\.]+)\s+([KMG]B)\)',line)
+        m = re.search('\s*\d+\s+\S+\s+(S\S+)\s+(\d+)[\s!]*\(\s*([\d\.]+)\s+([KMG]B)\)',line)
         if not m:
             continue
         label = m.group(3)+' '+m.group(4)
