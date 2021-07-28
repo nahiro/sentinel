@@ -148,11 +148,11 @@ for site in opts.sites:
                 command += ' --datdir '+os.path.join(opts.datdir,site,'atcor')
                 command += ' --cflag_dnam '+os.path.join(opts.datdir,site,'cflag')
                 command += ' --shp_fnam '+os.path.join(opts.wrkdir,site,site)
-                #command += ' --json_fnam '+jsn_fnam
+                command += ' --json_fnam '+jsn_fnam
                 command += ' --out_fnam '+shp_bnam
                 command += ' 2>'+os.path.join(wrkdir,'err')
-                sys.stderr.write(command+'\n')
-                #call(command,shell=True)
+                #sys.stderr.write(command+'\n')
+                call(command,shell=True)
                 if os.path.exists(shp_fnam):
                     file_list.append(jsn_fnam)
                     file_list.append(shp_fnam)
