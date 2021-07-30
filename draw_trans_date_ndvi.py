@@ -240,9 +240,16 @@ if opts.early:
     newcolors[indx:,:] = to_rgba('maroon')
 mymap2 = ListedColormap(newcolors)
 
-fig = plt.figure(1,facecolor='w',figsize=(7.6,8.6))
+site_low = opts.site.lower()
+if site_low == 'cihea':
+    fig = plt.figure(1,facecolor='w',figsize=(7.6,14.0))
+    plt.subplots_adjust(top=0.965,bottom=0.005,left=0.030,right=0.96,wspace=0.12,hspace=0.043)
+elif site_low == 'bojongsoang':
+    fig = plt.figure(1,facecolor='w',figsize=(7.6,8.6))
+    plt.subplots_adjust(top=0.94,bottom=0.06,left=0.030,right=0.96,wspace=0.12,hspace=0.25)
+else:
+    raise ValueError('Error in site >>> '+opts.site)
 fig.clear()
-plt.subplots_adjust(top=0.94,bottom=0.06,left=0.030,right=0.96,wspace=0.12,hspace=0.25)
 
 ax1 = plt.subplot(321,projection=prj)
 ax2 = plt.subplot(322,projection=prj)
