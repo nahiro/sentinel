@@ -26,6 +26,7 @@ parser.add_option('-l','--field_length',default=FIELD_LENGTH,type='int',help='Fi
 parser.add_option('-d','--decimal_length',default=DECIMAL_LENGTH,type='int',help='Decimal length (%default)')
 parser.add_option('-s','--shp_fnam',default=None,help='Input shapefile name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
+parser.add_option('-O','--output_field_name',default=None,action='append',help='Output field name (%default)')
 parser.add_option('-T','--num2date',default=False,action='store_true',help='Convert number to text date (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -39,33 +40,45 @@ if not field_type.upper() in ['C','F','N']:
 r = shapefile.Reader(opts.shp_fnam)
 nobject = len(r)
 
-dtim = []
 data = []
+if opts.output_field_name is None:
+    dtim = []
 for fnam in fnams:
-    f = os.path.basename(fnam)
-    m = re.search('\D('+'\d'*8+')\D',f)
-    if not m:
-        m = re.search('^('+'\d'*8+')\D',f)
-        if not m:
-            raise ValueError('Error in finding date >>> '+f)
-    dstr = m.group(1)
-    d = datetime.strptime(dstr,'%Y%m%d')
     dtmp = []
     records = list(shpreader.Reader(fnam).records())
     for rec in records:
         dtmp.append(rec.attributes[opts.field_name])
     if len(dtmp) != nobject:
         raise ValueError('Error, len(dtmp)={}, nobject={}'.format(len(dtmp),nobject))
-    dtim.append(d)
+    if opts.output_field_name is None:
+        f = os.path.basename(fnam)
+        m = re.search('\D('+'\d'*8+')\D',f)
+        if not m:
+            m = re.search('^('+'\d'*8+')\D',f)
+            if not m:
+                raise ValueError('Error in finding date >>> '+f)
+        dstr = m.group(1)
+        d = datetime.strptime(dstr,'%Y%m%d')
+        dtim.append(d)
     data.append(dtmp)
-dtim = np.array(dtim)
 data = np.array(data)
+ndat = len(data)
+if opts.output_field_name is None:
+    dtim = np.array(dtim)
+    if len(dtim) != ndat:
+        raise ValueError('Error, len(dtim)={}, ndat={}'.format(len(dtim),ndat))
 
 w = shapefile.Writer(opts.out_fnam)
 w.shapeType = shapefile.POLYGON
 w.fields = r.fields[1:] # skip first deletion field
-for i in range(len(dtim)):
-    w.field('{:%Y/%m/%d}'.format(dtim[i]),field_type,opts.field_length,opts.decimal_length)
+if opts.output_field_name is None:
+    for i in range(ndat):
+        w.field('{:%Y/%m/%d}'.format(dtim[i]),field_type,opts.field_length,opts.decimal_length)
+else:
+    if len(opts.output_field_name) != ndat:
+        raise ValueError('Error, len(opts.output_field_name)={}, ndat={}'.format(len(opts.output_field_name),ndat))
+    for i in range(ndat):
+        w.field(opts.output_field_name[i],field_type,opts.field_length,opts.decimal_length)
 for iobj,shaperec in enumerate(r.iterShapeRecords()):
     rec = shaperec.record
     shp = shaperec.shape
