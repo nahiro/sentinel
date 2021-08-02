@@ -44,10 +44,16 @@ data = []
 if opts.output_field_name is None:
     dtim = []
 for fnam in fnams:
-    dtmp = []
-    records = list(shpreader.Reader(fnam).records())
-    for rec in records:
-        dtmp.append(rec.attributes[opts.field_name])
+    ext = os.path.splitext(fnam)[1].lower()
+    if ext == '.npz':
+        dtmp = np.load(fnam)[opts.field_name]
+    elif ext == '.npy':
+        dtmp = np.load(fnam)
+    else:
+        dtmp = []
+        records = list(shpreader.Reader(fnam).records())
+        for rec in records:
+            dtmp.append(rec.attributes[opts.field_name])
     if len(dtmp) != nobject:
         raise ValueError('Error, len(dtmp)={}, nobject={}'.format(len(dtmp),nobject))
     if opts.output_field_name is None:
