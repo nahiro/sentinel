@@ -21,6 +21,7 @@ parser.add_option('--datdir',default=DATDIR,help='Data directory (%default)')
 parser.add_option('-s','--str',default=None,help='Start date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=None,help='End date in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
+parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if opts.sites is None:
@@ -59,7 +60,12 @@ for site in opts.sites:
     if len(dstrs) < 1:
         continue
 
-    for fnam in fnams:
+    for fnam,dstr in zip(fnams,dstrs):
+        gnam = os.path.join(datdir,'sigma0_speckle',dstr+'.tif')
+        if os.path.exists(gnam):
+            if not opts.overwrite:
+                continue
+        sys.stderr.write(dstr+'\n')
         command = 'python'
         command += ' '+os.path.join(opts.scrdir,'sentinel1_preprocess.py')
         command += ' '+fnam
@@ -76,6 +82,11 @@ for site in opts.sites:
         call(command,shell=True)
     for dstr in dstrs:
         fnam = os.path.join(datdir,'sigma0_speckle',dstr+'.tif')
+        gnam = os.path.join(datdir,'sigma0_speckle',dstr+'_resample.tif')
+        if os.path.exists(gnam):
+            if not opts.overwrite:
+                continue
+        sys.stderr.write(dstr+'\n')
         command = 'python'
         command += ' '+os.path.join(opts.scrdir,'sentinel_resample.py')
         command += ' '+fnam
