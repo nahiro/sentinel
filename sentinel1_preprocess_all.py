@@ -12,12 +12,14 @@ if HOME is None:
     HOME = os.environ.get('HOMEPATH')
 SCRDIR = os.path.join(HOME,'Script')
 DATDIR = os.path.join(HOME,'Work','Sentinel-1')
+SUBDIR = 'sigma0_speckle'
 SITES = ['Bojongsoang','Cihea']
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('--scrdir',default=SCRDIR,help='Script directory (%default)')
 parser.add_option('--datdir',default=DATDIR,help='Data directory (%default)')
+parser.add_option('--subdir',default=SUBDIR,help='Sub directory (%default)')
 parser.add_option('-s','--str',default=None,help='Start date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=None,help='End date in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
@@ -61,7 +63,7 @@ for site in opts.sites:
         continue
 
     for fnam,dstr in zip(fnams,dstrs):
-        gnam = os.path.join(datdir,'sigma0_speckle',dstr+'.tif')
+        gnam = os.path.join(datdir,opts.subdir,dstr+'.tif')
         if os.path.exists(gnam):
             if not opts.overwrite:
                 continue
@@ -69,7 +71,7 @@ for site in opts.sites:
         command = 'python'
         command += ' '+os.path.join(opts.scrdir,'sentinel1_preprocess.py')
         command += ' '+fnam
-        command += ' --datdir '+os.path.join(datdir,'sigma0_speckle')
+        command += ' --datdir '+os.path.join(datdir,opts.subdir)
         command += ' --site '+site
         command += ' --speckle'
         command += ' --iangle_value'
@@ -81,8 +83,8 @@ for site in opts.sites:
         command += ' '+os.path.join(opts.scrdir,'remove_snap_cache.py')
         call(command,shell=True)
     for dstr in dstrs:
-        fnam = os.path.join(datdir,'sigma0_speckle',dstr+'.tif')
-        gnam = os.path.join(datdir,'sigma0_speckle',dstr+'_resample.tif')
+        fnam = os.path.join(datdir,opts.subdir,dstr+'.tif')
+        gnam = os.path.join(datdir,opts.subdir,dstr+'_resample.tif')
         if os.path.exists(gnam):
             if not opts.overwrite:
                 continue
@@ -90,7 +92,7 @@ for site in opts.sites:
         command = 'python'
         command += ' '+os.path.join(opts.scrdir,'sentinel_resample.py')
         command += ' '+fnam
-        command += ' --datdir '+os.path.join(datdir,'sigma0_speckle')
+        command += ' --datdir '+os.path.join(datdir,opts.subdir)
         command += ' --site '+site
         command += ' --read_comments'
         call(command,shell=True)
