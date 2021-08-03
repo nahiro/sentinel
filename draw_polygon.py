@@ -14,21 +14,11 @@ import cartopy.io.shapereader as shpreader
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
-HOME = os.environ.get('HOME')
-if HOME is None:
-    HOME = os.environ.get('HOMEPATH')
 TMIN = '20190501'
 TMAX = '20190915'
-PMIN = 0.0
-PMAX = 0.8
-MMIN = 0
-MMAX = 5
-NMIN = 0
-NMAX = 12
-NCAN = 1
 COORDS_COLOR = '#aaaaaa'
 TRANS_FNAM = os.path.join('.','transplanting_date.shp')
-OUTPUT_FNAM = 'trans_date_testsite.pdf'
+OUTPUT_FNAM = 'output.pdf'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -45,8 +35,6 @@ parser.add_option('--coords_color',default=COORDS_COLOR,help='Color of geographi
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
-if opts.ncan < 1 or opts.ncan > 3:
-    raise ValueError('Error, ncan={}'.format(opts.ncan))
 if not opts.debug:
     warnings.simplefilter('ignore')
 
@@ -89,8 +77,6 @@ if opts.add_coords:
 color = cm.hsv(np.linspace(0.0,1.0,365))
 colors = np.vstack((color,color,color,color,color,color))
 mymap = LinearSegmentedColormap.from_list('my_colormap',colors,N=len(colors)*2)
-cmap5 = cm.get_cmap('jet',opts.mmax-opts.mmin+1)
-cmap15 = cm.get_cmap('jet',opts.nmax-opts.nmin+1)
 
 prj = ccrs.UTM(zone=48,southern_hemisphere=True)
 
@@ -182,9 +168,6 @@ if opts.add_tmax:
 torg = date2num(datetime(dmin.year,1,1))
 twid = 365.0*2.0
 newcolors = mymap(np.linspace((tmin-torg)/twid,(tmax-torg)/twid,mymap.N))
-if opts.early:
-    indx = int(mymap.N*0.995+0.5)
-    newcolors[indx:,:] = to_rgba('maroon')
 mymap2 = ListedColormap(newcolors)
 
 site_low = opts.site.lower()
@@ -202,11 +185,6 @@ ax1 = plt.subplot(111,projection=prj)
 
 for shp,rec in zip(shapes,records):
     t = rec.attributes['trans_d{:d}'.format(opts.ncan)]#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
-    p = rec.attributes['ndvi_{:d}'.format(opts.ncan)]
-    q = rec.attributes['ndvimax{:d}'.format(opts.ncan)]
-    s = rec.attributes['signal_{:d}'.format(opts.ncan)]
-    m = rec.attributes['ndat5_{:d}'.format(opts.ncan)]
-    n = rec.attributes['ndat15_{:d}'.format(opts.ncan)]
     if not np.isnan(t):
         ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=mymap2)
