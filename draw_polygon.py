@@ -14,6 +14,7 @@ import cartopy.io.shapereader as shpreader
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
+FIELD_NAME = 'value'
 FIELD_TYPE = 'float'
 HOME = os.environ.get('HOME')
 if HOME is None:
@@ -25,8 +26,8 @@ COORDS_COLOR = '#aaaaaa'
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('--site',default=None,help='Site name (%default)')
-parser.add_option('-t','--field_type',default=FIELD_TYPE,help='Field type, time, float, or number (%default)')
 parser.add_option('-a','--field_name',default=FIELD_NAME,help='Field name to draw (%default)')
+parser.add_option('-t','--field_type',default=FIELD_TYPE,help='Field type, time, float, or number (%default)')
 parser.add_option('-z','--zmin',default=None,help='Min value (%default)')
 parser.add_option('-Z','--zmax',default=None,help='Max value (%default)')
 parser.add_option('-i','--inp_fnam',default=None,help='Input file name (%default)')
@@ -133,13 +134,17 @@ else:
 if opts.zmin is not None:
     if field_type == 'T':
         zmin = date2num(datetime.strptime(opts.zmin,'%Y%m%d'))
+    elif field_type == 'N':
+        zmin = int(opts.zmin)
     else:
-        zmin = opts.zmin
+        zmin = float(opts.zmin)
 if opts.zmax is not None:
     if field_type == 'T':
         zmax = date2num(datetime.strptime(opts.zmax,'%Y%m%d'))
+    elif field_type == 'N':
+        zmax = int(opts.zmax)
     else:
-        zmax = opts.zmax
+        zmax = float(opts.zmax)
 zdif = zmax-zmin
 
 if field_type == 'T':
