@@ -14,20 +14,24 @@ import cartopy.io.shapereader as shpreader
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
-TMIN = '20190501'
-TMAX = '20190915'
-COORDS_COLOR = '#aaaaaa'
-TRANS_FNAM = os.path.join('.','transplanting_date.shp')
+FIELD_TYPE = 'float'
+HOME = os.environ.get('HOME')
+if HOME is None:
+    HOME = os.environ.get('HOMEPATH')
+SHP_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','Bojongsoang','Bojongsoang')
 OUTPUT_FNAM = 'output.pdf'
+COORDS_COLOR = '#aaaaaa'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('--site',default=None,help='Site name (%default)')
-parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMMDD (%default)')
-parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
-parser.add_option('-t','--title',default=None,help='Figure title (%default)')
-parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape file (%default)')
+parser.add_option('-t','--field_type',default=FIELD_TYPE,help='Field type, time, float, or number (%default)')
+parser.add_option('-a','--field_name',default=FIELD_NAME,help='Field name to draw (%default)')
+parser.add_option('-z','--zmin',default=None,help='Min value (%default)')
+parser.add_option('-Z','--zmax',default=None,help='Max value (%default)')
+parser.add_option('--shp_fnam',default=SHP_FNAM,help='Input shapefile name (%default)')
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
+parser.add_option('-T','--title',default=None,help='Figure title (%default)')
 parser.add_option('--add_tmin',default=False,action='store_true',help='Add tmin in colorbar (%default)')
 parser.add_option('--add_tmax',default=False,action='store_true',help='Add tmax in colorbar (%default)')
 parser.add_option('--add_coords',default=False,action='store_true',help='Add geographical coordinates (%default)')
@@ -37,6 +41,9 @@ parser.add_option('--debug',default=False,action='store_true',help='Debug mode (
 (opts,args) = parser.parse_args()
 if not opts.debug:
     warnings.simplefilter('ignore')
+field_type = opts.field_type[0].upper()
+if not field_type.upper() in ['T','F','N']:
+    raise ValueError('Error in field type >>> '+opts.field_type)
 
 if opts.batch:
     import matplotlib
@@ -58,30 +65,10 @@ def transform_wgs84_to_utm(longitude,latitude):
     xyz = np.array(wgs84_to_utm_geo_transform.TransformPoints(np.dstack((longitude,latitude)).reshape((-1,2)))).reshape(longitude.shape[0],longitude.shape[1],3)
     return xyz[:,:,0],xyz[:,:,1],xyz[:,:,2] # returns easting, northing, altitude
 
-if opts.add_coords:
-    center_x = 107.67225
-    center_y = -6.98795
-    lon = np.arange(107+36/60,107+44/60,1.0/60.0)
-    lat = np.arange(-7-2/60,-6-56/60,1.0/60.0)
-    xg,yg = np.meshgrid(lon,lat)
-    x,y,z = transform_wgs84_to_utm(xg,yg)
-    ind_x = np.argmin(np.abs(lon-center_x))
-    ind_y = np.argmin(np.abs(lat-center_y))
-    center_x_utm = x[ind_y,:]
-    center_y_utm = y[:,ind_x]
-    #x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((x*60.0-int(x*60.0))*60.0+0.1))+'$^{\prime\prime}$E' for x in lon]
-    #y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((y*60.0-int(y*60.0))*60.0+0.1))+'$^{\prime\prime}$S' for y in -lat]
-    x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$E' for x in lon]
-    y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$S' for y in -lat]
-
-color = cm.hsv(np.linspace(0.0,1.0,365))
-colors = np.vstack((color,color,color,color,color,color))
-mymap = LinearSegmentedColormap.from_list('my_colormap',colors,N=len(colors)*2)
-
 prj = ccrs.UTM(zone=48,southern_hemisphere=True)
 
-shapes = list(shpreader.Reader(opts.trans_fnam).geometries())
-records = list(shpreader.Reader(opts.trans_fnam).records())
+shapes = list(shpreader.Reader(opts.shp_fnam).geometries())
+records = list(shpreader.Reader(opts.shp_fnam).records())
 xmin = 1.0e10
 xmax = -1.0e10
 ymin = 1.0e10
@@ -101,74 +88,88 @@ xmax += 10.0
 ymin -= 10.0
 ymax += 10.0
 
-tmin = 1.0e10
-tmax = -1.0e10
+zmin = 1.0e10
+zmax = -1.0e10
 for rec in records:
-    t = rec.attributes['trans_d{:d}'.format(opts.ncan)]#+date2num(np.datetime64('0000-12-31'))
-    if t < tmin:
-        tmin = t
-    if t > tmax:
-        tmax = t
-sys.stderr.write('tmin: {}\n'.format(num2date(tmin).strftime('%Y%m%d')))
-sys.stderr.write('tmax: {}\n'.format(num2date(tmax).strftime('%Y%m%d')))
-if opts.tmin is not None:
-    tmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
-if opts.tmax is not None:
-    tmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
-tdif = tmax-tmin
-
-values = []
-labels = []
-ticks = []
-ds = tdif/365
-for y in range(num2date(tmin).year,num2date(tmax).year+1):
-    if ds > 2.0:
-        for m in range(1,13,3):
-            d = datetime(y,m,1)
-            values.append(date2num(d))
-            labels.append(d.strftime('%Y-%m'))
-        for m in range(1,13,1):
-            d = datetime(y,m,1)
-            ticks.append(date2num(d))
-    elif ds > 1.0:
-        for m in range(1,13,2):
-            d = datetime(y,m,1)
-            values.append(date2num(d))
-            labels.append(d.strftime('%Y-%m'))
-        for m in range(1,13,1):
-            d = datetime(y,m,1)
-            ticks.append(date2num(d))
+    z = rec.attributes[opts.field_name]
+    if z < zmin:
+        zmin = z
+    if z > zmax:
+        zmax = z
+if field_type == 'T':
+    sys.stderr.write('zmin: {}\n'.format(num2date(zmin).strftime('%Y%m%d')))
+    sys.stderr.write('zmax: {}\n'.format(num2date(zmax).strftime('%Y%m%d')))
+else:
+    sys.stderr.write('zmin: {}\n'.format(zmin))
+    sys.stderr.write('zmax: {}\n'.format(zmax))
+if opts.zmin is not None:
+    if field_type == 'T':
+        zmin = date2num(datetime.strptime(opts.zmin,'%Y%m%d'))
     else:
-        for m in range(1,13,1):
-            for day in [1]:
-                d = datetime(y,m,day)
+        zmin = opts.zmin
+if opts.zmax is not None:
+    if field_type == 'T':
+        zmax = date2num(datetime.strptime(opts.zmax,'%Y%m%d'))
+    else:
+        zmax = opts.zmax
+zdif = zmax-zmin
+
+if field_type == 'T':
+    dmin = num2date(zmin)
+    dmax = num2date(zmax)
+    color = cm.hsv(np.linspace(0.0,1.0,365))
+    colors = np.vstack((color,color,color,color,color,color))
+    mymap = LinearSegmentedColormap.from_list('my_colormap',colors,N=len(colors)*2)
+    values = []
+    labels = []
+    ticks = []
+    ds = tdif/365
+    for y in range(dmin.year,dmax.year+1):
+        if ds > 2.0:
+            for m in range(1,13,3):
+                d = datetime(y,m,1)
                 values.append(date2num(d))
-                labels.append(d.strftime('%m/%d'))
-            for day in [5,10,15,20,25]:
-                d = datetime(y,m,day)
+                labels.append(d.strftime('%Y-%m'))
+            for m in range(1,13,1):
+                d = datetime(y,m,1)
                 ticks.append(date2num(d))
-dmin = num2date(tmin)
-dmax = num2date(tmax)
-if opts.add_tmin:
-    if not tmin in values:
-        if ds > 1.0:
-            values.append(tmin)
-            labels.append(dmin.strftime('%Y-%m'))
+        elif ds > 1.0:
+            for m in range(1,13,2):
+                d = datetime(y,m,1)
+                values.append(date2num(d))
+                labels.append(d.strftime('%Y-%m'))
+            for m in range(1,13,1):
+                d = datetime(y,m,1)
+                ticks.append(date2num(d))
         else:
-            values.append(tmin)
-            labels.append(dmin.strftime('%m/%d'))
-if opts.add_tmax:
-    if not tmax in values:
-        if ds > 1.0:
-            values.append(tmax)
-            labels.append(dmax.strftime('%Y-%m'))
-        else:
-            values.append(tmax)
-            labels.append(dmax.strftime('%m/%d'))
-torg = date2num(datetime(dmin.year,1,1))
-twid = 365.0*2.0
-newcolors = mymap(np.linspace((tmin-torg)/twid,(tmax-torg)/twid,mymap.N))
-mymap2 = ListedColormap(newcolors)
+            for m in range(1,13,1):
+                for day in [1]:
+                    d = datetime(y,m,day)
+                    values.append(date2num(d))
+                    labels.append(d.strftime('%m/%d'))
+                for day in [5,10,15,20,25]:
+                    d = datetime(y,m,day)
+                    ticks.append(date2num(d))
+    if opts.add_tmin:
+        if not zmin in values:
+            if ds > 1.0:
+                values.append(zmin)
+                labels.append(dmin.strftime('%Y-%m'))
+            else:
+                values.append(zmin)
+                labels.append(dmin.strftime('%m/%d'))
+    if opts.add_tmax:
+        if not zmax in values:
+            if ds > 1.0:
+                values.append(zmax)
+                labels.append(dmax.strftime('%Y-%m'))
+            else:
+                values.append(zmax)
+                labels.append(dmax.strftime('%m/%d'))
+    torg = date2num(datetime(dmin.year,1,1))
+    twid = 365.0*2.0
+    newcolors = mymap(np.linspace((zmin-torg)/twid,(zmax-torg)/twid,mymap.N))
+    mycmap = ListedColormap(newcolors)
 
 site_low = opts.site.lower()
 if site_low == 'cihea':
@@ -184,22 +185,36 @@ fig.clear()
 ax1 = plt.subplot(111,projection=prj)
 
 for shp,rec in zip(shapes,records):
-    t = rec.attributes['trans_d{:d}'.format(opts.ncan)]#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
-    if not np.isnan(t):
-        ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
-im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=mymap2)
+    z = rec.attributes['trans_d{:d}'.format(opts.ncan)]#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
+    if not np.isnan(z):
+        ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mycmap((z-zmin)/zdif))
+im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=zmin,vmax=zmax,cmap=mycmap)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.00,pad=0.01).ax
-ax12.xaxis.set_major_locator(plt.FixedLocator(values))
-ax12.xaxis.set_major_formatter(plt.FixedFormatter(labels))
-ax12.xaxis.set_minor_locator(plt.FixedLocator(ticks))
-#ax1.set_title('(a)')
-for l in ax12.xaxis.get_ticklabels():
-    l.set_rotation(30)
+if field_type == 'T':
+    ax12.xaxis.set_major_locator(plt.FixedLocator(values))
+    ax12.xaxis.set_major_formatter(plt.FixedFormatter(labels))
+    ax12.xaxis.set_minor_locator(plt.FixedLocator(ticks))
+    for l in ax12.xaxis.get_ticklabels():
+        l.set_rotation(30)
 ax12.xaxis.set_label_coords(0.5,-3.0)
 ax12.set_xlabel('Estimated transplanting date (MM/DD)')
 #ax1.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
 
 if opts.add_coords:
+    center_x = 107.67225
+    center_y = -6.98795
+    lon = np.arange(107+36/60,107+44/60,1.0/60.0)
+    lat = np.arange(-7-2/60,-6-56/60,1.0/60.0)
+    xg,yg = np.meshgrid(lon,lat)
+    x,y,z = transform_wgs84_to_utm(xg,yg)
+    ind_x = np.argmin(np.abs(lon-center_x))
+    ind_y = np.argmin(np.abs(lat-center_y))
+    center_x_utm = x[ind_y,:]
+    center_y_utm = y[:,ind_x]
+    #x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((x*60.0-int(x*60.0))*60.0+0.1))+'$^{\prime\prime}$E' for x in lon]
+    #y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$'+'{:02d}'.format(int((y*60.0-int(y*60.0))*60.0+0.1))+'$^{\prime\prime}$S' for y in -lat]
+    x_labels = ['{:d}'.format(int(x))+'$^{\circ}$'+'{:02d}'.format(int((x-int(x))*60.0+0.1))+'$^{\prime}$E' for x in lon]
+    y_labels = ['{:d}'.format(int(y))+'$^{\circ}$'+'{:02d}'.format(int((y-int(y))*60.0+0.1))+'$^{\prime}$S' for y in -lat]
     ax1.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
     ax1.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
     ax1.xaxis.set_label_position('top')
