@@ -11,43 +11,51 @@ from statsmodels.stats.weightstats import DescrStatsW
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
-HOME = os.environ.get('HOME')
-if HOME is None:
-    HOME = os.environ.get('HOMEPATH')
-INPNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','cihea','New_Test_Sites')
-OUTNAM = os.path.join('.','transplanting_date')
-DATA_FILE = 'output.tif'
-AREA_FILE = 'pixel_area_block.dat'
+OUT_FNAM = 'output.npz'
+AREA_FNAM = 'pixel_area_block.dat'
+BAND = 0
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.add_option('--data_file',default=DATA_FILE,help='Estimation data file (%default)')
-parser.add_option('--area_file',default=AREA_FILE,help='Area data file (%default)')
-parser.add_option('--inpnam',default=INPNAM,help='Input shapefile (%default)')
-parser.add_option('--outnam',default=OUTNAM,help='Output shapefile (%default)')
+parser.add_option('-i','--inp_fnam',default=None,help='Input file name (%default)')
+parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output npz file name (%default)')
+parser.add_option('--area_fnam',default=AREA_FNAM,help='Pixel area file name (%default)')
+parser.add_option('-b','--band',default=BAND,type='int',help='Target band# (%default)')
+parser.add_option('-n','--no_block',default=False,action='store_true',help='No block in pixel area file (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 
-ds = gdal.Open(opts.data_file)
-data = ds.ReadAsArray()
+ds = gdal.Open(opts.inp_fnam)
+if ds.RasterCount < 2:
+    data = ds.ReadAsArray().flatten()
+else:
+    band = ds.GetRasterBand(opts.band+1)
+    data = band.ReadAsArray().flatten()
 ds = None
-data = data.reshape(len(data),-1)
 
 object_ids = []
 blocks = []
 inds = []
 areas = []
-with open(opts.area_file,'r') as fp:
+if opts.no_block:
+    n0 = 2
+else:
+    n0 = 3
+with open(opts.area_fnam,'r') as fp:
     for line in fp:
         item = line.split()
-        if len(item) < 5 or item[0] == '#':
+        nitem = len(item)
+        if nitem < n0 or item[0] == '#':
             continue
         object_ids.append(int(item[0]))
-        blocks.append(item[1])
+        if not opts.no_block:
+            blocks.append(item[1])
         inds.append([])
         areas.append([])
-        n = int(item[2])
-        for nn in range(3,n*2+3,2):
+        n = int(item[n0-1])
+        if n < 1 or nitem != n*2+n0:
+            raise ValueError('Error, nitem={}, n0={}, n={}'.format(nitem,n0,n))
+        for nn in range(n0,nitem,2):
             inds[-1].append(int(item[nn]))
             areas[-1].append(float(item[nn+1]))
         inds[-1] = np.array(inds[-1])
@@ -62,7 +70,7 @@ data_std = []
 for i in range(object_ids.size):
     object_id = object_ids[i]
     block = blocks[i]
-    data_value = data[0,inds[i]]
+    data_value = data[inds[i]]
     data_weight = areas[i]
     cnd = ~np.isnan(data_value)
     if cnd.sum() <= 1:
