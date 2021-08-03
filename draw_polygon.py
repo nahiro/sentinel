@@ -208,11 +208,11 @@ else:
 
 site_low = opts.site.lower()
 if site_low == 'cihea':
-    fig = plt.figure(1,facecolor='w',figsize=(7.6,14.0))
-    plt.subplots_adjust(top=0.965,bottom=0.005,left=0.030,right=0.96,wspace=0.12,hspace=0.043)
+    fig = plt.figure(1,facecolor='w',figsize=(8.0,5.3))
+    plt.subplots_adjust(top=0.99,bottom=0.00,left=0.044,right=0.95,wspace=0.12,hspace=0.25)
 elif site_low == 'bojongsoang':
-    fig = plt.figure(1,facecolor='w',figsize=(7.6,8.6))
-    plt.subplots_adjust(top=0.94,bottom=0.06,left=0.030,right=0.96,wspace=0.12,hspace=0.25)
+    fig = plt.figure(1,facecolor='w',figsize=(4.0,3.0))
+    plt.subplots_adjust(top=0.97,bottom=0.09,left=0.034,right=0.96,wspace=0.12,hspace=0.25)
 else:
     raise ValueError('Error in site >>> '+opts.site)
 fig.clear()
