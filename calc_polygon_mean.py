@@ -47,14 +47,14 @@ with open(opts.area_fnam,'r') as fp:
         nitem = len(item)
         if nitem < n0 or item[0] == '#':
             continue
+        n = int(item[n0-1])
+        if nitem != n*2+n0:
+            raise ValueError('Error, nitem={}, n0={}, n={}'.format(nitem,n0,n))
         object_ids.append(int(item[0]))
         if not opts.no_block:
             blocks.append(item[1])
         inds.append([])
         areas.append([])
-        n = int(item[n0-1])
-        if n < 1 or nitem != n*2+n0:
-            raise ValueError('Error, nitem={}, n0={}, n={}'.format(nitem,n0,n))
         for nn in range(n0,nitem,2):
             inds[-1].append(int(item[nn]))
             areas[-1].append(float(item[nn+1]))
