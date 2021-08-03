@@ -31,6 +31,7 @@ parser.add_option('-z','--zmin',default=None,help='Min value (%default)')
 parser.add_option('-Z','--zmax',default=None,help='Max value (%default)')
 parser.add_option('-i','--inp_fnam',default=None,help='Input file name (%default)')
 parser.add_option('--shp_fnam',default=SHP_FNAM,help='Input shapefile name (%default)')
+parser.add_option('--outline_fnam',default=None,help='Outline shapefile name (%default)')
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
 parser.add_option('-T','--title',default=None,help='Figure title (%default)')
 parser.add_option('--zlabel',default=None,help='Colorbar label (%default)')
@@ -71,6 +72,9 @@ shapes = list(shpreader.Reader(opts.shp_fnam).geometries())
 records = list(shpreader.Reader(opts.shp_fnam).records())
 nobject = len(records)
 
+if opts.outline_fnam is not None:
+    outline_shapes = list(shpreader.Reader(opts.outline_fnam).geometries())
+
 ext = os.path.splitext(opts.inp_fnam)[1].lower()
 if ext == '.npz':
     data = np.load(opts.inp_fnam)[opts.field_name]
@@ -97,6 +101,17 @@ for p in shapes:
         ymin = y1
     if y2 > ymax:
         ymax = y2
+if opts.outline_fnam is not None:
+    for p in outline_shapes:
+        x1,y1,x2,y2 = p.bounds
+        if x1 < xmin:
+            xmin = x1
+        if x2 > xmax:
+            xmax = x2
+        if y1 < ymin:
+            ymin = y1
+        if y2 > ymax:
+            ymax = y2
 xmin -= 10.0
 xmax += 10.0
 ymin -= 10.0
@@ -215,7 +230,8 @@ if field_type == 'T':
 ax12.xaxis.set_label_coords(0.5,-3.0)
 if opts.zlabel is not None:
     ax12.set_xlabel(opts.zlabel)
-#ax1.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+if opts.outline_fnam is not None:
+    ax1.add_geometries(outline_shapes,prj,edgecolor='k',facecolor='none')
 
 if opts.add_coords:
     center_x = 107.67225
