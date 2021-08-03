@@ -83,4 +83,4 @@ for i in range(object_ids.size):
 data_avg = np.array(data_avg)
 data_std = np.array(data_std)
 
-np.save(opts.out_fnam,object_ids=object_ids,data_avg=data_avg,data_std=data_std)
+np.savez(opts.out_fnam,object_ids=object_ids,data_avg=data_avg,data_std=data_std)
