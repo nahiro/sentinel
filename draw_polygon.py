@@ -29,9 +29,11 @@ parser.add_option('-t','--field_type',default=FIELD_TYPE,help='Field type, time,
 parser.add_option('-a','--field_name',default=FIELD_NAME,help='Field name to draw (%default)')
 parser.add_option('-z','--zmin',default=None,help='Min value (%default)')
 parser.add_option('-Z','--zmax',default=None,help='Max value (%default)')
+parser.add_option('-i','--inp_fnam',default=None,help='Input file name (%default)')
 parser.add_option('--shp_fnam',default=SHP_FNAM,help='Input shapefile name (%default)')
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
 parser.add_option('-T','--title',default=None,help='Figure title (%default)')
+parser.add_option('--zlabel',default=None,help='Colorbar label (%default)')
 parser.add_option('--add_tmin',default=False,action='store_true',help='Add tmin in colorbar (%default)')
 parser.add_option('--add_tmax',default=False,action='store_true',help='Add tmax in colorbar (%default)')
 parser.add_option('--add_coords',default=False,action='store_true',help='Add geographical coordinates (%default)')
@@ -65,10 +67,22 @@ def transform_wgs84_to_utm(longitude,latitude):
     xyz = np.array(wgs84_to_utm_geo_transform.TransformPoints(np.dstack((longitude,latitude)).reshape((-1,2)))).reshape(longitude.shape[0],longitude.shape[1],3)
     return xyz[:,:,0],xyz[:,:,1],xyz[:,:,2] # returns easting, northing, altitude
 
-prj = ccrs.UTM(zone=48,southern_hemisphere=True)
-
 shapes = list(shpreader.Reader(opts.shp_fnam).geometries())
 records = list(shpreader.Reader(opts.shp_fnam).records())
+nobject = len(records)
+
+ext = os.path.splitext(opts.inp_fnam)[1].lower()
+if ext == '.npz':
+    data = np.load(opts.inp_fnam)[opts.field_name]
+elif ext == '.npy':
+    data = np.load(opts.inp_fnam)
+else:
+    data = []
+    for rec in list(shpreader.Reader(opts.inp_fnam).records()):
+        data.append(rec.attributes[opts.field_name])
+if len(data) != nobject:
+    raise ValueError('Error, len(data)={}, nobject={}'.format(len(data),nobject))
+
 xmin = 1.0e10
 xmax = -1.0e10
 ymin = 1.0e10
@@ -90,8 +104,7 @@ ymax += 10.0
 
 zmin = 1.0e10
 zmax = -1.0e10
-for rec in records:
-    z = rec.attributes[opts.field_name]
+for z in data:
     if z < zmin:
         zmin = z
     if z > zmax:
@@ -170,6 +183,8 @@ if field_type == 'T':
     twid = 365.0*2.0
     newcolors = mymap(np.linspace((zmin-torg)/twid,(zmax-torg)/twid,mymap.N))
     mycmap = ListedColormap(newcolors)
+else:
+    mycmap = cm.jet
 
 site_low = opts.site.lower()
 if site_low == 'cihea':
@@ -182,10 +197,11 @@ else:
     raise ValueError('Error in site >>> '+opts.site)
 fig.clear()
 
+prj = ccrs.UTM(zone=48,southern_hemisphere=True)
 ax1 = plt.subplot(111,projection=prj)
 
-for shp,rec in zip(shapes,records):
-    z = rec.attributes['trans_d{:d}'.format(opts.ncan)]#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
+for i,shp in enumerate(shapes):
+    z = data[i]
     if not np.isnan(z):
         ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mycmap((z-zmin)/zdif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=zmin,vmax=zmax,cmap=mycmap)
@@ -197,7 +213,8 @@ if field_type == 'T':
     for l in ax12.xaxis.get_ticklabels():
         l.set_rotation(30)
 ax12.xaxis.set_label_coords(0.5,-3.0)
-ax12.set_xlabel('Estimated transplanting date (MM/DD)')
+if opts.zlabel is not None:
+    ax12.set_xlabel(opts.zlabel)
 #ax1.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
 
 if opts.add_coords:
