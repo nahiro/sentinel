@@ -211,7 +211,7 @@ if site_low == 'cihea':
     fig = plt.figure(1,facecolor='w',figsize=(8.0,5.3))
     plt.subplots_adjust(top=0.99,bottom=0.00,left=0.044,right=0.95,wspace=0.12,hspace=0.25)
 elif site_low == 'bojongsoang':
-    fig = plt.figure(1,facecolor='w',figsize=(4.0,3.0))
+    fig = plt.figure(1,facecolor='w',figsize=(5.0,3.8))
     plt.subplots_adjust(top=0.97,bottom=0.09,left=0.034,right=0.96,wspace=0.12,hspace=0.25)
 else:
     raise ValueError('Error in site >>> '+opts.site)
@@ -232,9 +232,9 @@ if field_type == 'T':
     ax12.xaxis.set_minor_locator(plt.FixedLocator(ticks))
     for l in ax12.xaxis.get_ticklabels():
         l.set_rotation(30)
-ax12.xaxis.set_label_coords(0.5,-3.0)
 if opts.zlabel is not None:
     ax12.set_xlabel(opts.zlabel)
+    ax12.xaxis.set_label_coords(0.5,-1.8)
 if opts.outline_fnam is not None:
     ax1.add_geometries(outline_shapes,prj,edgecolor='k',facecolor='none')
 
