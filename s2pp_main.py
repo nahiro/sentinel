@@ -17,7 +17,8 @@ DT_MAX = 10 # sec
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.add_option('-D','--datdir',default=DATDIR,help='Sentinel-1 data directory (%default)')
+parser.add_option('--site',default=None,help='Site name for preset coordinates (%default)')
+parser.add_option('-D','--datdir',default=DATDIR,help='Sentinel-2 data directory (%default)')
 parser.add_option('-s','--start',default=None,help='Start date of the query in the format YYYYMMDD.')
 parser.add_option('-e','--end',default=None,help='End date of the query in the format YYYYMMDD.')
 parser.add_option('-r','--resolution',default=RESOLUTION,type='int',help='Spatial resolution in m (%default)')
@@ -106,6 +107,8 @@ for year in range(dmin.year,dmax.year+1):
                 call(command,shell=True)
                 unzip_flag = True
         command = 'sentinel2_subset.py'
+        if opts.site is not None:
+            command += ' --site {}'.format(opts.site)
         if opts.unzip:
             command += ' '+rnam
         else:
