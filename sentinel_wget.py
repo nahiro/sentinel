@@ -26,7 +26,7 @@ QUERY_WAIT_TIME = 60
 ONLINE_CHECK_TIME = 300
 CLEANUP_TIME = 172800 # 2 days
 MAX_RETRY = 100
-N_REQUEST = 3
+N_REQUEST = 20
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -179,6 +179,18 @@ def request_data(d_list):
             download_data(uuid,gnam)
     return
 
+def download_next_data(d_list):
+    ret = -1
+    for i in range(len(d_list)):
+        uuid = d_list[i][0]
+        fnam = d_list[i][1]
+        gnam = fnam+'.incomplete'
+        name,size,stat,md5 = query_data(uuid)
+        if stat:
+            ret = download_data(uuid,gnam)
+            break
+    return ret
+
 # Query products
 command = 'sentinelsat'
 if opts.user is not None:
@@ -325,15 +337,25 @@ if opts.download:
             name,size,stat,md5 = query_data(uuid)
             if stat: # Online
                 break
-            # Request data
-            download_data(uuid,gnam)
-            sys.stderr.write('Offline. Wait for {} sec >>> {}\n'.format(opts.online_check_time,fnam))
-            sys.stderr.flush()
-            time.sleep(opts.online_check_time)
+            download_data(uuid,gnam) # Request data
+            tpre = time.time()
+            if (download_next_data(download_list) == 0): # Download next data
+                clean_up() # Remove old .incomplete files
+                download_list = make_list() # Make download list
+                request_data(download_list) # Request data in advance
+            tdif = time.time()-tpre
+            if tdif < opts.online_check_time:
+                sys.stderr.write('Offline. Wait for {} sec >>> {}\n'.format(opts.online_check_time-tdif,fnam))
+                sys.stderr.flush()
+                time.sleep(opts.online_check_time-tdif)
             continue
         # Download data
         for ntry in range(opts.max_retry): # loop to download 1 file
-            download_data(uuid,gnam)
+            tpre = time.time()
+            if (download_data(uuid,gnam) == 0):
+                clean_up() # Remove old .incomplete files
+                download_list = make_list() # Make download list
+                request_data(download_list) # Request data in advance
             # Rename if gnam with expected size exists
             if os.path.exists(gnam):
                 gsiz = os.path.getsize(gnam)
@@ -359,6 +381,8 @@ if opts.download:
                     if os.path.exists(gnam):
                         os.remove(gnam)
                     break
-            sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time))
-            sys.stderr.flush()
-            time.sleep(opts.wait_time)
+            tdif = time.time()-tpre
+            if tdif < opts.wait_time:
+                sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time-tdif))
+                sys.stderr.flush()
+                time.sleep(opts.wait_time-tdif)
