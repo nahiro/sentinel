@@ -98,6 +98,37 @@ def make_list():
             d_list.append((uuid,fnam))
     return d_list
 
+def check_data(i,e_list):
+    if not np.all(np.array([len(fnams),len(sizes),len(md5s),len(size_values),len(size_errors)]) == len(uuids)):
+        raise ValueError('Error, different size.')
+    fnam = fnams[i]
+    gnam = fnam+'.incomplete'
+    # Rename if gnam with expected size exists
+    if os.path.exists(gnam):
+        gsiz = os.path.getsize(gnam)
+        if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) <= size_errors[i]):
+            os.rename(gnam,fnam)
+        elif gsiz > max(sizes[i],size_values[i]+size_errors[i]):
+            os.remove(gnam)
+    if os.path.exists(fnam):
+        fsiz = os.path.getsize(fnam)
+        if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) <= size_errors[i]):
+            if not opts.no_checksum:
+                with open(fnam,'rb') as fp:
+                    md5 = hashlib.md5(fp.read()).hexdigest()
+                if md5.upper() != md5s[i].upper():
+                    sys.stderr.write('Warning, md5={}, md5s[{}]={} >>> {}\n'.format(md5,i,md5s[i],fnam))
+                    sys.stderr.flush()
+            sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
+            sys.stderr.flush()
+            if opts.log is not None and not fnam in e_list:
+                with open(opts.log,'a') as fp:
+                    fp.write(fnam+'\n')
+            if os.path.exists(gnam):
+                os.remove(gnam)
+            return 0
+    return -1
+
 def query_data(uuid):
     command = 'wget'
     command += ' --no-check-certificate'
@@ -307,32 +338,15 @@ if opts.download:
         fnams.append(fnam)
     clean_up() # Remove old .incomplete files
     download_list = make_list() # Make download list
-    request_data(download_list) # Request data in advance
     existing_list = [fnam for fnam in fnams if not fnam in [l[1] for l in download_list]]
+    request_data(download_list) # Request data in advance
     for i in range(len(uuids)):
         uuid = uuids[i]
         fnam = fnams[i]
         gnam = fnam+'.incomplete'
-        # Rename if gnam with expected size exists
-        if os.path.exists(gnam):
-            gsiz = os.path.getsize(gnam)
-            if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) <= size_errors[i]):
-                os.rename(gnam,fnam)
-        # Skip if fnam with expected size exists
-        if os.path.exists(fnam):
-            fsiz = os.path.getsize(fnam)
-            if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) <= size_errors[i]):
-                if not opts.no_checksum:
-                    with open(fnam,'rb') as fp:
-                        md5 = hashlib.md5(fp.read()).hexdigest()
-                    if md5.upper() != md5s[i].upper():
-                        sys.stderr.write('Warning, md5={}, md5s[{}]={} >>> {}\n'.format(md5,i,md5s[i],fnam))
-                        sys.stderr.flush()
-                sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
-                sys.stderr.flush()
-                if os.path.exists(gnam):
-                    os.remove(gnam)
-                continue
+        # Skip if fnam or gnam with expected size exists
+        if check_data(i,existing_list) == 0:
+            continue
         # Wait online
         while True:
             name,size,stat,md5 = query_data(uuid)
@@ -357,31 +371,9 @@ if opts.download:
                 clean_up() # Remove old .incomplete files
                 download_list = make_list() # Make download list
                 request_data(download_list) # Request data in advance
-            # Rename if gnam with expected size exists
-            if os.path.exists(gnam):
-                gsiz = os.path.getsize(gnam)
-                if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) <= size_errors[i]):
-                    os.rename(gnam,fnam)
-                elif gsiz > sizes[i]:
-                    os.remove(gnam)
-            # Exit if fnam with expected size exists
-            if os.path.exists(fnam):
-                fsiz = os.path.getsize(fnam)
-                if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) <= size_errors[i]):
-                    if not opts.no_checksum:
-                        with open(fnam,'rb') as fp:
-                            md5 = hashlib.md5(fp.read()).hexdigest()
-                        if md5 != md5s[i]:
-                            sys.stderr.write('Warning, md5={}, md5s[{}]={} >>> {}\n'.format(md5,i,md5s[i],fnam))
-                            sys.stderr.flush()
-                    sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
-                    sys.stderr.flush()
-                    if opts.log is not None:
-                        with open(opts.log,'a') as fp:
-                            fp.write(fnam+'\n')
-                    if os.path.exists(gnam):
-                        os.remove(gnam)
-                    break
+            # Exit if fnam or gnam with expected size exists
+            if check_data(i,existing_list) == 0:
+                break
             tdif = time.time()-tpre
             if tdif < opts.wait_time:
                 if (download_next_data(download_list) == 0): # Download next data
