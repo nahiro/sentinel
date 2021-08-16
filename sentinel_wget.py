@@ -61,6 +61,20 @@ parser.add_option('-v','--version',default=False,action='store_true',help='Show 
 parser.add_option('-Q','--quiet',default=False,action='store_true',help='Quiet mode (%default)')
 (opts,args) = parser.parse_args()
 
+def clean_up():
+    tcur = time.time()
+    for i in range(len(uuids)):
+        fnam = fnams[i]
+        gnam = fnam+'.incomplete'
+        if os.path.exists(gnam):
+            gsiz = os.path.getsize(gnam)
+            gtim = os.path.getmtime(gnam)
+            if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) <= size_errors[i]):
+                pass # keep
+            elif tcur-gtim > opts.cleanup_time:
+                os.remove(gnam)
+    return
+
 def make_list():
     new_list = []
     for i in range(len(uuids)):
@@ -263,6 +277,7 @@ if opts.download:
             dnam = path
         fnam = os.path.join(dnam,names[i]+'.zip')
         fnams.append(fnam)
+    clean_up()
     download_list = make_list()
     # Request data in advance
     for i in range(min(opts.n_request,len(download_list))):
