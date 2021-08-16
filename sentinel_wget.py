@@ -61,6 +61,24 @@ parser.add_option('-v','--version',default=False,action='store_true',help='Show 
 parser.add_option('-Q','--quiet',default=False,action='store_true',help='Quiet mode (%default)')
 (opts,args) = parser.parse_args()
 
+def make_list():
+    new_list = []
+    for i in range(len(uuids)):
+        fnam = fnams[i]
+        gnam = fnam+'.incomplete'
+        flag = False
+        if os.path.exists(fnam):
+            fsiz = os.path.getsize(fnam)
+            if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) <= size_errors[i]):
+                flag = True
+        if os.path.exists(gnam):
+            gsiz = os.path.getsize(gnam)
+            if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) <= size_errors[i]):
+                flag = True
+        if not flag:
+            new_list.append((uuids[i],fnam))
+    return new_list
+
 def query_data(uuid):
     command = 'wget'
     command += ' --no-check-certificate'
@@ -232,7 +250,6 @@ for i,uuid in enumerate(uuids):
 if opts.download:
     # Make download list
     fnams = []
-    download_list = []
     path = '.' if opts.path is None else opts.path
     for i in range(len(uuids)):
         # Check data availability
@@ -245,19 +262,8 @@ if opts.download:
         else:
             dnam = path
         fnam = os.path.join(dnam,names[i]+'.zip')
-        gnam = fnam+'.incomplete'
         fnams.append(fnam)
-        flag = False
-        if os.path.exists(fnam):
-            fsiz = os.path.getsize(fnam)
-            if (fsiz == sizes[i]) or (np.abs(fsiz-size_values[i]) <= size_errors[i]):
-                flag = True
-        if os.path.exists(gnam):
-            gsiz = os.path.getsize(gnam)
-            if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) <= size_errors[i]):
-                flag = True
-        if not flag:
-            download_list.append((uuids[i],fnam))
+    download_list = make_list()
     # Request data in advance
     for i in range(min(opts.n_request,len(download_list))):
         uuid = download_list[i][0]
