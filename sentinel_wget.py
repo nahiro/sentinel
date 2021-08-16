@@ -283,7 +283,6 @@ if opts.download:
     fnams = []
     path = '.' if opts.path is None else opts.path
     for i in range(len(uuids)):
-        # Check data availability
         if opts.sort_year:
             m = re.search('^\S+[^\d]_('+'\d'*4+')'+'\d'*4+'T'+'\d'*6+'_',names[i])
             if not m:
@@ -294,9 +293,9 @@ if opts.download:
             dnam = path
         fnam = os.path.join(dnam,names[i]+'.zip')
         fnams.append(fnam)
-    clean_up()
-    download_list = make_list()
-    request_data(download_list)
+    clean_up() # Remove old .incomplete files
+    download_list = make_list() # Make download list
+    request_data(download_list) # Request data in advance
     for i in range(len(uuids)):
         uuid = uuids[i]
         fnam = fnams[i]
@@ -322,17 +321,15 @@ if opts.download:
                     os.remove(gnam)
                 continue
         # Wait online
-        ntry = 0
         while True:
             name,size,stat,md5 = query_data(uuid)
             if stat: # Online
                 break
-            sys.stderr.write('Offline. Wait for {} sec >>> {}\n'.format(opts.online_check_time,fnam))
-            sys.stderr.flush()
             # Request data
             download_data(uuid,gnam)
+            sys.stderr.write('Offline. Wait for {} sec >>> {}\n'.format(opts.online_check_time,fnam))
+            sys.stderr.flush()
             time.sleep(opts.online_check_time)
-            ntry += 1
             continue
         # Download data
         for ntry in range(opts.max_retry): # loop to download 1 file
