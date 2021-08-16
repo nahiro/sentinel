@@ -62,6 +62,8 @@ parser.add_option('-Q','--quiet',default=False,action='store_true',help='Quiet m
 (opts,args) = parser.parse_args()
 
 def clean_up():
+    if not np.all(np.array([len(fnams),len(sizes),len(md5s),len(size_values),len(size_errors)]) == len(uuids)):
+        raise ValueError('Error, different size.')
     tcur = time.time()
     for i in range(len(uuids)):
         fnam = fnams[i]
@@ -76,8 +78,11 @@ def clean_up():
     return
 
 def make_list():
-    new_list = []
+    if not np.all(np.array([len(fnams),len(sizes),len(md5s),len(size_values),len(size_errors)]) == len(uuids)):
+        raise ValueError('Error, different size.')
+    d_list = []
     for i in range(len(uuids)):
+        uuid = uuids[i]
         fnam = fnams[i]
         gnam = fnam+'.incomplete'
         flag = False
@@ -90,8 +95,8 @@ def make_list():
             if (gsiz == sizes[i]) or (np.abs(gsiz-size_values[i]) <= size_errors[i]):
                 flag = True
         if not flag:
-            new_list.append((uuids[i],fnam))
-    return new_list
+            d_list.append((uuid,fnam))
+    return d_list
 
 def query_data(uuid):
     command = 'wget'
@@ -161,6 +166,18 @@ def download_data(uuid,dst):
     except Exception:
         ret = -1
     return ret
+
+def request_data(d_list):
+    for i in range(min(opts.n_request,len(d_list))):
+        uuid = d_list[i][0]
+        fnam = d_list[i][1]
+        gnam = fnam+'.incomplete'
+        if os.path.exists(gnam):
+            continue
+        name,size,stat,md5 = query_data(uuid)
+        if not stat:
+            download_data(uuid,gnam)
+    return
 
 # Query products
 command = 'sentinelsat'
@@ -262,7 +279,7 @@ for i,uuid in enumerate(uuids):
     sys.stderr.flush()
 
 if opts.download:
-    # Make download list
+    # Make file list
     fnams = []
     path = '.' if opts.path is None else opts.path
     for i in range(len(uuids)):
@@ -279,25 +296,8 @@ if opts.download:
         fnams.append(fnam)
     clean_up()
     download_list = make_list()
-    # Request data in advance
-    for i in range(min(opts.n_request,len(download_list))):
-        uuid = download_list[i][0]
-        fnam = download_list[i][1]
-        gnam = fnam+'.incomplete'
-        name,size,stat,md5 = query_data(uuid)
-        if not stat:
-            download_data(uuid,gnam)
+    request_data(download_list)
     for i in range(len(uuids)):
-        # Request data in advance
-        if fnams[i] in download_list:
-            j = download_list.index(fnams[i])+opts.n_request
-            if j < len(download_list):
-                uuid = download_list[j][0]
-                fnam = download_list[j][1]
-                gnam = fnam+'.incomplete'
-                name,size,stat,md5 = query_data(uuid)
-                if not stat:
-                    download_data(uuid,gnam)
         uuid = uuids[i]
         fnam = fnams[i]
         gnam = fnam+'.incomplete'
