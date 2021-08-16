@@ -308,6 +308,7 @@ if opts.download:
     clean_up() # Remove old .incomplete files
     download_list = make_list() # Make download list
     request_data(download_list) # Request data in advance
+    existing_list = [fnam for fnam in fnams if not fnam in [l[1] for l in download_list]]
     for i in range(len(uuids)):
         uuid = uuids[i]
         fnam = fnams[i]
@@ -337,8 +338,8 @@ if opts.download:
             name,size,stat,md5 = query_data(uuid)
             if stat: # Online
                 break
-            download_data(uuid,gnam) # Request data
             tpre = time.time()
+            download_data(uuid,gnam) # Request data
             if (download_next_data(download_list) == 0): # Download next data
                 clean_up() # Remove old .incomplete files
                 download_list = make_list() # Make download list
@@ -383,6 +384,12 @@ if opts.download:
                     break
             tdif = time.time()-tpre
             if tdif < opts.wait_time:
-                sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time-tdif))
-                sys.stderr.flush()
-                time.sleep(opts.wait_time-tdif)
+                if (download_next_data(download_list) == 0): # Download next data
+                    clean_up() # Remove old .incomplete files
+                    download_list = make_list() # Make download list
+                    request_data(download_list) # Request data in advance
+                tdif = time.time()-tpre
+                if tdif < opts.wait_time:
+                    sys.stderr.write('Wait for {} sec\n'.format(opts.wait_time-tdif))
+                    sys.stderr.flush()
+                    time.sleep(opts.wait_time-tdif)
