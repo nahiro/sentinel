@@ -73,6 +73,8 @@ parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default
 parser.add_option('-j','--json_fnam',default=JSON_FNAM,help='Output JSON name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output shapefile name (%default)')
 parser.add_option('-F','--fig_fnam',default=None,help='Output figure name for debug (%default)')
+parser.add_option('--true_field',default=None,help='Field name of true value in shp_fnam (%default)')
+parser.add_option('--true_format',default=None,help='Format of true value in shp_fnam (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
 (opts,args) = parser.parse_args()
@@ -168,6 +170,25 @@ data_info['dtim'] = ','.join([d.strftime('%Y%m%d') for d in ndvi_dtim])
 with open(opts.json_fnam,'w') as json_file:
     json.dump(data_info,json_file,indent=4)
     json_file.write('\n') # Add newline cause PyJSON does not
+
+r = shapefile.Reader(opts.shp_fnam)
+if len(r) != nobject:
+    raise ValueError('Error, len(r)={}, nobject={}'.format(len(r),nobject))
+if opts.true_field is not None and opts.true_field in [f[0] for f in r.fields]:
+    trans_date_true = []
+    if opts.true_format is None:
+        for rec in r.records():
+            trans_date_true.append(getattr(rec,opts.true_field))
+    else:
+        for rec in r.records():
+            try:
+                t = date2num(datetime.strptime(getattr(rec,opts.true_field),opts.true_format))
+            except Exception:
+                t = np.nan
+            trans_date_true.append(t)
+    trans_date_true = np.array(trans_date_true)
+else:
+    trans_date_true = None
 
 xx = np.arange(np.floor(data_nmin),np.ceil(data_nmax)+0.1*opts.tstp,opts.tstp)
 if opts.debug:
@@ -384,6 +405,8 @@ for iobj in range(nobject):
         l12 = ax1.vlines(output_data[16,iobj],ndvi_min,output_data[19,iobj],color='orange',label='T$_{est3}$',zorder=10)
         l11 = ax1.vlines(output_data[ 8,iobj],ndvi_min,output_data[11,iobj],color=cols[1],label='T$_{est2}$',zorder=10)
         l10 = ax1.vlines(output_data[ 0,iobj],ndvi_min,output_data[ 3,iobj],color=cols[0],label='T$_{est1}$',zorder=10)
+        if trans_date_true is not None:
+            l13 = ax1.axvline(trans_date_true[iobj],color='g',label='T$_{sur}$',zorder=10)
         #ax1.plot(output_data[ 0,iobj],output_data[ 1,iobj],'r*',ms=10)
         #ax1.plot(output_data[ 8,iobj],output_data[ 9,iobj],'m*',ms=10)
 
@@ -400,6 +423,8 @@ for iobj in range(nobject):
         for l in ax1.xaxis.get_ticklabels():
             l.set_rotation(30.0)
         lns = [l1,l2,l3,l4,l5,l6,l10,l11,l12]
+        if trans_date_true is not None:
+            lns.append(l13)
         lbs = [l.get_label() for l in lns]
         ax1.legend(lns,lbs,prop={'size':12},numpoints=1,loc=8,bbox_to_anchor=(0.5,1.01),ncol=len(lns),frameon=False,handletextpad=0.05,columnspacing=0.40,handlelength=0.8)
 
@@ -418,9 +443,6 @@ if opts.debug:
 if opts.npy_fnam is not None:
     np.save(opts.npy_fnam,output_data)
 
-r = shapefile.Reader(opts.shp_fnam)
-if len(r) != nobject:
-    raise ValueError('Error, len(r)={}, nobject={}'.format(len(r),nobject))
 w = shapefile.Writer(opts.out_fnam)
 w.shapeType = shapefile.POLYGON
 w.fields = r.fields[1:] # skip first deletion field
