@@ -161,7 +161,7 @@ if field_type == 'T':
     values = []
     labels = []
     ticks = []
-    ds = tdif/365
+    ds = zdif/365
     for y in range(dmin.year,dmax.year+1):
         if ds > 2.0:
             for m in range(1,13,3):
@@ -217,7 +217,7 @@ if site_low == 'cihea':
     plt.subplots_adjust(top=0.99,bottom=0.00,left=0.044,right=0.95,wspace=0.12,hspace=0.25)
 elif site_low == 'bojongsoang':
     fig = plt.figure(1,facecolor='w',figsize=(5.0,3.8))
-    plt.subplots_adjust(top=0.97,bottom=0.09,left=0.034,right=0.96,wspace=0.12,hspace=0.25)
+    plt.subplots_adjust(top=0.97,bottom=0.09,left=0.040,right=0.96,wspace=0.12,hspace=0.25)
 else:
     raise ValueError('Error in site >>> '+opts.site)
 fig.clear()
@@ -239,7 +239,10 @@ if field_type == 'T':
         l.set_rotation(30)
 if opts.zlabel is not None:
     ax12.set_xlabel(opts.zlabel)
-    ax12.xaxis.set_label_coords(0.5,-1.8)
+    if field_type == 'T':
+        ax12.xaxis.set_label_coords(0.5,-2.0)
+    else:
+        ax12.xaxis.set_label_coords(0.5,-1.8)
 if opts.outline_fnam is not None:
     ax1.add_geometries(outline_shapes,prj,edgecolor='k',facecolor='none')
 
