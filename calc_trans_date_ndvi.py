@@ -12,7 +12,6 @@ import json
 import shapefile
 import numpy as np
 from collections import OrderedDict
-import cartopy.io.shapereader as shpreader
 from csaps import csaps
 from statsmodels.stats.weightstats import DescrStatsW
 from scipy.signal import find_peaks
@@ -312,8 +311,6 @@ for iobj in range(nobject):
         can_inds.append(indv[0])
 
     # Sort three candidates
-    xans = []
-    yans = []
     cval = sval.copy()
     for ic in range(xest.size):
         if not ic in can_inds:
