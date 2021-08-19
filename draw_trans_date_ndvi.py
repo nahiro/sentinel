@@ -25,6 +25,8 @@ MMIN = 0
 MMAX = 5
 NMIN = 0
 NMAX = 12
+XMGN = 100.0
+YMGN = 100.0
 NCAN = 1
 COORDS_COLOR = '#aaaaaa'
 TRANS_FNAM = os.path.join('.','transplanting_date.shp')
@@ -41,6 +43,8 @@ parser.add_option('--mmin',default=MMIN,type='int',help='Min #data within 5 days
 parser.add_option('--mmax',default=MMAX,type='int',help='Max #data within 5 days (%default)')
 parser.add_option('--nmin',default=NMIN,type='int',help='Min #data within 15 days (%default)')
 parser.add_option('--nmax',default=NMAX,type='int',help='Max #data within 15 days (%default)')
+parser.add_option('--xmgn',default=XMGN,type='float',help='X margin in m (%default)')
+parser.add_option('--ymgn',default=YMGN,type='float',help='Y margin in m (%default)')
 parser.add_option('-N','--ncan',default=NCAN,type='int',help='Candidate number between 1 and 3 (%default)')
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape file (%default)')
@@ -124,10 +128,10 @@ for p in pp:
         ymin = y1
     if y2 > ymax:
         ymax = y2
-xmin -= 10.0
-xmax += 10.0
-ymin -= 10.0
-ymax += 10.0
+xmin -= opts.xmgn
+xmax += opts.xmgn
+ymin -= opts.ymgn
+ymax += opts.ymgn
 
 tmin = 1.0e10
 tmax = -1.0e10
