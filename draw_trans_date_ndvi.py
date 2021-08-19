@@ -44,6 +44,7 @@ parser.add_option('--nmax',default=NMAX,type='int',help='Max #data within 15 day
 parser.add_option('-N','--ncan',default=NCAN,type='int',help='Candidate number between 1 and 3 (%default)')
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape file (%default)')
+parser.add_option('--outline_fnam',default=None,help='Outline shapefile name (%default)')
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
 parser.add_option('--add_tmin',default=False,action='store_true',help='Add tmin in colorbar (%default)')
 parser.add_option('--add_tmax',default=False,action='store_true',help='Add tmax in colorbar (%default)')
@@ -104,11 +105,16 @@ prj = ccrs.UTM(zone=48,southern_hemisphere=True)
 
 shapes = list(shpreader.Reader(opts.trans_fnam).geometries())
 records = list(shpreader.Reader(opts.trans_fnam).records())
+if opts.outline_fnam is not None:
+    outline_shapes = list(shpreader.Reader(opts.outline_fnam).geometries())
+    pp = outline_shapes
+else:
+    pp = shapes
 xmin = 1.0e10
 xmax = -1.0e10
 ymin = 1.0e10
 ymax = -1.0e10
-for p in shapes:
+for p in pp:
     x1,y1,x2,y2 = p.bounds
     if x1 < xmin:
         xmin = x1
@@ -287,7 +293,8 @@ for l in ax12.xaxis.get_ticklabels():
     l.set_rotation(30)
 ax12.xaxis.set_label_coords(0.5,-3.0)
 ax12.set_xlabel('Estimated transplanting date (MM/DD)')
-#ax1.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+if opts.outline_fnam is not None:
+    ax1.add_geometries(outline_shapes,prj,edgecolor='k',facecolor='none')
 
 im2 = ax2.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=pmin,vmax=pmax,cmap=cm.jet)
 ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=1.00,pad=0.01).ax
@@ -296,7 +303,8 @@ ax22.minorticks_on()
 #ax2.set_title('(b)')
 ax22.set_xlabel('NDVI at transplanting')
 ax22.xaxis.set_label_coords(0.5,-3.0)
-#ax2.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+if opts.outline_fnam is not None:
+    ax2.add_geometries(outline_shapes,prj,edgecolor='k',facecolor='none')
 
 im3 = ax3.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=qmin,vmax=qmax,cmap=cm.jet)
 ax32 = plt.colorbar(im3,ax=ax3,orientation='horizontal',shrink=1.00,pad=0.01).ax
@@ -304,7 +312,8 @@ ax32.minorticks_on()
 #ax3.set_title('(c)')
 ax32.set_xlabel('NDVI increase after transplanting')
 ax32.xaxis.set_label_coords(0.5,-2.2)
-#ax3.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+if opts.outline_fnam is not None:
+    ax3.add_geometries(outline_shapes,prj,edgecolor='k',facecolor='none')
 
 im4 = ax4.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=smin,vmax=smax,cmap=cm.jet)
 ax42 = plt.colorbar(im4,ax=ax4,orientation='horizontal',shrink=1.00,pad=0.01).ax
@@ -312,7 +321,8 @@ ax42.minorticks_on()
 #ax4.set_title('(d)')
 ax42.set_xlabel('Signal at transplanting')
 ax42.xaxis.set_label_coords(0.5,-2.2)
-#ax4.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+if opts.outline_fnam is not None:
+    ax4.add_geometries(outline_shapes,prj,edgecolor='k',facecolor='none')
 
 im5 = ax5.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=mmin,vmax=mmax,cmap=cmap5)
 ax52 = plt.colorbar(im5,ax=ax5,orientation='horizontal',ticks=np.arange(opts.mmin,opts.mmax+1,1),shrink=1.00,pad=0.01).ax
@@ -320,7 +330,8 @@ ax52 = plt.colorbar(im5,ax=ax5,orientation='horizontal',ticks=np.arange(opts.mmi
 #ax5.set_title('(e)')
 ax52.set_xlabel('#Data within $\pm$5 days')
 ax52.xaxis.set_label_coords(0.5,-2.2)
-#ax5.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+if opts.outline_fnam is not None:
+    ax5.add_geometries(outline_shapes,prj,edgecolor='k',facecolor='none')
 
 im6 = ax6.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=nmin,vmax=nmax,cmap=cmap15)
 ax62 = plt.colorbar(im6,ax=ax6,orientation='horizontal',ticks=np.arange(opts.nmin,opts.nmax+1,1),shrink=1.00,pad=0.01).ax
@@ -328,7 +339,8 @@ ax62 = plt.colorbar(im6,ax=ax6,orientation='horizontal',ticks=np.arange(opts.nmi
 #ax6.set_title('(f)')
 ax62.set_xlabel('#Data within $\pm$15 days')
 ax62.xaxis.set_label_coords(0.5,-2.2)
-#ax6.add_geometries(shapes,prj,edgecolor='k',facecolor='none')
+if opts.outline_fnam is not None:
+    ax6.add_geometries(outline_shapes,prj,edgecolor='k',facecolor='none')
 
 if opts.add_coords:
     ax1.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
