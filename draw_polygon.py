@@ -30,10 +30,11 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.add_option('--site',default=None,help='Site name (%default)')
 parser.add_option('-a','--field_name',default=FIELD_NAME,help='Field name to draw (%default)')
 parser.add_option('-t','--field_type',default=FIELD_TYPE,help='Field type, time, float, or number (%default)')
+parser.add_option('--time_format',default=None,help='Time format in inp_fnam, leave as None for numerical time (%default)')
 parser.add_option('--xmgn',default=XMGN,type='float',help='X margin in m (%default)')
 parser.add_option('--ymgn',default=YMGN,type='float',help='Y margin in m (%default)')
-parser.add_option('-z','--zmin',default=None,help='Min value (%default)')
-parser.add_option('-Z','--zmax',default=None,help='Max value (%default)')
+parser.add_option('-z','--zmin',default=None,help='Min value, YYYYMMDD if field_type is time (%default)')
+parser.add_option('-Z','--zmax',default=None,help='Max value, YYYYMMDD if field_type is time (%default)')
 parser.add_option('-i','--inp_fnam',default=None,help='Input file name (%default)')
 parser.add_option('--shp_fnam',default=SHP_FNAM,help='Input shapefile name (%default)')
 parser.add_option('--outline_fnam',default=None,help='Outline shapefile name (%default)')
@@ -90,8 +91,16 @@ elif ext == '.npy':
     data = np.load(opts.inp_fnam)
 else:
     data = []
-    for rec in list(shpreader.Reader(opts.inp_fnam).records()):
-        data.append(rec.attributes[opts.field_name])
+    if opts.time_format is None:
+        for rec in list(shpreader.Reader(opts.inp_fnam).records()):
+            data.append(rec.attributes[opts.field_name])
+    else:
+        for rec in list(shpreader.Reader(opts.inp_fnam).records()):
+            try:
+                t = date2num(datetime.strptime(rec.attributes[opts.field_name],opts.time_format))
+            except Exception:
+                t = np.nan
+            data.append(t)
 if len(data) != nobject:
     raise ValueError('Error, len(data)={}, nobject={}'.format(len(data),nobject))
 
