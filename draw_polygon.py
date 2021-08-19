@@ -16,6 +16,8 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 FIELD_NAME = 'value'
 FIELD_TYPE = 'float'
+XMGN = 100.0
+YMGN = 100.0
 HOME = os.environ.get('HOME')
 if HOME is None:
     HOME = os.environ.get('HOMEPATH')
@@ -28,6 +30,8 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.add_option('--site',default=None,help='Site name (%default)')
 parser.add_option('-a','--field_name',default=FIELD_NAME,help='Field name to draw (%default)')
 parser.add_option('-t','--field_type',default=FIELD_TYPE,help='Field type, time, float, or number (%default)')
+parser.add_option('--xmgn',default=XMGN,type='float',help='X margin in m (%default)')
+parser.add_option('--ymgn',default=YMGN,type='float',help='Y margin in m (%default)')
 parser.add_option('-z','--zmin',default=None,help='Min value (%default)')
 parser.add_option('-Z','--zmax',default=None,help='Max value (%default)')
 parser.add_option('-i','--inp_fnam',default=None,help='Input file name (%default)')
@@ -75,6 +79,9 @@ nobject = len(records)
 
 if opts.outline_fnam is not None:
     outline_shapes = list(shpreader.Reader(opts.outline_fnam).geometries())
+    pp = outline_shapes
+else:
+    pp = shapes
 
 ext = os.path.splitext(opts.inp_fnam)[1].lower()
 if ext == '.npz':
@@ -92,7 +99,7 @@ xmin = 1.0e10
 xmax = -1.0e10
 ymin = 1.0e10
 ymax = -1.0e10
-for p in shapes:
+for p in pp:
     x1,y1,x2,y2 = p.bounds
     if x1 < xmin:
         xmin = x1
@@ -102,21 +109,10 @@ for p in shapes:
         ymin = y1
     if y2 > ymax:
         ymax = y2
-if opts.outline_fnam is not None:
-    for p in outline_shapes:
-        x1,y1,x2,y2 = p.bounds
-        if x1 < xmin:
-            xmin = x1
-        if x2 > xmax:
-            xmax = x2
-        if y1 < ymin:
-            ymin = y1
-        if y2 > ymax:
-            ymax = y2
-xmin -= 10.0
-xmax += 10.0
-ymin -= 10.0
-ymax += 10.0
+xmin -= opts.xmgn
+xmax += opts.xmgn
+ymin -= opts.ymgn
+ymax += opts.ymgn
 
 zmin = 1.0e10
 zmax = -1.0e10
