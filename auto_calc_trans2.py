@@ -62,7 +62,9 @@ for site in opts.sites:
             for f in sorted(os.listdir(dnam)):
                 m = re.search('^S2[AB]_MSIL2A_('+'\d'*8+')T\S+\.zip$',f)
                 if not m:
-                    continue
+                    m = re.search('^S2[AB]_MSIL2A_('+'\d'*8+')T\S+\.SAFE$',f)
+                    if not m:
+                        continue
                 dstr = m.group(1)
                 d = datetime.strptime(dstr,'%Y%m%d')
                 if d < dmin or d > dmax:
@@ -219,9 +221,8 @@ for site in opts.sites:
             command += ' '+os.path.join(opts.scrdir,'sentinel2_atcor_fit.py')
             command += ' '+fnam
             command += ' --band ndvi'
-            command += ' --mask_fnam '+os.path.join(datdir,'atcor_mask.tif')
             command += ' --stat_fnam '+os.path.join(datdir,'ndvi_stat.npz')
-            command += ' --inds_fnam '+os.path.join(datdir,'nearest_inds_1000.npy')
+            command += ' --inds_fnam '+os.path.join(datdir,'nearest_inds.npy')
             command += ' --output_fnam '+fit_fnam
             try:
                 call(command,shell=True)
