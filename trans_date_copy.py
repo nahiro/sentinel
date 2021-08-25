@@ -14,8 +14,8 @@ VERSION = 'v1.0'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.add_option('--topdir',default=TOPDIR,help='Top directory (%default)')
 parser.set_usage('Usage: %prog list_of_input_file [options]')
+parser.add_option('--topdir',default=TOPDIR,help='Top directory (%default)')
 parser.add_option('--site',default=SITE,help='Site name (%default)')
 parser.add_option('--level',default=LEVEL,help='Analysis level, test/final/preliminary (%default)')
 parser.add_option('--version',default=VERSION,help='Product version (%default)')
