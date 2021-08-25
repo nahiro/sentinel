@@ -223,7 +223,6 @@ for site in opts.sites:
             command += ' --stat_fnam '+os.path.join(datdir,'ndvi_stat.npz')
             command += ' --inds_fnam '+os.path.join(datdir,'nearest_inds_1000.npy')
             command += ' --output_fnam '+fit_fnam
-            call(command,shell=True)
             try:
                 call(command,shell=True)
             except Exception:
