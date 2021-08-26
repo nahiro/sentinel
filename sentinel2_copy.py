@@ -43,7 +43,8 @@ for input_fnam in fnams:
     d1 = datetime.strptime(m.group(3),'%Y%m%dT%H%M%S')
     d2 = datetime.strptime(m.group(7),'%Y%m%dT%H%M%S')
     if d1.date() != d2.date():
-        sys.stderr.write('Warning, d1={}, d2={}\n'.format(m.group(3),m.group(7)))
+        sys.stderr.write('Warning, d1={}, d2={} >>> {}\n'.format(m.group(3),m.group(7),fnam))
+        sys.stderr.flush()
     search_key = m.group(1)+'_'+m.group(2)+'_'+d1.strftime('%Y%m%d')
     copy_fnam = bnam+enam.lower()
     dstr_year = d1.strftime('%Y')
