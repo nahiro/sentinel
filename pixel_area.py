@@ -34,7 +34,10 @@ parser.add_option('-F','--fignam',default=FIGNAM,help='Output figure name for de
 
 ds = gdal.Open(opts.img_fnam)
 data = ds.ReadAsArray()
-data_shape = data[0].shape
+if ds.RasterCount < 2:
+    data_shape = data.shape
+else:
+    data_shape = data[0].shape
 trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
 indy,indx = np.indices(data_shape)
 xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
