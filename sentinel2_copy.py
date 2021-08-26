@@ -46,7 +46,10 @@ for input_fnam in fnams:
         sys.stderr.write('Warning, d1={}, d2={} >>> {}\n'.format(m.group(3),m.group(7),fnam))
         sys.stderr.flush()
     search_key = m.group(1)+'_'+m.group(2)+'_'+d1.strftime('%Y%m%d')
-    copy_fnam = bnam+enam.lower()
+    if enam == '.SAFE':
+        copy_fnam = bnam+enam
+    else:
+        copy_fnam = bnam+enam.lower()
     dstr_year = d1.strftime('%Y')
     dstdir = os.path.join(opts.topdir,opts.site,dstr_year) # Destination directory
     if not os.path.exists(dstdir):
