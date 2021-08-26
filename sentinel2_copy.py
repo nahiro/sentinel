@@ -75,6 +75,9 @@ for input_fnam in fnams:
             sys.stderr.write('cp {} {}\n'.format(input_fnam,os.path.join(dstdir,copy_fnam)))
             sys.stderr.flush()
         else:
-            shutil.copy2(input_fnam,os.path.join(dstdir,copy_fnam))
+            if os.path.isdir(input_fnam):
+                shutil.copytree(input_fnam,os.path.join(dstdir,copy_fnam))
+            else:
+                shutil.copy2(input_fnam,os.path.join(dstdir,copy_fnam))
             sys.stderr.write('Successfully copied >>> '+copy_fnam+'\n')
             sys.stderr.flush()
