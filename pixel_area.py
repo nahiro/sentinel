@@ -81,6 +81,9 @@ with open(opts.datnam,'w') as fp:
             object_id = ii+1
         else:
             object_id = rec.OBJECTID
+        if len(shp.points) < 1:
+            sys.stderr.write('Warning, len(shp.points)={}, ii={}\n'.format(len(shp.points),ii))
+            continue
         path_original = Path(shp.points)
         if opts.buffer is not None:
             poly_buffer = Polygon(shp.points).buffer(opts.buffer)
