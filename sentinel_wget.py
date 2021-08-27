@@ -21,6 +21,7 @@ GB = MB*1024
 URL = os.environ.get('DHUS_URL')
 if URL is None:
     URL = 'https://scihub.copernicus.eu/dhus'
+DOTBYTES = '10M'
 WAIT_TIME = 300
 QUERY_WAIT_TIME = 60
 ONLINE_CHECK_TIME = 600
@@ -44,13 +45,14 @@ parser.add_option('-t','--producttype',default=None,help='Limit search to a Sent
 parser.add_option('-c','--cloud',default=None,type='int',help='Maximum cloud cover in percent. (requires --sentinel to be 2 or 3)')
 parser.add_option('-o','--order_by',default=None,help='Comma-separated list of keywords to order the result by. Prefix keywords with \'-\' for descending order.')
 parser.add_option('-l','--limit',default=None,type='int',help='Maximum number of results to return.  Defaults to no limit.')
+parser.add_option('-B','--dotbytes',default=DOTBYTES,help='Dot size of progress indicator (%default)')
 parser.add_option('-L','--log',default=None,help='Set the log file name.')
 parser.add_option('-P','--path',default=None,help='Set the path where the files will be saved.')
 parser.add_option('-q','--query',default=None,help='Extra search keywords you want to use in the query. Separate keywords with comma. Example: \'producttype=GRD,polarisationmode=HH\'.')
 parser.add_option('-W','--wait_time',default=WAIT_TIME,type='int',help='Wait time to download data in sec (%default)')
-parser.add_option('--query_wait_time',default=QUERY_WAIT_TIME,type='int',help='Wait time to query data in sec (%default)')
+parser.add_option('-w','--query_wait_time',default=QUERY_WAIT_TIME,type='int',help='Wait time to query data in sec (%default)')
 parser.add_option('-O','--online_check_time',default=ONLINE_CHECK_TIME,type='int',help='Wait time to check online data in sec (%default)')
-parser.add_option('--cleanup_time',default=CLEANUP_TIME,type='int',help='Time to cleanup incomplete files in sec (%default)')
+parser.add_option('-T','--cleanup_time',default=CLEANUP_TIME,type='int',help='Time to cleanup incomplete files in sec (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-R','--n_request',default=N_REQUEST,type='int',help='Number of requests in advance (%default)')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
@@ -191,7 +193,7 @@ def download_data(uuid,fnam):
     #command += ' --content-disposition'
     command += ' --continue'
     command += ' --progress=dot'
-    command += ' --execute dotbytes=10M'
+    command += ' --execute dotbytes={}'.format(opts.dotbytes)
     if opts.user is not None:
         command += ' --user {}'.format(opts.user)
     if opts.password is not None:
