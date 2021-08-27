@@ -23,7 +23,7 @@ if URL is None:
     URL = 'https://scihub.copernicus.eu/dhus'
 WAIT_TIME = 300
 QUERY_WAIT_TIME = 60
-ONLINE_CHECK_TIME = 300
+ONLINE_CHECK_TIME = 600
 CLEANUP_TIME = 172800 # 2 days
 MAX_RETRY = 100
 N_REQUEST = 20
@@ -119,7 +119,7 @@ def check_data(i,e_list):
                 if md5.upper() != md5s[i].upper():
                     sys.stderr.write('Warning, md5={}, md5s[{}]={} >>> {}\n'.format(md5,i,md5s[i],fnam))
                     sys.stderr.flush()
-            sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
+            sys.stderr.write('###### File exists >>> {}\n'.format(fnam))
             sys.stderr.flush()
             if opts.log is not None and not fnam in e_list:
                 with open(opts.log,'a') as fp:
@@ -142,7 +142,9 @@ def query_data(uuid):
         try:
             out = check_output(command,shell=True,stderr=PIPE).decode()
             break
-        except Exception:
+        except Exception as inst:
+            sys.stderr.write(str(inst)+'\n')
+            sys.stderr.flush()
             sys.stderr.write('Query failed. Wait for {} sec.\n'.format(opts.query_wait_time))
             sys.stderr.flush()
             time.sleep(opts.query_wait_time)
@@ -171,8 +173,15 @@ def query_data(uuid):
     md5 = tags['Checksum']['Value']
     return name,size,stat,md5
 
-def download_data(uuid,dst):
-    dnam = os.path.dirname(dst)
+def download_data(uuid,fnam):
+    if not np.all(np.array([len(fnams),len(sizes),len(md5s),len(size_values),len(size_errors)]) == len(uuids)):
+        raise ValueError('Error, different size.')
+    elif not fnam in fnams:
+        raise ValueError('Error, not in fnams >>> '+fnam)
+    else:
+        indx = fnams.index(fnam)
+    gnam = fnam+'.incomplete'
+    dnam = os.path.dirname(fnam)
     if dnam: # != ''
         if not os.path.exists(dnam):
             os.makedirs(dnam)
@@ -189,12 +198,35 @@ def download_data(uuid,dst):
         command += ' --password {}'.format(opts.password)
     if opts.quiet:
         command += ' --quiet'
-    command += ' --output-document '+dst
+    command += ' --output-document '+gnam
     command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
     try:
-        call(command,shell=True)
-        ret = 0
-    except Exception:
+        ret = call(command,shell=True)
+        if ret != 0:
+            raise ValueError('Error, command returned non-zero exit status >>> {}'.format(ret))
+        ret = 1
+        # Rename if gnam with expected size exists
+        if os.path.exists(gnam):
+            gsiz = os.path.getsize(gnam)
+            if (gsiz == sizes[indx]) or (np.abs(gsiz-size_values[indx]) <= size_errors[indx]):
+                os.rename(gnam,fnam)
+            elif gsiz > max(sizes[indx],size_values[indx]+size_errors[indx]):
+                os.remove(gnam)
+        if os.path.exists(fnam):
+            fsiz = os.path.getsize(fnam)
+            if (fsiz == sizes[indx]) or (np.abs(fsiz-size_values[indx]) <= size_errors[indx]):
+                if not opts.no_checksum:
+                    with open(fnam,'rb') as fp:
+                        md5 = hashlib.md5(fp.read()).hexdigest()
+                    if md5.upper() != md5s[indx].upper():
+                        sys.stderr.write('Warning, md5={}, md5s[{}]={} >>> {}\n'.format(md5,indx,md5s[indx],fnam))
+                        sys.stderr.flush()
+                sys.stderr.write('###### Successfully downloaded >>> {}\n'.format(fnam))
+                sys.stderr.flush()
+                ret = 0
+    except Exception as inst:
+        sys.stderr.write(str(inst)+'\n')
+        sys.stderr.flush()
         ret = -1
     return ret
 
@@ -207,7 +239,7 @@ def request_data(d_list):
             continue
         name,size,stat,md5 = query_data(uuid)
         if not stat:
-            download_data(uuid,gnam)
+            download_data(uuid,fnam)
     return
 
 def download_next_data(d_list):
@@ -215,11 +247,11 @@ def download_next_data(d_list):
     for i in range(len(d_list)):
         uuid = d_list[i][0]
         fnam = d_list[i][1]
-        gnam = fnam+'.incomplete'
         name,size,stat,md5 = query_data(uuid)
         if stat:
-            ret = download_data(uuid,gnam)
-            break
+            ret = download_data(uuid,fnam)
+            if ret == 0:
+                break
     return ret
 
 # Query products
@@ -353,7 +385,7 @@ if opts.download:
             if stat: # Online
                 break
             tpre = time.time()
-            download_data(uuid,gnam) # Request data
+            download_data(uuid,fnam) # Request data
             if (download_next_data(download_list) == 0): # Download next data
                 clean_up() # Remove old .incomplete files
                 download_list = make_list() # Make download list
@@ -367,7 +399,7 @@ if opts.download:
         # Download data
         for ntry in range(opts.max_retry): # loop to download 1 file
             tpre = time.time()
-            if (download_data(uuid,gnam) == 0):
+            if (download_data(uuid,fnam) == 0):
                 clean_up() # Remove old .incomplete files
                 download_list = make_list() # Make download list
                 request_data(download_list) # Request data in advance
