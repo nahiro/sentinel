@@ -27,6 +27,7 @@ parser.add_option('-s','--str',default=None,help='Start date of download in the 
 parser.add_option('-e','--end',default=END,help='End date of download in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
 parser.add_option('--skip_upload',default=False,action='store_true',help='Skip upload (%default)')
+parser.add_option('--skip_copy',default=False,action='store_true',help='Skip copy (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if opts.sites is None:
@@ -117,3 +118,13 @@ if not opts.skip_upload:
             command += ' '+gnam
             call(command,shell=True)
     os.chdir(topdir)
+
+# Copy data
+if not opts.skip_copy:
+    for site in opts.sites:
+        for gnam in gnams[site]:
+            command = 'python'
+            command += ' '+os.path.join(opts.scrdir,'sentinel2_copy.py')
+            command += ' --site '+site
+            command += ' '+gnam
+            call(command,shell=True)
