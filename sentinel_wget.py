@@ -146,7 +146,6 @@ def query_data(uuid):
             break
         except Exception as inst:
             sys.stderr.write(str(inst)+'\n')
-            sys.stderr.flush()
             sys.stderr.write('Query failed. Wait for {} sec.\n'.format(opts.query_wait_time))
             sys.stderr.flush()
             time.sleep(opts.query_wait_time)
@@ -203,6 +202,8 @@ def download_data(uuid,fnam):
     command += ' --output-document '+gnam
     command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
     try:
+        sys.stderr.write('###### Downloading {}\n'.format(fnam))
+        sys.stderr.flush()
         ret = call(command,shell=True)
         if ret != 0:
             raise ValueError('Error, command returned non-zero exit status >>> {}'.format(ret))
