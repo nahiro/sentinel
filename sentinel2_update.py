@@ -26,6 +26,7 @@ parser.add_option('--drvdir',default=DRVDIR,help='GoogleDrive directory (%defaul
 parser.add_option('-s','--str',default=None,help='Start date of download in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=END,help='End date of download in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
+parser.add_option('--skip_download',default=False,action='store_true',help='Skip download (%default)')
 parser.add_option('--skip_upload',default=False,action='store_true',help='Skip upload (%default)')
 parser.add_option('--skip_copy',default=False,action='store_true',help='Skip copy (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
@@ -86,9 +87,10 @@ for site,start in zip(opts.sites,dmaxs):
     command += ' --sort_year'
     if site_low == 'bojongsoang':
         command += ' --query filename="*48MYT*"'
-    sys.stderr.write(command+'\n')
-    sys.stderr.flush()
-    call(command,shell=True)
+    if not opts.skip_download:
+        sys.stderr.write(command+'\n')
+        sys.stderr.flush()
+        call(command,shell=True)
     d1 = datetime.strptime(start,'%Y%m%d')
     d2 = datetime.strptime(opts.end,'%Y%m%d')
     for y in range(d1.year,d2.year+1):
