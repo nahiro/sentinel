@@ -202,7 +202,7 @@ def download_data(uuid,fnam):
     command += ' --output-document '+gnam
     command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
     try:
-        sys.stderr.write('###### Downloading {}\n'.format(fnam))
+        sys.stderr.write('###### Download request for {}\n'.format(fnam))
         sys.stderr.flush()
         ret = call(command,shell=True)
         if ret != 0:
