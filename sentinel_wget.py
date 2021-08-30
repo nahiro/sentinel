@@ -137,7 +137,7 @@ def query_data(uuid):
     if opts.user is not None:
         command += ' --user {}'.format(opts.user)
     if opts.password is not None:
-        command += ' --password {}'.format(opts.password)
+        command += ' --password "{}"'.format(opts.password)
     command += ' --output-document -'
     command += ' "'+opts.url+'/odata/v1/Products(\'{}\')"'.format(uuid)
     while True:
@@ -190,13 +190,14 @@ def download_data(uuid,fnam):
             raise IOError('Error, no such directory >>> '+dnam)
     command = 'wget'
     #command += ' --content-disposition'
+    command += ' --no-check-certificate'
     command += ' --continue'
     command += ' --progress=dot'
     command += ' --execute dotbytes={}'.format(opts.dotbytes)
     if opts.user is not None:
         command += ' --user {}'.format(opts.user)
     if opts.password is not None:
-        command += ' --password {}'.format(opts.password)
+        command += ' --password "{}"'.format(opts.password)
     if opts.quiet:
         command += ' --quiet'
     command += ' --output-document '+gnam
@@ -262,7 +263,7 @@ command = 'sentinelsat'
 if opts.user is not None:
     command += ' --user {}'.format(opts.user)
 if opts.password is not None:
-    command += ' --password {}'.format(opts.password)
+    command += ' --password "{}"'.format(opts.password)
 if opts.url is not None:
     command += ' --url {}'.format(opts.url)
 if opts.start is not None:
