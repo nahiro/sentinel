@@ -55,6 +55,7 @@ parser.add_option('-O','--online_check_time',default=ONLINE_CHECK_TIME,type='int
 parser.add_option('-T','--cleanup_time',default=CLEANUP_TIME,type='int',help='Time to cleanup incomplete files in sec (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('-R','--n_request',default=N_REQUEST,type='int',help='Number of requests in advance (%default)')
+parser.add_option('-D','--dosmode',default=None,action='store_true',help='DOS mode (%default)')
 parser.add_option('-d','--download',default=False,action='store_true',help='Download all results of the query. (%default)')
 parser.add_option('-Y','--sort_year',default=False,action='store_true',help='Sort files by year. (%default)')
 parser.add_option('-C','--no_checksum',default=False,action='store_true',help='Do NOT verify the downloaded files\' integrity by checking its MD5 checksum. (%default)')
@@ -135,7 +136,7 @@ def query_data(uuid):
     command = 'wget'
     command += ' --no-check-certificate'
     if opts.user is not None:
-        command += ' --user {}'.format(opts.user)
+        command += ' --user "{}"'.format(opts.user)
     if opts.password is not None:
         command += ' --password "{}"'.format(opts.password)
     command += ' --output-document -'
@@ -195,13 +196,16 @@ def download_data(uuid,fnam):
     command += ' --progress=dot'
     command += ' --execute dotbytes={}'.format(opts.dotbytes)
     if opts.user is not None:
-        command += ' --user {}'.format(opts.user)
+        command += ' --user "{}"'.format(opts.user)
     if opts.password is not None:
         command += ' --password "{}"'.format(opts.password)
     if opts.quiet:
         command += ' --quiet'
     command += ' --output-document '+gnam
-    command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
+    if opts.dosmode:
+        command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/$value"'.format(uuid)
+    else:
+        command += ' "'+opts.url+'/odata/v1/Products(\'{}\')/\$value"'.format(uuid)
     try:
         sys.stderr.write('###### Download request for {}\n'.format(fnam))
         sys.stderr.flush()
@@ -258,10 +262,17 @@ def download_next_data(d_list):
                 break
     return ret
 
+if opts.dosmode is None:
+    out = check_output('echo \$',shell=True).decode().strip()
+    if len(out) == 2: # '\$'
+        opts.dosmode = True
+    else: # '$'
+        opts.dosmode = False
+
 # Query products
 command = 'sentinelsat'
 if opts.user is not None:
-    command += ' --user {}'.format(opts.user)
+    command += ' --user "{}"'.format(opts.user)
 if opts.password is not None:
     command += ' --password "{}"'.format(opts.password)
 if opts.url is not None:
