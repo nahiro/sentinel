@@ -110,3 +110,19 @@ if datetime.now().day == opts.date_final:
         command += ' --datdir '+opts.datdir
         command += ' --sites '+site
         call(command,shell=True)
+
+for site in ['Bojongsoang']:
+    datdir = os.path.join(opts.datdir,site)
+    command = 'python'
+    command += ' '+os.path.join(opts.scrdir,'sentinel2_update.py')
+    command += ' --scrdir '+opts.scrdir
+    command += ' --datdir '+opts.datdir
+    if opts.str is not None:
+        command += ' --str '+opts.str
+    if opts.end is not None:
+        command += ' --end '+opts.end
+    if opts.skip_upload:
+        command += ' --skip_upload'
+    command += ' --sites '+site
+    #sys.stderr.write(command+'\n')
+    call(command,shell=True)
