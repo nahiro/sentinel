@@ -405,7 +405,7 @@ if opts.download:
             if stat: # Online
                 break
             tpre = time.time()
-            download_data(uuid,fnam) # Request data
+            request_data([(uuid,fnam)]) # Request data
             if (download_next_data(download_list) == 0): # Download next data
                 clean_up() # Remove old .incomplete files
                 download_list = make_list() # Make download list
