@@ -89,7 +89,7 @@ else:
     if opts.ax1_zmax is None:
         opts.ax1_zmax = 0.035
 if opts.output_fnam is None:
-    opts.output_fnam = 'atcor_param_{}_{}.npy'.format(band_l,dstr)
+    opts.output_fnam = 'atcor_param_{}_{}.npz'.format(band_l,dstr)
 if opts.fig_fnam is None:
     opts.fig_fnam = 'sentinel2_atcor_{}_{}.pdf'.format(band_l,dstr)
 
