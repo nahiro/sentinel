@@ -247,7 +247,12 @@ def request_data(d_list):
             continue
         name,size,stat,md5 = query_data(uuid)
         if not stat:
-            download_data(uuid,fnam)
+            ret = download_data(uuid,fnam)
+            if ret != 0:
+                if os.path.exists(gnam):
+                    gsiz = os.path.getsize(gnam)
+                    if gsiz == 0:
+                        os.remove(gnam)
     return
 
 def download_next_data(d_list):
