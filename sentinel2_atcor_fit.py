@@ -20,6 +20,7 @@ BAND = '4'
 BAND_COL = 1
 RTHR = 1.0
 MTHR = 2.0
+BAND4_MAX = 0.4
 INDS_FNAM = 'nearest_inds.npy'
 
 # Read options
@@ -31,6 +32,7 @@ parser.add_option('--band_col',default=BAND_COL,help='Band column number (%defau
 parser.add_option('-v','--vthr',default=None,type='float',help='Absolute threshold to remove outliers (%default)')
 parser.add_option('-r','--rthr',default=RTHR,type='float',help='Relative threshold for 2-step outlier removal (%default)')
 parser.add_option('--mthr',default=MTHR,type='float',help='Multiplying factor of vthr for 2-step outlier removal (%default)')
+parser.add_option('--band4_max',default=BAND4_MAX,type='float',help='Band4 threshold (%default)')
 parser.add_option('--ax1_xmin',default=None,type='float',help='Axis1 X min (%default)')
 parser.add_option('--ax1_xmax',default=None,type='float',help='Axis1 X max (%default)')
 parser.add_option('--ax1_ymin',default=None,type='float',help='Axis1 Y min (%default)')
@@ -42,6 +44,7 @@ parser.add_option('--stat_fnam',default=None,help='Statistic file name (%default
 parser.add_option('--inds_fnam',default=INDS_FNAM,help='Index file name (%default)')
 parser.add_option('-F','--fig_fnam',default=None,help='Output figure name for debug (%default)')
 parser.add_option('-o','--output_fnam',default=None,help='Output NPZ name (%default)')
+parser.add_option('--ignore_band4',default=False,action='store_true',help='Ignore exceeding the band4 threshold (%default)')
 parser.add_option('--outlier_remove2',default=False,action='store_true',help='2-step outlier removal mode (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
@@ -204,7 +207,7 @@ for i in range(nobject):
     rmse.append(rms_value)
     if opts.debug:
         fig.clear()
-        ax1 = plt.subplot(111,aspect='equal')
+        ax1 = plt.subplot(111)#,aspect='equal')
         ax1.minorticks_on()
         ax1.grid(True)
         line = 'number: {}\n'.format(calc_y.size)
