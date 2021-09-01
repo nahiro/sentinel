@@ -316,7 +316,15 @@ if opts.version:
     command += ' --version'
 sys.stderr.write(command+'\n')
 sys.stderr.flush()
-out = check_output(command,shell=True,stderr=STDOUT).decode()
+while True:
+    try:
+        out = check_output(command,shell=True,stderr=STDOUT).decode()
+        break
+    except Exception as inst:
+        sys.stderr.write(str(inst)+'\n')
+        sys.stderr.write('Search failed. Wait for {} sec.\n'.format(opts.query_wait_time))
+        sys.stderr.flush()
+        time.sleep(opts.query_wait_time)
 sys.stderr.write(out+'\n')
 sys.stderr.flush()
 if opts.version:
