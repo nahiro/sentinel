@@ -128,19 +128,30 @@ if opts.band.upper() == 'NDVI':
     if not band_name in band_list:
         raise ValueError('Error, faild to search index for {}'.format(band_name))
     band4_index = band_list.index(band_name)
-    b4_img = data[band4_index].flatten()
+    b4_img = data[band4_index].astype(np.float64).flatten()
     band_name = 'B8'
     if not band_name in band_list:
         raise ValueError('Error, faild to search index for {}'.format(band_name))
     band8_index = band_list.index(band_name)
-    b8_img = data[band8_index].flatten()
+    b8_img = data[band8_index].astype(np.float64).flatten()
     data_img = (b8_img-b4_img)/(b8_img+b4_img)
+    if not opts.ignore_band4:
+        b4_img *= 1.0e-4
 else:
     band_name = 'B{}'.format(opts.band)
     if not band_name in band_list:
         raise ValueError('Error, faild to search index for {}'.format(band_name))
     band_index = band_list.index(band_name)
-    data_img = data[band_index].flatten()*1.0e-4
+    data_img = data[band_index].astype(np.float64).flatten()*1.0e-4
+    if not opts.ignore_band4:
+        if opts.band == 4:
+            b4_img = data_img.copy()
+        else:
+            band_name = 'B4'
+            if not band_name in band_list:
+                raise ValueError('Error, faild to search index for {}'.format(band_name))
+            band4_index = band_list.index(band_name)
+            b4_img = data[band4_index].astype(np.float64).flatten()*1.0e-4
 if opts.mask_fnam is not None:
     ds = gdal.Open(opts.mask_fnam)
     mask = ds.ReadAsArray()
