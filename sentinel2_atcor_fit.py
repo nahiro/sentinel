@@ -135,23 +135,21 @@ if opts.band.upper() == 'NDVI':
     band8_index = band_list.index(band_name)
     b8_img = data[band8_index].astype(np.float64).flatten()
     data_img = (b8_img-b4_img)/(b8_img+b4_img)
-    if not opts.ignore_band4:
-        b4_img *= 1.0e-4
+    b4_img *= 1.0e-4
 else:
     band_name = 'B{}'.format(opts.band)
     if not band_name in band_list:
         raise ValueError('Error, faild to search index for {}'.format(band_name))
     band_index = band_list.index(band_name)
     data_img = data[band_index].astype(np.float64).flatten()*1.0e-4
-    if not opts.ignore_band4:
-        if opts.band == 4:
-            b4_img = data_img.copy()
-        else:
-            band_name = 'B4'
-            if not band_name in band_list:
-                raise ValueError('Error, faild to search index for {}'.format(band_name))
-            band4_index = band_list.index(band_name)
-            b4_img = data[band4_index].astype(np.float64).flatten()*1.0e-4
+    if opts.band == 4:
+        b4_img = data_img.copy()
+    else:
+        band_name = 'B4'
+        if not band_name in band_list:
+            raise ValueError('Error, faild to search index for {}'.format(band_name))
+        band4_index = band_list.index(band_name)
+        b4_img = data[band4_index].astype(np.float64).flatten()*1.0e-4
 if opts.mask_fnam is not None:
     ds = gdal.Open(opts.mask_fnam)
     mask = ds.ReadAsArray()
@@ -175,6 +173,7 @@ if opts.debug:
 else:
     warnings.simplefilter('ignore')
 
+number = []
 factor = []
 offset = []
 rmse = []
@@ -190,6 +189,8 @@ for i in range(nobject):
         cnd1 = ~np.isnan(data_x) & (np.abs(data_x-data_y) < (np.abs(data_y)*opts.rthr).clip(min=opts.vthr*opts.mthr))
     else:
         cnd1 = ~np.isnan(data_x)
+    if not opts.ignore_band4:
+        cnd1 &= (b4_img[indx] < opts.band4_max)
     xcnd = data_x[cnd1]
     ycnd = data_y[cnd1]
     zcnd = data_z[cnd1]
@@ -213,6 +214,7 @@ for i in range(nobject):
             calc_y = xcnd2*result[0]+result[1]
             rms_value = np.sqrt(np.square(calc_y-ycnd2).sum()/calc_y.size)
             flag = True
+    number.append(calc_y.size)
     factor.append(result[0])
     offset.append(result[1])
     rmse.append(rms_value)
@@ -254,7 +256,8 @@ for i in range(nobject):
         #break
 if opts.debug:
     pdf.close()
+number = np.array(number)
 factor = np.array(factor)
 offset = np.array(offset)
 rmse = np.array(rmse)
-np.savez(opts.output_fnam,factor=factor,offset=offset,rmse=rmse)
+np.savez(opts.output_fnam,number=number,factor=factor,offset=offset,rmse=rmse)
