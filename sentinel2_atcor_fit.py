@@ -244,6 +244,8 @@ for i in range(nobject):
         ax1.minorticks_on()
         ax1.grid(True)
         line = 'number: {}\n'.format(calc_y.size)
+        line += 'coeff: {:7.4f}\n'.format(r_value)
+        line += 'band4: {:6.4f}\n'.format(b4_value)
         line += 'factor: {:5.4f}\n'.format(result[0])
         line += 'offset: {:5.4f}\n'.format(result[1])
         line += 'rmse: {:5.4f}'.format(rms_value)
