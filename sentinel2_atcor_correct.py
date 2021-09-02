@@ -12,6 +12,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 BAND = 'NDVI'
 BAND_COL = 1
 BAND4_MAX = 0.35
+R_MIN = 0.3
 AREA_FNAM = 'pixel_area_block.dat'
 
 # Read options
@@ -21,6 +22,7 @@ parser.add_option('--band',default=BAND,help='Target band (%default)')
 parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
 parser.add_option('--band4_max',default=BAND4_MAX,type='float',help='Band4 threshold (%default)')
+parser.add_option('--r_min',default=R_MIN,type='float',help='R threshold (%default)')
 parser.add_option('--area_fnam',default=AREA_FNAM,help='Pixel area file name (%default)')
 parser.add_option('--param_fnam',default=None,help='Atcor parameter file name (%default)')
 parser.add_option('-o','--output_fnam',default=None,help='Output NPZ name (%default)')
@@ -48,8 +50,12 @@ if not os.path.exists(opts.param_fnam):
 if opts.output_fnam is None:
     opts.output_fnam = 'atcor_data_{}_{}.npz'.format(band_l,dstr)
 param = np.load(opts.param_fnam)
+corcoef = param['corcoef']
 factor = param['factor']
 offset = param['offset']
+cnd = (corcoef < opts.r_min)
+factor[cnd] = np.nan
+offset[cnd] = np.nan
 npar = factor.size
 
 ds = gdal.Open(input_fnam)
