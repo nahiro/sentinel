@@ -20,7 +20,7 @@ BAND = '4'
 BAND_COL = 1
 RTHR = 1.0
 MTHR = 2.0
-BAND4_MAX = 0.4
+BAND4_MAX = 0.35
 INDS_FNAM = 'nearest_inds.npy'
 
 # Read options
