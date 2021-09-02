@@ -159,8 +159,10 @@ if opts.mask_fnam is not None:
         raise ValueError('Error, data_shape={}, mask_shape={}'.format(data_shape,mask_shape))
     cnd = ~np.isnan(mask.flatten())
     data_x_all = data_img.flatten()[cnd]
+    data_b_all = b4_img.flatten()[cnd]
 else:
     data_x_all = data_img.flatten()
+    data_b_all = b4_img.flatten()
 if data_x_all.shape != data_y_all.shape:
     raise ValueError('Error, data_x_all.shape={}, data_y_all.shape={}'.format(data_x_all.shape,data_y_all.shape))
 
@@ -188,19 +190,23 @@ for i in range(nobject):
     data_x = data_x_all[indx]
     data_y = data_y_all[indx]
     data_z = data_z_all[indx]
+    data_b = data_b_all[indx]
     if opts.outlier_remove2:
         cnd1 = ~np.isnan(data_x) & (np.abs(data_x-data_y) < (np.abs(data_y)*opts.rthr).clip(min=opts.vthr*opts.mthr))
     else:
         cnd1 = ~np.isnan(data_x)
     if not opts.ignore_band4:
-        cnd1 &= (b4_img[indx] < opts.band4_max)
+        cnd1 &= (~np.isnan(data_b) & (data_b < opts.band4_max))
     xcnd = data_x[cnd1]
     ycnd = data_y[cnd1]
     zcnd = data_z[cnd1]
+    bcnd = data_b[cnd1]
     if xcnd.size < 2:
         result = [np.nan,np.nan]
         calc_y = np.array([])
         r_value = np.nan
+        b4_value = np.nan
+        b4_error = np.nan
         rms_value = np.nan
         flag = False
     else:
@@ -210,18 +216,25 @@ for i in range(nobject):
         xcnd2 = xcnd[cnd2]
         ycnd2 = ycnd[cnd2]
         zcnd2 = zcnd[cnd2]
+        bcnd2 = bcnd[cnd2]
         if (xcnd2.size == cnd2.size) or (xcnd2.size < 2):
             r_value = np.corrcoef(xcnd,ycnd)[0,1]
+            b4_value = np.nanmean(bcnd)
+            b4_error = np.nanstd(bcnd)
             rms_value = np.sqrt(np.square(calc_y-ycnd).sum()/calc_y.size)
             flag = False
         else:
             result = np.polyfit(xcnd2,ycnd2,1)
             calc_y = xcnd2*result[0]+result[1]
             r_value = np.corrcoef(xcnd2,ycnd2)[0,1]
+            b4_value = np.nanmean(bcnd2)
+            b4_error = np.nanstd(bcnd2)
             rms_value = np.sqrt(np.square(calc_y-ycnd2).sum()/calc_y.size)
             flag = True
     number.append(calc_y.size)
     corcoef.append(r_value)
+    b4_mean.append(b4_value)
+    b4_std.append(b4_error)
     factor.append(result[0])
     offset.append(result[1])
     rmse.append(rms_value)
@@ -264,7 +277,10 @@ for i in range(nobject):
 if opts.debug:
     pdf.close()
 number = np.array(number)
+corcoef = np.array(corcoef)
+b4_mean = np.array(b4_mean)
+b4_std = np.array(b4_std)
 factor = np.array(factor)
 offset = np.array(offset)
 rmse = np.array(rmse)
-np.savez(opts.output_fnam,number=number,factor=factor,offset=offset,rmse=rmse)
+np.savez(opts.output_fnam,number=number,corcoef=corcoef,b4_mean=b4_mean,b4_std=b4_std,factor=factor,offset=offset,rmse=rmse)
