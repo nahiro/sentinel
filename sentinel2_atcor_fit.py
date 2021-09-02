@@ -192,11 +192,11 @@ for i in range(nobject):
     data_z = data_z_all[indx]
     data_b = data_b_all[indx]
     if opts.outlier_remove2:
-        cnd1 = ~np.isnan(data_x) & (np.abs(data_x-data_y) < (np.abs(data_y)*opts.rthr).clip(min=opts.vthr*opts.mthr))
+        cnd1 = (~np.isnan(data_x)) & (np.abs(data_x-data_y) < (np.abs(data_y)*opts.rthr).clip(min=opts.vthr*opts.mthr))
     else:
         cnd1 = ~np.isnan(data_x)
     if not opts.ignore_band4:
-        cnd1 &= (~np.isnan(data_b) & (data_b < opts.band4_max))
+        cnd1 &= ((~np.isnan(data_b)) & (data_b < opts.band4_max))
     xcnd = data_x[cnd1]
     ycnd = data_y[cnd1]
     zcnd = data_z[cnd1]

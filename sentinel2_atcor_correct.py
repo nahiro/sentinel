@@ -84,21 +84,23 @@ if opts.band.upper() == 'NDVI':
     band8_index = band_list.index(band_name)
     b8_img = data[band8_index].astype(np.float64).flatten()
     data_img = (b8_img-b4_img)/(b8_img+b4_img)
-    b4_img *= 1.0e-4
+    if not opts.ignore_band4:
+        b4_img *= 1.0e-4
 else:
     band_name = 'B{}'.format(opts.band)
     if not band_name in band_list:
         raise ValueError('Error, faild to search index for {}'.format(band_name))
     band_index = band_list.index(band_name)
     data_img = data[band_index].astype(np.float64).flatten()*1.0e-4
-    if opts.band == 4:
-        b4_img = data_img.copy()
-    else:
-        band_name = 'B4'
-        if not band_name in band_list:
-            raise ValueError('Error, faild to search index for {}'.format(band_name))
-        band4_index = band_list.index(band_name)
-        b4_img = data[band4_index].astype(np.float64).flatten()*1.0e-4
+    if not opts.ignore_band4:
+        if opts.band == 4:
+            b4_img = data_img.copy()
+        else:
+            band_name = 'B4'
+            if not band_name in band_list:
+                raise ValueError('Error, faild to search index for {}'.format(band_name))
+            band4_index = band_list.index(band_name)
+            b4_img = data[band4_index].astype(np.float64).flatten()*1.0e-4
 
 object_ids = []
 blocks = []
@@ -134,7 +136,11 @@ for iobj in range(nobject):
         continue
     data_value = data_img[inds[iobj]]
     data_weight = areas[iobj]
-    cnd = ~np.isnan(data_value)
+    if opts.ignore_band4:
+        cnd = ~np.isnan(data_value)
+    else:
+        data_band4 = b4_img[inds[iobj]]
+        cnd = (~np.isnan(data_value)) & (~np.isnan(data_band4)) & (data_band4 < opts.band4_max)
     if cnd.sum() <= 1:
         data_org.append(data_value[cnd].mean())
     else:
