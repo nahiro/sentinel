@@ -11,6 +11,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 BAND = 'NDVI'
 BAND_COL = 1
+BAND4_MAX = 0.35
 AREA_FNAM = 'pixel_area_block.dat'
 
 # Read options
@@ -19,9 +20,11 @@ parser.set_usage('Usage: %prog input_fnam [options]')
 parser.add_option('--band',default=BAND,help='Target band (%default)')
 parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
+parser.add_option('--band4_max',default=BAND4_MAX,type='float',help='Band4 threshold (%default)')
 parser.add_option('--area_fnam',default=AREA_FNAM,help='Pixel area file name (%default)')
 parser.add_option('--param_fnam',default=None,help='Atcor parameter file name (%default)')
 parser.add_option('-o','--output_fnam',default=None,help='Output NPZ name (%default)')
+parser.add_option('--ignore_band4',default=False,action='store_true',help='Ignore exceeding the band4 threshold (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if len(args) < 1:
@@ -74,19 +77,28 @@ if opts.band.upper() == 'NDVI':
     if not band_name in band_list:
         raise ValueError('Error, faild to search index for {}'.format(band_name))
     band4_index = band_list.index(band_name)
-    b4_img = data[band4_index].flatten()
+    b4_img = data[band4_index].astype(np.float64).flatten()
     band_name = 'B8'
     if not band_name in band_list:
         raise ValueError('Error, faild to search index for {}'.format(band_name))
     band8_index = band_list.index(band_name)
-    b8_img = data[band8_index].flatten()
+    b8_img = data[band8_index].astype(np.float64).flatten()
     data_img = (b8_img-b4_img)/(b8_img+b4_img)
+    b4_img *= 1.0e-4
 else:
     band_name = 'B{}'.format(opts.band)
     if not band_name in band_list:
         raise ValueError('Error, faild to search index for {}'.format(band_name))
     band_index = band_list.index(band_name)
-    data_img = data[band_index].flatten()*1.0e-4
+    data_img = data[band_index].astype(np.float64).flatten()*1.0e-4
+    if opts.band == 4:
+        b4_img = data_img.copy()
+    else:
+        band_name = 'B4'
+        if not band_name in band_list:
+            raise ValueError('Error, faild to search index for {}'.format(band_name))
+        band4_index = band_list.index(band_name)
+        b4_img = data[band4_index].astype(np.float64).flatten()*1.0e-4
 
 object_ids = []
 blocks = []
