@@ -174,6 +174,9 @@ else:
     warnings.simplefilter('ignore')
 
 number = []
+corcoef = []
+b4_mean = []
+b4_std = []
 factor = []
 offset = []
 rmse = []
@@ -197,6 +200,7 @@ for i in range(nobject):
     if xcnd.size < 2:
         result = [np.nan,np.nan]
         calc_y = np.array([])
+        r_value = np.nan
         rms_value = np.nan
         flag = False
     else:
@@ -207,14 +211,17 @@ for i in range(nobject):
         ycnd2 = ycnd[cnd2]
         zcnd2 = zcnd[cnd2]
         if (xcnd2.size == cnd2.size) or (xcnd2.size < 2):
+            r_value = np.corrcoef(xcnd,ycnd)[0,1]
             rms_value = np.sqrt(np.square(calc_y-ycnd).sum()/calc_y.size)
             flag = False
         else:
             result = np.polyfit(xcnd2,ycnd2,1)
             calc_y = xcnd2*result[0]+result[1]
+            r_value = np.corrcoef(xcnd2,ycnd2)[0,1]
             rms_value = np.sqrt(np.square(calc_y-ycnd2).sum()/calc_y.size)
             flag = True
     number.append(calc_y.size)
+    corcoef.append(r_value)
     factor.append(result[0])
     offset.append(result[1])
     rmse.append(rms_value)
