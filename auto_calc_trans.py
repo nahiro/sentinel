@@ -12,6 +12,7 @@ if HOME is None:
     HOME = os.environ.get('HOMEPATH')
 SCRDIR = os.path.join(HOME,'Script')
 DATDIR = os.path.join(HOME,'Work','Sentinel-1')
+L2ADIR = os.path.join(HOME,'Work','Sentinel-2','L2A')
 SITES = ['Bojongsoang','Cihea']
 DATE_FINAL = 5
 
@@ -19,6 +20,7 @@ DATE_FINAL = 5
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('--scrdir',default=SCRDIR,help='Script directory (%default)')
 parser.add_option('--datdir',default=DATDIR,help='Data directory (%default)')
+parser.add_option('--l2adir',default=L2ADIR,help='L2A data directory (%default)')
 parser.add_option('-s','--str',default=None,help='Start date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=None,help='End date in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
@@ -116,7 +118,7 @@ for site in ['Bojongsoang']:
     command = 'python'
     command += ' '+os.path.join(opts.scrdir,'sentinel2_update.py')
     command += ' --scrdir '+opts.scrdir
-    command += ' --datdir '+opts.datdir
+    command += ' --datdir '+opts.l2adir
     if opts.str is not None:
         command += ' --str '+opts.str
     if opts.end is not None:
