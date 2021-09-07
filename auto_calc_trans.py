@@ -15,6 +15,7 @@ DATDIR = os.path.join(HOME,'Work','Sentinel-1')
 L2ADIR = os.path.join(HOME,'Work','Sentinel-2','L2A')
 SITES = ['Bojongsoang','Cihea']
 DATE_FINAL = 5
+MAX_RETRY = 10
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -25,6 +26,7 @@ parser.add_option('-s','--str',default=None,help='Start date in the format YYYYM
 parser.add_option('-e','--end',default=None,help='End date in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
 parser.add_option('--date_final',default=DATE_FINAL,type='int',help='Date to calculate final estimation (%default)')
+parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('--skip_upload',default=False,action='store_true',help='Skip upload (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
@@ -131,5 +133,6 @@ for site in ['Bojongsoang']:
     if opts.skip_upload:
         command += ' --skip_upload'
     command += ' --sites '+site
+    command += ' --max_retry {}'.format(opts.max_retry)
     #sys.stderr.write(command+'\n')
     call(command,shell=True)

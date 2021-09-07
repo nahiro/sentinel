@@ -26,6 +26,7 @@ parser.add_option('--drvdir',default=DRVDIR,help='GoogleDrive directory (%defaul
 parser.add_option('-s','--str',default=None,help='Start date of download in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=END,help='End date of download in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
+parser.add_option('-M','--max_retry',default=None,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('--skip_download',default=False,action='store_true',help='Skip download (%default)')
 parser.add_option('--skip_upload',default=False,action='store_true',help='Skip upload (%default)')
 parser.add_option('--skip_copy',default=False,action='store_true',help='Skip copy (%default)')
@@ -85,6 +86,8 @@ for site,start in zip(opts.sites,dmaxs):
     command += ' --path '+datdir
     command += ' --download'
     command += ' --sort_year'
+    if opts.max_retry is not None:
+        command += ' --max_retry {}'.format(opts.max_retry)
     if site_low == 'bojongsoang':
         command += ' --query filename="*48MYT*"'
     if not opts.skip_download:
