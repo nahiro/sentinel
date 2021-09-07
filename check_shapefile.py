@@ -35,8 +35,13 @@ for i,shaperec in enumerate(r.iterShapeRecords()):
         sys.stderr.write('Error, FID {:6d} is not valid\n'.format(i))
     # Check if the barycenter and the center of bbox is the same -> not needed
     pp = np.array(shp.points)
-    xc = pp[:,0].mean()
-    yc = pp[:,1].mean()
+    if p1.is_empty:
+        sys.stderr.write('Error, FID {:6d} is empty\n'.format(i))
+        xc = np.nan
+        yc = np.nan
+    else:
+        xc = pp[:,0].mean()
+        yc = pp[:,1].mean()
     #x1,y1,x2,y2 = shp.bbox
     #xctr = 0.5*(x1+x2)
     #yctr = 0.5*(y1+y2)
