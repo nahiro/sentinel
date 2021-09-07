@@ -104,7 +104,8 @@ for site in opts.sites:
     if os.path.exists(log):
         os.remove(log)
 
-if datetime.now().day == opts.date_final:
+dcur = datetime.now()
+if dcur.day == opts.date_final:
     for site in opts.sites:
         command = 'python'
         command += ' '+os.path.join(opts.scrdir,'get_final_estimation.py')
@@ -121,8 +122,12 @@ for site in ['Bojongsoang']:
     command += ' --datdir '+opts.l2adir
     if opts.str is not None:
         command += ' --str '+opts.str
+    else:
+        command += ' --str {:%Y%m%d}'.format(dcur+timedelta(days=-60))
     if opts.end is not None:
         command += ' --end '+opts.end
+    else:
+        command += ' --end {:%Y%m%d}'.format(dcur)
     if opts.skip_upload:
         command += ' --skip_upload'
     command += ' --sites '+site
