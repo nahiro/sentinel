@@ -49,11 +49,13 @@ parser.add_option('-N','--ncan',default=NCAN,type='int',help='Candidate number b
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape file (%default)')
 parser.add_option('--outline_fnam',default=None,help='Outline shapefile name (%default)')
+parser.add_option('--mask_fnam',default=None,help='Mask file (%default)')
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
 parser.add_option('--add_tmin',default=False,action='store_true',help='Add tmin in colorbar (%default)')
 parser.add_option('--add_tmax',default=False,action='store_true',help='Add tmax in colorbar (%default)')
 parser.add_option('--add_coords',default=False,action='store_true',help='Add geographical coordinates (%default)')
 parser.add_option('--coords_color',default=COORDS_COLOR,help='Color of geographical coordinates (%default)')
+parser.add_option('--use_index',default=False,action='store_true',help='Use index instead of OBJECTID (%default)')
 parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
@@ -106,6 +108,11 @@ cmap5 = cm.get_cmap('jet',opts.mmax-opts.mmin+1)
 cmap15 = cm.get_cmap('jet',opts.nmax-opts.nmin+1)
 
 prj = ccrs.UTM(zone=48,southern_hemisphere=True)
+
+if opts.mask_fnam is not None:
+    mask = np.loadtxt(opts.mask_fnam,usecols=(0,),dtype=np.int32)
+else:
+    mask = []
 
 shapes = list(shpreader.Reader(opts.trans_fnam).geometries())
 records = list(shpreader.Reader(opts.trans_fnam).records())
@@ -269,7 +276,13 @@ ax4 = plt.subplot(324,projection=prj)
 ax5 = plt.subplot(325,projection=prj)
 ax6 = plt.subplot(326,projection=prj)
 
-for shp,rec in zip(shapes,records):
+for i,(shp,rec) in enumerate(zip(shapes,records)):
+    if opts.use_index:
+        object_id = i+1
+    else:
+        object_id = rec.OBJECTID
+    if object_id in mask:
+        continue
     t = rec.attributes['trans_d{:d}'.format(opts.ncan)]#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
     p = rec.attributes['ndvi_{:d}'.format(opts.ncan)]
     q = rec.attributes['ndvimax{:d}'.format(opts.ncan)]
