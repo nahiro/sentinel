@@ -1,13 +1,32 @@
 #!/usr/bin/env python
 import sys
+import gdal
 import numpy as np
+from optparse import OptionParser,IndentedHelpFormatter
 
 n_nearest = 120
 
-xstp = 10.0
-ystp = -10.0
-xmin,xmax,ymin,ymax = (743805.0,757305.0,9235815.0,9251805.0)
-xg,yg = np.meshgrid(np.arange(xmin,xmax+0.1*xstp,xstp),np.arange(ymax,ymin+0.1*ystp,ystp))
+# Read options
+parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.set_usage('Usage: %prog input_fnam [options]')
+(opts,args) = parser.parse_args()
+if len(args) < 1:
+    parser.print_help()
+    sys.exit(0)
+input_fnam = args[0]
+
+ds = gdal.Open(input_fnam)
+data = ds.ReadAsArray()
+if ds.RasterCount < 2:
+    data_shape = data.shape
+else:
+    data_shape = data[0].shape
+data_trans = ds.GetGeoTransform()
+indy,indx = np.indices(data_shape)
+xg = data_trans[0]+(indx+0.5)*data_trans[1]+(indy+0.5)*data_trans[2]
+yg = data_trans[3]+(indx+0.5)*data_trans[4]+(indy+0.5)*data_trans[5]
+ds = None
+
 ngrd = xg.size
 nx = xg.shape[1]
 ny = xg.shape[0]
