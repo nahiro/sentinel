@@ -10,6 +10,8 @@ BLOCK_FNAM = '/home/naohiro/Work/SATREPS/Shapefile/cihea_testsite_200819/cihea_t
 FIELD_FNAM = '/home/naohiro/Work/SATREPS/Shapefile/field_GIS/cihea/New_Test_Sites.shp'
 BLOCK_FIELD = 'Blok'
 BLOCK = 'None'
+VTHR1 = 0.8
+VTHR2 = 0.3
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -17,6 +19,8 @@ parser.add_option('-b','--block_fnam',default=BLOCK_FNAM,help='Block shape file 
 parser.add_option('-f','--field_fnam',default=FIELD_FNAM,help='Field shape file name (%default)')
 parser.add_option('--block_field',default=BLOCK_FIELD,help='Field name of block in block_fnam (%default)')
 parser.add_option('-B','--block',default=BLOCK,help='Default block name (%default)')
+parser.add_option('-v','--vthr1',default=VTHR1,type='float',help='Threshold 1 (%default)')
+parser.add_option('-V','--vthr2',default=VTHR2,type='float',help='Threshold 2 (%default)')
 parser.add_option('--use_index',default=False,action='store_true',help='Use index instead of OBJECTID (%default)')
 parser.add_option('--use_objectid',default=False,action='store_true',help='Use OBJECTID for default block name (%default)')
 (opts,args) = parser.parse_args()
@@ -49,7 +53,7 @@ for iobj,shaperec in enumerate(r2.iterShapeRecords()):
         p3 = p2.intersection(p1)
         rat = p3.area/p2.area
         ratios.append(rat)
-        if rat > 0.8:
+        if rat > opts.vthr1:
             if block is None:
                 block = blocks[i]
             else:
@@ -57,7 +61,7 @@ for iobj,shaperec in enumerate(r2.iterShapeRecords()):
     ratios = np.array(ratios)
     if block is None:
         i = np.argmax(ratios)
-        if ratios[i] < 1.0e-10:
+        if ratios[i] < opts.vthr2:
             if opts.use_objectid:
                 block = str(object_id)
             else:
