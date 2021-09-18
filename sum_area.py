@@ -8,17 +8,17 @@ import osr
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values
-DATNAM = ['pixel_area.dat']
+AREA_FNAMS = ['pixel_area.dat']
 OUT_FNAM = 'area_map.tif'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-f','--img_fnam',default=None,help='Image file name (%default)')
-parser.add_option('-i','--datnam',default=None,action='append',help='Input data name ({})'.format(DATNAM))
+parser.add_option('-a','--area_fnams',default=None,action='append',help='Pixel area file names ({})'.format(AREA_FNAMS))
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output GeoTIFF name (%default)')
 (opts,args) = parser.parse_args()
-if opts.datnam is None:
-    opts.datnam = DATNAM
+if opts.area_fnams is None:
+    opts.area_fnams = AREA_FNAMS
 
 ds = gdal.Open(opts.img_fnam)
 data = ds.ReadAsArray()
@@ -34,7 +34,7 @@ ds = None
 
 area_map = np.zeros(data_shape)
 
-for area_file in opts.datnam:
+for area_file in opts.area_fnams:
     object_ids = []
     inds = []
     areas = []
