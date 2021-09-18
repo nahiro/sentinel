@@ -13,7 +13,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Defaults
 DATDIR = os.curdir
 XMIN_CIHEA = 743805.0 # Cihea, pixel center
-XMAX_CIHEA = 757305.0 # Cihea, pixel center
+XMAX_CIHEA = 757295.0 # Cihea, pixel center
 YMIN_CIHEA = 9235815.0 # Cihea, pixel center
 YMAX_CIHEA = 9251805.0 # Cihea, pixel center
 XMIN_BOJONGSOANG = 790585.0 # Bojongsoang, pixel center
@@ -34,11 +34,11 @@ parser.add_option('--output_bmin',default=None,type='int',help='Minimum output b
 parser.add_option('--output_bmax',default=None,type='int',help='Maximum output band index (%default)')
 parser.add_option('-B','--band_fnam',default=None,help='Band file name (%default)')
 parser.add_option('-e','--output_epsg',default=None,type='int',help='Output EPSG (guessed from input data)')
-parser.add_option('-x','--xmin',default=None,type='float',help='Minimum X in m (%default)')
-parser.add_option('-X','--xmax',default=None,type='float',help='Maximum X in m (%default)')
+parser.add_option('-x','--xmin',default=XMIN_CIHEA,type='float',help='Minimum X in m (%default)')
+parser.add_option('-X','--xmax',default=XMAX_CIHEA,type='float',help='Maximum X in m (%default)')
 parser.add_option('--xstp',default=XSTP,type='float',help='Step X in m (%default)')
-parser.add_option('-y','--ymin',default=None,type='float',help='Minimum Y in m (%default)')
-parser.add_option('-Y','--ymax',default=None,type='float',help='Maximum Y in m (%default)')
+parser.add_option('-y','--ymin',default=YMIN_CIHEA,type='float',help='Minimum Y in m (%default)')
+parser.add_option('-Y','--ymax',default=YMAX_CIHEA,type='float',help='Maximum Y in m (%default)')
 parser.add_option('--ystp',default=YSTP,type='float',help='Step Y in m (%default)')
 parser.add_option('--band_col',default=BAND_COL,help='Band column number (%default)')
 parser.add_option('--no_check_grid',default=False,action='store_true',help='Do not check grid (%default)')
@@ -136,6 +136,7 @@ for input_fnam in fnams:
     nband = len(band_name)
     if nband != ndat:
         raise ValueError('Error, nband={}, ndat={}'.format(nband,ndat))
+    meta = ds.GetMetadata()
     if opts.read_comments:
         comments = {}
         tif_tags = {}
@@ -158,6 +159,7 @@ for input_fnam in fnams:
                     m = re.search('([^=]+)=([^=]+)',value.text)
                     if m:
                         comments[m.group(1).strip()] = m.group(2).strip()
+        meta.update(comments)
     ds = None # close dataset
 
     if opts.output_bmin is not None:
@@ -192,8 +194,7 @@ for input_fnam in fnams:
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(output_epsg)
     ds.SetProjection(srs.ExportToWkt())
-    if opts.read_comments:
-        ds.SetMetadata(comments)
+    ds.SetMetadata(meta)
     for i in range(nset):
         band = ds.GetRasterBand(i+1)
         band.WriteArray(dset[i])
