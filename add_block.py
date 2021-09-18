@@ -1,9 +1,20 @@
 #!/usr/bin/env python
 import sys
 import re
+from optparse import OptionParser,IndentedHelpFormatter
+
+# Default values
+BLK_FNAM = 'field_block.dat'
+AREA_FNAM = 'pixel_area.dat'
+
+# Read options
+parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('-b','--blk_fnam',default=BLK_FNAM,help='Block file name (%default)')
+parser.add_option('-a','--area_fnam',default=AREA_FNAM,help='Pixel area file name (%default)')
+(opts,args) = parser.parse_args()
 
 blocks = []
-with open('field_block.dat','r') as fp:
+with open(opts.blk_fnam,'r') as fp:
     iobj = 0
     for line in fp:
         item = line.split()
@@ -16,7 +27,7 @@ with open('field_block.dat','r') as fp:
         blocks.append(block)
         iobj += 1
 
-with open('pixel_area.dat','r') as fp:
+with open(opts.area_fnam,'r') as fp:
     iobj = 0
     for line in fp:
         m = re.search('^\s*(\d+)\s+(\S+.*$)',line)
