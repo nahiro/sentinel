@@ -2,6 +2,7 @@
 import os
 import sys
 import re
+import atexit
 from glob import glob
 from datetime import datetime
 import gdal
@@ -339,6 +340,12 @@ if opts.ymin is None:
     opts.ymin = 0
 if opts.ymax is None:
     opts.ymax = ny
+
+def clean_up():
+    if os.path.exists(opts.temp_fnam):
+        os.remove(opts.temp_fnam)
+atexit.register(clean_up)
+
 with open(opts.temp_fnam,'wb') as fp:
     for indy in range(opts.ymin,opts.ymax):
         if indy%100 == 0:
@@ -427,8 +434,6 @@ with open(opts.temp_fnam,'rb') as fp:
             min_peaks = min_peaks_list[indp]
 if not np.all(yy == yy_check):
     raise ValueError('Error, yy != yy_check.')
-if os.path.exists(opts.temp_fnam):
-    os.remove(opts.temp_fnam)
 if opts.npy_fnam is not None:
     np.save(opts.npy_fnam,output_data)
 
