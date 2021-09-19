@@ -380,6 +380,7 @@ with open(opts.temp_fnam,'rb') as fp:
             indp = np.ravel_multi_index((indy,indx),data_shape)
             if indp != sid_0[indp]:
                 raise ValueError('Error, indp={}, sid_0={}'.format(indp,sid_0[indp]))
+            yy = np.fromfile(fp,count=xx.size)
             inds = []
             lengs = []
             for nn in range(1,opts.n_nearest+1):
@@ -422,7 +423,6 @@ with open(opts.temp_fnam,'rb') as fp:
                 continue
             output_data[0,indy,indx] = xp[k]
             output_data[1,indy,indx] = yp[k]
-            yy = np.fromfile(fp,count=xx.size)
             min_peaks = min_peaks_list[indp]
 if os.path.exists(opts.temp_fnam):
     os.remove(opts.temp_fnam)
