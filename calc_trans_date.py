@@ -365,10 +365,10 @@ for indp in range(ngrd):
 
 nb = 2
 output_data = np.full((nb,ny,nx),np.nan)
-for i in range(ngrd):
-    if i != sid_0[i]:
-        raise ValueError('Error, i={}, sid_0={}'.format(i,sid_0[i]))
-    indy,indx = np.unravel_index(i,data_shape)
+for indp in range(ngrd):
+    if indp != sid_0[indp]:
+        raise ValueError('Error, indp={}, sid_0={}'.format(indp,sid_0[indp]))
+    indy,indx = np.unravel_index(indp,data_shape)
     if indy < opts.ymin or indy >= opts.ymax:
         continue
     if indx < opts.xmin or indx >= opts.xmax:
@@ -376,13 +376,13 @@ for i in range(ngrd):
     inds = []
     lengs = []
     for nn in range(1,opts.n_nearest+1):
-        exec('inds.append(sid_{}[i])'.format(nn))
-        exec('lengs.append(leng_{}[i])'.format(nn))
+        exec('inds.append(sid_{}[indp])'.format(nn))
+        exec('lengs.append(leng_{}[indp])'.format(nn))
     inds = np.array(inds)
     lengs = np.array(lengs)
     ys = np.zeros_like(xx)
     ws = 1.0
-    for xj,yj in zip(xpek_sid[i],ypek_sid[i]):
+    for xj,yj in zip(xpek_sid[indp],ypek_sid[indp]):
         ytmp = yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
         ys += ytmp
     if opts.mask_fnam is not None:
@@ -392,14 +392,14 @@ for i in range(ngrd):
             fact = np.exp(-0.5*np.square(leng/opts.lsgm))
             ws += fact
             for xj,yj in zip(xpek_sid[j],ypek_sid[j]):
-                ytmp = yj*fact*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+                ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
                 ys += ytmp
     else:
         for j,leng in zip(inds,lengs):
             fact = np.exp(-0.5*np.square(leng/opts.lsgm))
             ws += fact
             for xj,yj in zip(xpek_sid[j],ypek_sid[j]):
-                ytmp = yj*fact*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+                ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
                 ys += ytmp
     ys *= 1.0/ws
     max_peaks,properties = find_peaks(ys,distance=opts.sig_distance,prominence=opts.sig_prominence)
