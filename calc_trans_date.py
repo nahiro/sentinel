@@ -345,13 +345,13 @@ for indy in range(opts.ymin,opts.ymax):
                 if (yy[xc_ind_1] < opts.vthr) & (yy[xc_ind_1] < yy[xc_ind_2]):
                     min_peaks = np.append(min_peaks,xc_ind_1)
         if len(min_peaks) > 0:
-            sid = np.ravel_multi_index((indy,indx),data_shape)
+            indp = np.ravel_multi_index((indy,indx),data_shape)
             for k in min_peaks:
                 if k == xc_ind_1:
                     vmin = yy[k]
                     if vmin < opts.vthr:
-                        xpek_sid[sid].append(xx[k])
-                        ypek_sid[sid].append(opts.vthr-vmin)
+                        xpek_sid[indp].append(xx[k])
+                        ypek_sid[indp].append(opts.vthr-vmin)
                 else:
                     xtmp = xx[k]+opts.offset
                     #if xtmp < nmin or xtmp > nmax:
@@ -360,8 +360,8 @@ for indy in range(opts.ymin,opts.ymax):
                     k2 = min(k+k2_offset,xx.size)
                     vmin = yy[k1:k2].mean()
                     if vmin < opts.vthr:
-                        xpek_sid[sid].append(xtmp)
-                        ypek_sid[sid].append(opts.vthr-vmin)
+                        xpek_sid[indp].append(xtmp)
+                        ypek_sid[indp].append(opts.vthr-vmin)
 for i in range(ngrd):
     xpek_sid[i] = np.array(xpek_sid[i])
     ypek_sid[i] = np.array(ypek_sid[i])
