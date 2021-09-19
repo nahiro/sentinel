@@ -326,6 +326,7 @@ xc_ind_1 = xc_indx[-1]
 xc_ind_2 = xc_indx[-2]
 xpek_sid = [[] for indp in range(ngrd)]
 ypek_sid = [[] for indp in range(ngrd)]
+min_peaks_list = [None for indp in range(ngrd)]
 
 if opts.xmin is None:
     opts.xmin = 0
@@ -340,6 +341,7 @@ with open(opts.temp_fnam,'wb') as fp:
         if indy%100 == 0:
             sys.stderr.write('{}\n'.format(indy))
         for indx in range(opts.xmin,opts.xmax):
+            indp = np.ravel_multi_index((indy,indx),data_shape)
             yi = vh_data[:,indy,indx] # VH
             yy = csaps(vh_ntim,yi,xx,smooth=opts.smooth)
             yy.tofile(fp)
@@ -348,8 +350,8 @@ with open(opts.temp_fnam,'wb') as fp:
                 if not xc_ind_1 in min_peaks:
                     if (yy[xc_ind_1] < opts.vthr) & (yy[xc_ind_1] < yy[xc_ind_2]):
                         min_peaks = np.append(min_peaks,xc_ind_1)
+            min_peaks_list[indp] = min_peaks.astype(np.int16)
             if len(min_peaks) > 0:
-                indp = np.ravel_multi_index((indy,indx),data_shape)
                 for k in min_peaks:
                     if k == xc_ind_1:
                         vmin = yy[k]
@@ -418,6 +420,7 @@ with open(opts.temp_fnam,'rb') as fp:
             output_data[0,indy,indx] = xp[k]
             output_data[1,indy,indx] = yp[k]
             yy = np.fromfile(fp,count=xx.size)
+            min_peaks = min_peaks_list[indp]
 if os.path.exists(opts.temp_fnam):
     os.remove(opts.temp_fnam)
 if opts.npy_fnam is not None:
