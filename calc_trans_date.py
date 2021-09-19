@@ -114,6 +114,8 @@ if opts.data_tmax is not None:
     dmax = datetime.strptime(opts.data_tmax,'%Y%m%d')
 else:
     dmax = num2date(nmax+opts.tend+opts.tmgn).replace(tzinfo=None)
+data_nmin = date2num(dmin)
+data_nmax = date2num(dmax)
 
 # read nearby indices
 data = np.load(opts.near_fnam)
@@ -205,10 +207,11 @@ ngrd = nx*ny
 
 if opts.mask_fnam is not None:
     ds = gdal.Open(opts.mask_fnam)
-    mask = (ds.ReadAsArray() != 1)
+    mask = ds.ReadAsArray()
     ds = None
     if mask.shape != data_shape:
         raise ValueError('Error, mask.shape={}, data_shape={}'.format(mask.shape,data_shape))
+    mask_flat = mask.flatten()
 
 if opts.incidence_list is not None:
     incidence_flag = []
@@ -296,8 +299,8 @@ for i,band in enumerate(band_list):
         dtmp = data[i]+signal_dif[incidence_indx[dstr]]
     else:
         dtmp = data[i]
-    if opts.mask_fnam is not None:
-        dtmp[mask] = np.nan
+    #if opts.mask_fnam is not None:
+    #    dtmp[mask < 0.5] = np.nan
     vh_data.append(dtmp)
     vh_dtim.append(datetime.strptime(dstr,'%Y%m%d'))
 vh_dtim = np.array(vh_dtim)
@@ -310,8 +313,8 @@ with open(opts.json_fnam,'w') as json_file:
 
 k1_offset = int(opts.tstr/opts.tstp+(-0.1 if opts.tstr < 0.0 else 0.1))
 k2_offset = int(opts.tend/opts.tstp+(-0.1 if opts.tend < 0.0 else 0.1))+1
-xx = np.arange(np.floor(vh_ntim.min()),np.ceil(vh_ntim.max())+0.1*opts.tstp,opts.tstp)
-cnd = (xx > nmin-1.0e-6) & (xx < nmax+1.0e-6)
+xx = np.arange(data_nmin,data_nmax+0.1*opts.tstp,opts.tstp)
+cnd = (xx > data_nmin-1.0e-6) & (xx < data_nmax+1.0e-6)
 xc_indx = np.where(cnd)[0]
 if xc_indx.size < 3:
     raise ValueError('Error, not enough data, xc_indx.size={}'.format(xc_indx.size))
@@ -381,14 +384,27 @@ for i in range(ngrd):
     inds = np.array(inds)
     lengs = np.array(lengs)
     ys = np.zeros_like(xx)
+    ws = 1.0
     for xj,yj in zip(xpek_sid[i],ypek_sid[i]):
         ytmp = yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
         ys += ytmp
-    for j,leng in zip(inds,lengs):
-        fact = np.exp(-0.5*np.square(leng/opts.lsgm))
-        for xj,yj in zip(xpek_sid[j],ypek_sid[j]):
-            ytmp = yj*fact*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
-            ys += ytmp
+    if opts.mask_fnam is not None:
+        for j,leng in zip(inds,lengs):
+            if mask_flat[j] < 0.5:
+                continue
+            fact = np.exp(-0.5*np.square(leng/opts.lsgm))
+            ws += fact
+            for xj,yj in zip(xpek_sid[j],ypek_sid[j]):
+                ytmp = yj*fact*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+                ys += ytmp
+    else:
+        for j,leng in zip(inds,lengs):
+            fact = np.exp(-0.5*np.square(leng/opts.lsgm))
+            ws += fact
+            for xj,yj in zip(xpek_sid[j],ypek_sid[j]):
+                ytmp = yj*fact*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+                ys += ytmp
+    ys *= 1.0/ws
     max_peaks,properties = find_peaks(ys,distance=opts.sig_distance,prominence=opts.sig_prominence)
     if opts.early:
         max_peaks = np.append(max_peaks,xc_indx_1)
