@@ -425,6 +425,8 @@ with open(opts.temp_fnam,'rb') as fp:
             output_data[0,indy,indx] = xp[k]
             output_data[1,indy,indx] = yp[k]
             min_peaks = min_peaks_list[indp]
+if not np.all(yy == yy_check):
+    raise ValueError('Error, yy != yy_check.')
 if os.path.exists(opts.temp_fnam):
     os.remove(opts.temp_fnam)
 if opts.npy_fnam is not None:
