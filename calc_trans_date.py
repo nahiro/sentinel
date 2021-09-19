@@ -368,6 +368,7 @@ with open(opts.temp_fnam,'wb') as fp:
                         if vmin < opts.vthr:
                             xpek_sid[indp].append(xx[k]+opts.offset)
                             ypek_sid[indp].append(opts.vthr-vmin)
+yy_check = yy.copy()
 for indp in range(ngrd):
     xpek_sid[indp] = np.array(xpek_sid[indp])
     ypek_sid[indp] = np.array(ypek_sid[indp])
