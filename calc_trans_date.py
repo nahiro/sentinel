@@ -333,11 +333,11 @@ if opts.ymin is None:
     opts.ymin = 0
 if opts.ymax is None:
     opts.ymax = ny
-for i in range(opts.ymin,opts.ymax):
-    if i%100 == 0:
-        sys.stderr.write('{}\n'.format(i))
-    for j in range(opts.xmin,opts.xmax):
-        yi = vh_data[:,i,j] # VH
+for iy in range(opts.ymin,opts.ymax):
+    if iy%100 == 0:
+        sys.stderr.write('{}\n'.format(iy))
+    for ix in range(opts.xmin,opts.xmax):
+        yi = vh_data[:,iy,ix] # VH
         yy = csaps(vh_ntim,yi,xx,smooth=opts.smooth)
         min_peaks,properties = find_peaks(-yy,distance=opts.sen1_distance,prominence=opts.sen1_prominence)
         if opts.early:
@@ -345,7 +345,7 @@ for i in range(opts.ymin,opts.ymax):
                 if (yy[xc_indx_1] < opts.vthr) & (yy[xc_indx_1] < yy[xc_indx_2]):
                     min_peaks = np.append(min_peaks,xc_indx_1)
         if len(min_peaks) > 0:
-            sid = np.ravel_multi_index((i,j),data_shape)
+            sid = np.ravel_multi_index((iy,ix),data_shape)
             for k in min_peaks:
                 if k == xc_indx_1:
                     vmin = yy[k]
