@@ -365,56 +365,53 @@ for indp in range(ngrd):
 
 nb = 2
 output_data = np.full((nb,ny,nx),np.nan)
-for indp in range(ngrd):
-    if indp != sid_0[indp]:
-        raise ValueError('Error, indp={}, sid_0={}'.format(indp,sid_0[indp]))
-    indy,indx = np.unravel_index(indp,data_shape)
-    if indy < opts.ymin or indy >= opts.ymax:
-        continue
-    if indx < opts.xmin or indx >= opts.xmax:
-        continue
-    inds = []
-    lengs = []
-    for nn in range(1,opts.n_nearest+1):
-        exec('inds.append(sid_{}[indp])'.format(nn))
-        exec('lengs.append(leng_{}[indp])'.format(nn))
-    inds = np.array(inds)
-    lengs = np.array(lengs)
-    ys = np.zeros_like(xx)
-    ws = 1.0
-    for xj,yj in zip(xpek_sid[indp],ypek_sid[indp]):
-        ytmp = yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
-        ys += ytmp
-    if opts.mask_fnam is not None:
-        for indq,leng in zip(inds,lengs):
-            if mask_flat[indq] < 0.5:
-                continue
-            fact = np.exp(-0.5*np.square(leng/opts.lsgm))
-            ws += fact
-            for xj,yj in zip(xpek_sid[indq],ypek_sid[indq]):
-                ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
-                ys += ytmp
-    else:
-        for indq,leng in zip(inds,lengs):
-            fact = np.exp(-0.5*np.square(leng/opts.lsgm))
-            ws += fact
-            for xj,yj in zip(xpek_sid[indq],ypek_sid[indq]):
-                ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
-                ys += ytmp
-    ys *= 1.0/ws
-    max_peaks,properties = find_peaks(ys,distance=opts.sig_distance,prominence=opts.sig_prominence)
-    if opts.early:
-        max_peaks = np.append(max_peaks,xc_ind_1)
-    if len(max_peaks) < 1:
-        continue
-    xp = xx[max_peaks]
-    yp = ys[max_peaks]
-    yp[(xp < nmin-1.0e-6) | (xp > nmax+1.0e-6)] = -1.0e10
-    k = np.argmax(yp)
-    if yp[k] < -1.0e2:
-        continue
-    output_data[0,indy,indx] = xp[k]
-    output_data[1,indy,indx] = yp[k]
+for indy in range(opts.ymin,opts.ymax):
+    for indx in range(opts.xmin,opts.xmax):
+        indp = np.ravel_multi_index((indy,indx),data_shape)
+        if indp != sid_0[indp]:
+            raise ValueError('Error, indp={}, sid_0={}'.format(indp,sid_0[indp]))
+        inds = []
+        lengs = []
+        for nn in range(1,opts.n_nearest+1):
+            exec('inds.append(sid_{}[indp])'.format(nn))
+            exec('lengs.append(leng_{}[indp])'.format(nn))
+        inds = np.array(inds)
+        lengs = np.array(lengs)
+        ys = np.zeros_like(xx)
+        ws = 1.0
+        for xj,yj in zip(xpek_sid[indp],ypek_sid[indp]):
+            ytmp = yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+            ys += ytmp
+        if opts.mask_fnam is not None:
+            for indq,leng in zip(inds,lengs):
+                if mask_flat[indq] < 0.5:
+                    continue
+                fact = np.exp(-0.5*np.square(leng/opts.lsgm))
+                ws += fact
+                for xj,yj in zip(xpek_sid[indq],ypek_sid[indq]):
+                    ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+                    ys += ytmp
+        else:
+            for indq,leng in zip(inds,lengs):
+                fact = np.exp(-0.5*np.square(leng/opts.lsgm))
+                ws += fact
+                for xj,yj in zip(xpek_sid[indq],ypek_sid[indq]):
+                    ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+                    ys += ytmp
+        ys *= 1.0/ws
+        max_peaks,properties = find_peaks(ys,distance=opts.sig_distance,prominence=opts.sig_prominence)
+        if opts.early:
+            max_peaks = np.append(max_peaks,xc_ind_1)
+        if len(max_peaks) < 1:
+            continue
+        xp = xx[max_peaks]
+        yp = ys[max_peaks]
+        yp[(xp < nmin-1.0e-6) | (xp > nmax+1.0e-6)] = -1.0e10
+        k = np.argmax(yp)
+        if yp[k] < -1.0e2:
+            continue
+        output_data[0,indy,indx] = xp[k]
+        output_data[1,indy,indx] = yp[k]
 if opts.npy_fnam is not None:
     np.save(opts.npy_fnam,output_data)
 
