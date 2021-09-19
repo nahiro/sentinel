@@ -367,7 +367,7 @@ for indp in range(ngrd):
     xpek_sid[indp] = np.array(xpek_sid[indp])
     ypek_sid[indp] = np.array(ypek_sid[indp])
 
-nb = 2
+nb = 8
 output_data = np.full((nb,ny,nx),np.nan)
 with open(opts.temp_fnam,'rb') as fp:
     for indy in range(opts.ymin,opts.ymax):
@@ -430,7 +430,7 @@ srs = osr.SpatialReference()
 srs.ImportFromEPSG(output_epsg)
 ds.SetProjection(srs.ExportToWkt())
 ds.SetMetadata({'offset':'{:.4f}'.format(opts.offset)})
-band_name = ['xpek','ypek']
+band_name = ['trans_d','trans_s','trans_n','bsc_min','post_avg','post_min','post_max','risetime']
 for i in range(nb):
     band = ds.GetRasterBand(i+1)
     band.WriteArray(output_data[i])
