@@ -22,13 +22,14 @@ TMGN = 30.0 # day
 TSTP = 0.1 # day
 TSTR = -20.0 # day
 TEND = 20.0 # day
+TPST = 30.0 # day
 SMOOTH = 0.01
 SEN1_DISTANCE = 10
 SEN1_PROMINENCE = 0.1
 SIG_DISTANCE = 10
 SIG_PROMINENCE = 0.1
 VTHR = -13.0 # dB
-XSGM = 6.0 # day
+XSGM = 12.0 # day
 LSGM = 30.0 # m
 N_NEAREST = 120 # pixel
 OFFSET = 0.0 # day
@@ -48,6 +49,7 @@ parser.add_option('--tmgn',default=TMGN,type='float',help='Margin of input data 
 parser.add_option('--tstp',default=TSTP,type='float',help='Precision of transplanting date in day (%default)')
 parser.add_option('--tstr',default=TSTR,type='float',help='Start day of transplanting period seen from the min. peak (%default)')
 parser.add_option('--tend',default=TEND,type='float',help='End day of transplanting period seen from the min. peak (%default)')
+parser.add_option('--tpst',default=TPST,type='float',help='Days to calculate BSC change after transplanting (%default)')
 parser.add_option('-x','--xmin',default=None,type='int',help='Min X index (inclusive, %default)')
 parser.add_option('-X','--xmax',default=None,type='int',help='Max X index (exclusive, %default)')
 parser.add_option('-y','--ymin',default=None,type='int',help='Min Y index (inclusive, %default)')
@@ -86,6 +88,7 @@ data_info['tmgn'] = opts.tmgn
 data_info['tstp'] = opts.tstp
 data_info['tstr'] = opts.tstr
 data_info['tend'] = opts.tend
+data_info['tpst'] = opts.tpst
 data_info['xmin'] = opts.xmin
 data_info['xmax'] = opts.xmax
 data_info['ymin'] = opts.ymin
