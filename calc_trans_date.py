@@ -35,6 +35,7 @@ OFFSET = 0.0 # day
 DATDIR = '.'
 NEAR_FNAM = 'find_nearest.npz'
 JSON_FNAM = 'output.json'
+TEMP_FNAM = 'temporary.bin'
 OUT_FNAM = 'output.tif'
 
 # Read options
@@ -70,6 +71,7 @@ parser.add_option('--near_fnam',default=NEAR_FNAM,help='Nearby index file name (
 parser.add_option('--mask_fnam',default=None,help='Mask file name (%default)')
 parser.add_option('-i','--inp_fnam',default=None,help='Input GeoTIFF name (%default)')
 parser.add_option('-j','--json_fnam',default=JSON_FNAM,help='Output JSON name (%default)')
+parser.add_option('--temp_fnam',default=TEMP_FNAM,help='Temporary file name (%default)')
 parser.add_option('-o','--out_fnam',default=OUT_FNAM,help='Output GeoTIFF name (%default)')
 parser.add_option('--npy_fnam',default=None,help='Output npy file name (%default)')
 parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
@@ -333,85 +335,91 @@ if opts.ymin is None:
     opts.ymin = 0
 if opts.ymax is None:
     opts.ymax = ny
-for indy in range(opts.ymin,opts.ymax):
-    if indy%100 == 0:
-        sys.stderr.write('{}\n'.format(indy))
-    for indx in range(opts.xmin,opts.xmax):
-        yi = vh_data[:,indy,indx] # VH
-        yy = csaps(vh_ntim,yi,xx,smooth=opts.smooth)
-        min_peaks,properties = find_peaks(-yy,distance=opts.sen1_distance,prominence=opts.sen1_prominence)
-        if opts.early:
-            if not xc_ind_1 in min_peaks:
-                if (yy[xc_ind_1] < opts.vthr) & (yy[xc_ind_1] < yy[xc_ind_2]):
-                    min_peaks = np.append(min_peaks,xc_ind_1)
-        if len(min_peaks) > 0:
-            indp = np.ravel_multi_index((indy,indx),data_shape)
-            for k in min_peaks:
-                if k == xc_ind_1:
-                    vmin = yy[k]
-                    if vmin < opts.vthr:
-                        xpek_sid[indp].append(xx[k])
-                        ypek_sid[indp].append(opts.vthr-vmin)
-                else:
-                    k1 = max(k+k1_offset,0)
-                    k2 = min(k+k2_offset,xx.size)
-                    vmin = yy[k1:k2].mean()
-                    if vmin < opts.vthr:
-                        xpek_sid[indp].append(xx[k]+opts.offset)
-                        ypek_sid[indp].append(opts.vthr-vmin)
+with open(opts.temp_fnam,'wb') as fp:
+    for indy in range(opts.ymin,opts.ymax):
+        if indy%100 == 0:
+            sys.stderr.write('{}\n'.format(indy))
+        for indx in range(opts.xmin,opts.xmax):
+            yi = vh_data[:,indy,indx] # VH
+            yy = csaps(vh_ntim,yi,xx,smooth=opts.smooth)
+            yy.tofile(fp)
+            min_peaks,properties = find_peaks(-yy,distance=opts.sen1_distance,prominence=opts.sen1_prominence)
+            if opts.early:
+                if not xc_ind_1 in min_peaks:
+                    if (yy[xc_ind_1] < opts.vthr) & (yy[xc_ind_1] < yy[xc_ind_2]):
+                        min_peaks = np.append(min_peaks,xc_ind_1)
+            if len(min_peaks) > 0:
+                indp = np.ravel_multi_index((indy,indx),data_shape)
+                for k in min_peaks:
+                    if k == xc_ind_1:
+                        vmin = yy[k]
+                        if vmin < opts.vthr:
+                            xpek_sid[indp].append(xx[k])
+                            ypek_sid[indp].append(opts.vthr-vmin)
+                    else:
+                        k1 = max(k+k1_offset,0)
+                        k2 = min(k+k2_offset,xx.size)
+                        vmin = yy[k1:k2].mean()
+                        if vmin < opts.vthr:
+                            xpek_sid[indp].append(xx[k]+opts.offset)
+                            ypek_sid[indp].append(opts.vthr-vmin)
 for indp in range(ngrd):
     xpek_sid[indp] = np.array(xpek_sid[indp])
     ypek_sid[indp] = np.array(ypek_sid[indp])
 
 nb = 2
 output_data = np.full((nb,ny,nx),np.nan)
-for indy in range(opts.ymin,opts.ymax):
-    for indx in range(opts.xmin,opts.xmax):
-        indp = np.ravel_multi_index((indy,indx),data_shape)
-        if indp != sid_0[indp]:
-            raise ValueError('Error, indp={}, sid_0={}'.format(indp,sid_0[indp]))
-        inds = []
-        lengs = []
-        for nn in range(1,opts.n_nearest+1):
-            exec('inds.append(sid_{}[indp])'.format(nn))
-            exec('lengs.append(leng_{}[indp])'.format(nn))
-        inds = np.array(inds)
-        lengs = np.array(lengs)
-        ys = np.zeros_like(xx)
-        ws = 1.0
-        for xj,yj in zip(xpek_sid[indp],ypek_sid[indp]):
-            ytmp = yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
-            ys += ytmp
-        if opts.mask_fnam is not None:
-            for indq,leng in zip(inds,lengs):
-                if mask_flat[indq] < 0.5:
-                    continue
-                fact = np.exp(-0.5*np.square(leng/opts.lsgm))
-                ws += fact
-                for xj,yj in zip(xpek_sid[indq],ypek_sid[indq]):
-                    ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
-                    ys += ytmp
-        else:
-            for indq,leng in zip(inds,lengs):
-                fact = np.exp(-0.5*np.square(leng/opts.lsgm))
-                ws += fact
-                for xj,yj in zip(xpek_sid[indq],ypek_sid[indq]):
-                    ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
-                    ys += ytmp
-        ys *= 1.0/ws
-        max_peaks,properties = find_peaks(ys,distance=opts.sig_distance,prominence=opts.sig_prominence)
-        if opts.early:
-            max_peaks = np.append(max_peaks,xc_ind_1)
-        if len(max_peaks) < 1:
-            continue
-        xp = xx[max_peaks]
-        yp = ys[max_peaks]
-        yp[(xp < nmin-1.0e-6) | (xp > nmax+1.0e-6)] = -1.0e10
-        k = np.argmax(yp)
-        if yp[k] < -1.0e2:
-            continue
-        output_data[0,indy,indx] = xp[k]
-        output_data[1,indy,indx] = yp[k]
+with open(opts.temp_fnam,'rb') as fp:
+    for indy in range(opts.ymin,opts.ymax):
+        for indx in range(opts.xmin,opts.xmax):
+            indp = np.ravel_multi_index((indy,indx),data_shape)
+            if indp != sid_0[indp]:
+                raise ValueError('Error, indp={}, sid_0={}'.format(indp,sid_0[indp]))
+            inds = []
+            lengs = []
+            for nn in range(1,opts.n_nearest+1):
+                exec('inds.append(sid_{}[indp])'.format(nn))
+                exec('lengs.append(leng_{}[indp])'.format(nn))
+            inds = np.array(inds)
+            lengs = np.array(lengs)
+            ys = np.zeros_like(xx)
+            ws = 1.0
+            for xj,yj in zip(xpek_sid[indp],ypek_sid[indp]):
+                ytmp = yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+                ys += ytmp
+            if opts.mask_fnam is not None:
+                for indq,leng in zip(inds,lengs):
+                    if mask_flat[indq] < 0.5:
+                        continue
+                    fact = np.exp(-0.5*np.square(leng/opts.lsgm))
+                    ws += fact
+                    for xj,yj in zip(xpek_sid[indq],ypek_sid[indq]):
+                        ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+                        ys += ytmp
+            else:
+                for indq,leng in zip(inds,lengs):
+                    fact = np.exp(-0.5*np.square(leng/opts.lsgm))
+                    ws += fact
+                    for xj,yj in zip(xpek_sid[indq],ypek_sid[indq]):
+                        ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
+                        ys += ytmp
+            ys *= 1.0/ws
+            max_peaks,properties = find_peaks(ys,distance=opts.sig_distance,prominence=opts.sig_prominence)
+            if opts.early:
+                max_peaks = np.append(max_peaks,xc_ind_1)
+            if len(max_peaks) < 1:
+                continue
+            xp = xx[max_peaks]
+            yp = ys[max_peaks]
+            yp[(xp < nmin-1.0e-6) | (xp > nmax+1.0e-6)] = -1.0e10
+            k = np.argmax(yp)
+            if yp[k] < -1.0e2:
+                continue
+            output_data[0,indy,indx] = xp[k]
+            output_data[1,indy,indx] = yp[k]
+            yy = np.fromfile(fp,count=xx.size)
+if os.path.exists(opts.temp_fnam):
+    os.remove(opts.temp_fnam)
 if opts.npy_fnam is not None:
     np.save(opts.npy_fnam,output_data)
 
