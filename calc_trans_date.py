@@ -318,10 +318,10 @@ cnd = (xx > data_nmin-1.0e-6) & (xx < data_nmax+1.0e-6)
 xc_indx = np.where(cnd)[0]
 if xc_indx.size < 3:
     raise ValueError('Error, not enough data, xc_indx.size={}'.format(xc_indx.size))
-xc_indx0 = xc_indx[0]
-xc_indx1 = xc_indx[1]
-xc_indx_1 = xc_indx[-1]
-xc_indx_2 = xc_indx[-2]
+xc_ind0 = xc_indx[0]
+xc_ind1 = xc_indx[1]
+xc_ind_1 = xc_indx[-1]
+xc_ind_2 = xc_indx[-2]
 xpek_sid = [[] for i in range(ngrd)]
 ypek_sid = [[] for i in range(ngrd)]
 
@@ -341,13 +341,13 @@ for iy in range(opts.ymin,opts.ymax):
         yy = csaps(vh_ntim,yi,xx,smooth=opts.smooth)
         min_peaks,properties = find_peaks(-yy,distance=opts.sen1_distance,prominence=opts.sen1_prominence)
         if opts.early:
-            if not xc_indx_1 in min_peaks:
-                if (yy[xc_indx_1] < opts.vthr) & (yy[xc_indx_1] < yy[xc_indx_2]):
-                    min_peaks = np.append(min_peaks,xc_indx_1)
+            if not xc_ind_1 in min_peaks:
+                if (yy[xc_ind_1] < opts.vthr) & (yy[xc_ind_1] < yy[xc_ind_2]):
+                    min_peaks = np.append(min_peaks,xc_ind_1)
         if len(min_peaks) > 0:
             sid = np.ravel_multi_index((iy,ix),data_shape)
             for k in min_peaks:
-                if k == xc_indx_1:
+                if k == xc_ind_1:
                     vmin = yy[k]
                     if vmin < opts.vthr:
                         xpek_sid[sid].append(xx[k])
@@ -407,7 +407,7 @@ for i in range(ngrd):
     ys *= 1.0/ws
     max_peaks,properties = find_peaks(ys,distance=opts.sig_distance,prominence=opts.sig_prominence)
     if opts.early:
-        max_peaks = np.append(max_peaks,xc_indx_1)
+        max_peaks = np.append(max_peaks,xc_ind_1)
     if len(max_peaks) < 1:
         continue
     xp = xx[max_peaks]
