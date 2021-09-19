@@ -322,8 +322,8 @@ xc_ind0 = xc_indx[0]
 xc_ind1 = xc_indx[1]
 xc_ind_1 = xc_indx[-1]
 xc_ind_2 = xc_indx[-2]
-xpek_sid = [[] for i in range(ngrd)]
-ypek_sid = [[] for i in range(ngrd)]
+xpek_sid = [[] for indp in range(ngrd)]
+ypek_sid = [[] for indp in range(ngrd)]
 
 if opts.xmin is None:
     opts.xmin = 0
@@ -353,18 +353,15 @@ for indy in range(opts.ymin,opts.ymax):
                         xpek_sid[indp].append(xx[k])
                         ypek_sid[indp].append(opts.vthr-vmin)
                 else:
-                    xtmp = xx[k]+opts.offset
-                    #if xtmp < nmin or xtmp > nmax:
-                    #    continue
                     k1 = max(k+k1_offset,0)
                     k2 = min(k+k2_offset,xx.size)
                     vmin = yy[k1:k2].mean()
                     if vmin < opts.vthr:
-                        xpek_sid[indp].append(xtmp)
+                        xpek_sid[indp].append(xx[k]+opts.offset)
                         ypek_sid[indp].append(opts.vthr-vmin)
-for i in range(ngrd):
-    xpek_sid[i] = np.array(xpek_sid[i])
-    ypek_sid[i] = np.array(ypek_sid[i])
+for indp in range(ngrd):
+    xpek_sid[indp] = np.array(xpek_sid[indp])
+    ypek_sid[indp] = np.array(ypek_sid[indp])
 
 nb = 2
 output_data = np.full((nb,ny,nx),np.nan)
