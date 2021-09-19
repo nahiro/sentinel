@@ -386,19 +386,19 @@ for indp in range(ngrd):
         ytmp = yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
         ys += ytmp
     if opts.mask_fnam is not None:
-        for j,leng in zip(inds,lengs):
-            if mask_flat[j] < 0.5:
+        for indq,leng in zip(inds,lengs):
+            if mask_flat[indq] < 0.5:
                 continue
             fact = np.exp(-0.5*np.square(leng/opts.lsgm))
             ws += fact
-            for xj,yj in zip(xpek_sid[j],ypek_sid[j]):
+            for xj,yj in zip(xpek_sid[indq],ypek_sid[indq]):
                 ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
                 ys += ytmp
     else:
-        for j,leng in zip(inds,lengs):
+        for indq,leng in zip(inds,lengs):
             fact = np.exp(-0.5*np.square(leng/opts.lsgm))
             ws += fact
-            for xj,yj in zip(xpek_sid[j],ypek_sid[j]):
+            for xj,yj in zip(xpek_sid[indq],ypek_sid[indq]):
                 ytmp = fact*yj*np.exp(-0.5*np.square((xx-xj)/opts.xsgm))
                 ys += ytmp
     ys *= 1.0/ws
