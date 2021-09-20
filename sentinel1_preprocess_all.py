@@ -71,9 +71,10 @@ for site in opts.sites:
         command = 'python'
         command += ' '+os.path.join(opts.scrdir,'sentinel1_preprocess.py')
         command += ' '+fnam
-        command += ' --datdir '+os.path.join(datdir,opts.subdir)
         command += ' --site '+site
-        command += ' --speckle'
+        command += ' --datdir '+os.path.join(datdir,opts.subdir)
+        if 'speckle' in opts.subdir.lower():
+            command += ' --speckle'
         command += ' --iangle_value'
         command += ' --std_grid'
         command += ' --tiff'
