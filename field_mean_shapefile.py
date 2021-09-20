@@ -98,9 +98,15 @@ w.fields = r.fields[1:] # skip first deletion field
 w.field('Block','C',6,0)
 w.field('TANAM','F',13,6)
 w.field('TANAM_text','C',10,0)
-w.field('trans_date','F',13,6)
-w.field('trans_text','C',10,0)
-w.field('peak_value','F',13,6)
+w.field('trans_d','F',13,6)
+w.field('trans_t','C',10,0)
+w.field('trans_s','F',13,6)
+w.field('trans_n','F',13,6)
+w.field('bsc_min','F',13,6)
+w.field('post_avg','F',13,6)
+w.field('post_min','F',13,6)
+w.field('post_max','F',13,6)
+w.field('risetime','F',13,6)
 for shaperec in r.iterShapeRecords():
     rec = shaperec.record
     shp = shaperec.shape
