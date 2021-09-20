@@ -21,8 +21,12 @@ if HOME is None:
     HOME = os.environ.get('HOMEPATH')
 TMIN = '20190415'
 TMAX = '20190601'
+BMIN = -22.0
+BMAX = -12.0
 PMIN = 0.0
-PMAX = 6.0
+PMAX = 5.0
+SMIN = 0.0
+SMAX = 6.0
 COORDS_COLOR = '#aaaaaa'
 BLOCK_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','studyarea','studyarea.shp')
 TRANS_FNAM = os.path.join('.','output.tif')
@@ -33,8 +37,12 @@ OUTPUT_FNAM = 'trans_date_cihea.pdf'
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
-parser.add_option('-p','--pmin',default=PMIN,type='float',help='Min signal in dB (%default)')
-parser.add_option('-P','--pmax',default=PMAX,type='float',help='Max signal in dB (%default)')
+parser.add_option('--bmin',default=BMIN,type='float',help='Min bsc_min in dB (%default)')
+parser.add_option('--bmax',default=BMAX,type='float',help='Max bsc_min in dB (%default)')
+parser.add_option('--pmin',default=PMIN,type='float',help='Min post_avg in dB (%default)')
+parser.add_option('--pmax',default=PMAX,type='float',help='Max post_avg in dB (%default)')
+parser.add_option('--smin',default=SMIN,type='float',help='Min trans_s in dB (%default)')
+parser.add_option('--smax',default=SMAX,type='float',help='Max trans_s in dB (%default)')
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--block_fnam',default=BLOCK_FNAM,help='Block shape file (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting tiff file (%default)')
@@ -118,20 +126,39 @@ ymax = data_trans[3]
 ystp = data_trans[5]
 ymin = ymax+ystp*data_shape[0]
 
-sys.stderr.write('tmin: {}\n'.format(num2date(np.nanmin(data[0])).strftime('%Y%m%d')))
-sys.stderr.write('tmax: {}\n'.format(num2date(np.nanmax(data[0])).strftime('%Y%m%d')))
-sys.stderr.write('pmin: {}\n'.format(np.nanmin(data[1])))
-sys.stderr.write('pmax: {}\n'.format(np.nanmax(data[1])))
+tmin = np.nanmin(data[0])
+tmax = np.nanmax(data[0])
+bmin = np.nanmin(data[3])
+bmax = np.nanmax(data[3])
+pmin = np.nanmin(data[4])
+pmax = np.nanmax(data[4])
+smin = np.nanmin(data[1])
+smax = np.nanmax(data[1])
+sys.stderr.write('tmin: {}\n'.format(num2date(tmin).strftime('%Y%m%d')))
+sys.stderr.write('tmax: {}\n'.format(num2date(tmax).strftime('%Y%m%d')))
+sys.stderr.write('bmin: {}\n'.format(bmin))
+sys.stderr.write('bmax: {}\n'.format(bmax))
+sys.stderr.write('pmin: {}\n'.format(pmin))
+sys.stderr.write('pmax: {}\n'.format(pmax))
+sys.stderr.write('smin: {}\n'.format(smin))
+sys.stderr.write('smax: {}\n'.format(smax))
 if opts.tmin is not None:
     tmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 if opts.tmax is not None:
     tmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
+if opts.bmin is not None:
+    bmin = opts.bmin
+if opts.bmax is not None:
+    bmax = opts.bmax
 if opts.pmin is not None:
     pmin = opts.pmin
 if opts.pmax is not None:
     pmax = opts.pmax
+if opts.smin is not None:
+    smin = opts.smin
+if opts.smax is not None:
+    smax = opts.smax
 tdif = tmax-tmin
-pdif = pmax-pmin
 
 values = []
 labels = []
@@ -191,12 +218,14 @@ mymap2 = ListedColormap(newcolors)
 
 if not opts.batch:
     plt.interactive(True)
-fig = plt.figure(1,facecolor='w',figsize=(8.3,5.8))
-plt.subplots_adjust(top=0.97,bottom=0.01,left=0.026,right=0.963,wspace=0.085,hspace=0.08)
+fig = plt.figure(1,facecolor='w',figsize=(8.3,11.5))
+plt.subplots_adjust(top=0.95,bottom=0.01,left=0.026,right=0.975,wspace=0.100,hspace=0.05)
 fig.clear()
 
-ax1 = plt.subplot(121,projection=prj)
-ax2 = plt.subplot(122,projection=prj)
+ax1 = plt.subplot(221,projection=prj)
+ax2 = plt.subplot(222,projection=prj)
+ax3 = plt.subplot(223,projection=prj)
+ax4 = plt.subplot(224,projection=prj)
 
 im1 = ax1.imshow(data[0],extent=(xmin,xmax,ymax,ymin),vmin=tmin,vmax=tmax,cmap=mymap2)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.0,pad=0.01).ax
@@ -210,18 +239,26 @@ ax12.set_xlabel('Estimated transplanting date (MM/DD)')
 ax12.xaxis.set_label_coords(0.5,-2.8)
 ax1.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
-im2 = ax2.imshow(data[1],extent=(xmin,xmax,ymax,ymin),vmin=pmin,vmax=pmax,cmap=cm.jet)
+im2 = ax2.imshow(data[3],extent=(xmin,xmax,ymax,ymin),vmin=bmin,vmax=bmax,cmap=cm.jet)
 ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=1.0,pad=0.01).ax
-#ax22.xaxis.set_major_locator(plt.FixedLocator(values))
-#ax22.xaxis.set_major_formatter(plt.FixedFormatter(labels))
-#ax22.xaxis.set_minor_locator(plt.FixedLocator(ticks))
-#ax12.set_xlabel('Transplanting date')
-#ax2.set_title('(b) Signal')
-#for l in ax22.xaxis.get_ticklabels():
-#    l.set_rotation(30)
-ax22.set_xlabel('Signal (dB)')
-ax22.xaxis.set_label_coords(0.5,-2.6)
+ax22.minorticks_on()
+ax22.set_xlabel('BSC at transplanting (dB)')
+ax22.xaxis.set_label_coords(0.5,-2.8)
 ax2.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
+
+im3 = ax3.imshow(data[4],extent=(xmin,xmax,ymax,ymin),vmin=pmin,vmax=pmax,cmap=cm.jet)
+ax32 = plt.colorbar(im3,ax=ax3,orientation='horizontal',shrink=1.0,pad=0.01).ax
+ax32.minorticks_on()
+ax32.set_xlabel('BSC increase after transplanting (dB)')
+ax32.xaxis.set_label_coords(0.5,-2.6)
+ax3.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
+
+im4 = ax4.imshow(data[1],extent=(xmin,xmax,ymax,ymin),vmin=smin,vmax=smax,cmap=cm.jet)
+ax42 = plt.colorbar(im4,ax=ax4,orientation='horizontal',shrink=1.0,pad=0.01).ax
+ax42.minorticks_on()
+ax42.set_xlabel('Signal at transplanting (dB)')
+ax42.xaxis.set_label_coords(0.5,-2.6)
+ax4.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
 if opts.add_coords:
     ax1.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
@@ -254,10 +291,44 @@ if opts.add_coords:
     ax2.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
     ax2.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
 
+    ax3.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax3.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax3.xaxis.set_label_position('top')
+    ax3.xaxis.tick_top()
+    ax3.yaxis.set_label_position('right')
+    ax3.yaxis.tick_right()
+    plt.setp(ax3.get_xticklabels(),color=opts.coords_color)
+    plt.setp(ax3.get_yticklabels(),color=opts.coords_color)
+    ax3.set_xticks(np.arange(100.0,120.0,0.1))
+    ax3.set_yticks(np.arange(-7.5,-5.5,0.1))
+    ax3.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
+    ax3.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
+    ax3.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
+    ax3.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
+
+    ax4.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax4.yaxis.set_tick_params(labelsize=6,direction='in',pad=2)
+    ax4.xaxis.set_label_position('top')
+    ax4.xaxis.tick_top()
+    ax4.yaxis.set_label_position('right')
+    ax4.yaxis.tick_right()
+    plt.setp(ax4.get_xticklabels(),color=opts.coords_color)
+    plt.setp(ax4.get_yticklabels(),color=opts.coords_color)
+    ax4.set_xticks(np.arange(100.0,120.0,0.1))
+    ax4.set_yticks(np.arange(-7.5,-5.5,0.1))
+    ax4.xaxis.set_major_locator(plt.FixedLocator(center_x_utm))
+    ax4.yaxis.set_major_locator(plt.FixedLocator(center_y_utm))
+    ax4.xaxis.set_major_formatter(plt.FixedFormatter(x_labels))
+    ax4.yaxis.set_major_formatter(plt.FixedFormatter(y_labels))
+
 ax1.set_xlim(xmin,xmax)
 ax1.set_ylim(ymin,ymax)
 ax2.set_xlim(xmin,xmax)
 ax2.set_ylim(ymin,ymax)
+ax3.set_xlim(xmin,xmax)
+ax3.set_ylim(ymin,ymax)
+ax4.set_xlim(xmin,xmax)
+ax4.set_ylim(ymin,ymax)
 #ax1.background_patch.set_facecolor('#eeeeee')
 #ax3.background_patch.set_facecolor('#eeeeee')
 if opts.title is not None:
