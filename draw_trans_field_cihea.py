@@ -35,11 +35,13 @@ parser.add_option('-P','--pmax',default=PMAX,type='float',help='Max signal in dB
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--block_fnam',default=BLOCK_FNAM,help='Block shape file (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape file (%default)')
+parser.add_option('--mask_fnam',default=None,help='Mask file (%default)')
 parser.add_option('--output_fnam',default=OUTPUT_FNAM,help='Output figure name (%default)')
 parser.add_option('--add_tmin',default=False,action='store_true',help='Add tmin in colorbar (%default)')
 parser.add_option('--add_tmax',default=False,action='store_true',help='Add tmax in colorbar (%default)')
 parser.add_option('--add_coords',default=False,action='store_true',help='Add geographical coordinates (%default)')
 parser.add_option('--coords_color',default=COORDS_COLOR,help='Color of geographical coordinates (%default)')
+parser.add_option('--use_index',default=False,action='store_true',help='Use index instead of OBJECTID (%default)')
 parser.add_option('--early',default=False,action='store_true',help='Early estimation mode (%default)')
 parser.add_option('-b','--batch',default=False,action='store_true',help='Batch mode (%default)')
 parser.add_option('--debug',default=False,action='store_true',help='Debug mode (%default)')
@@ -86,6 +88,11 @@ colors = np.vstack((color,color,color,color,color,color))
 mymap = LinearSegmentedColormap.from_list('my_colormap',colors,N=len(colors)*2)
 
 prj = ccrs.UTM(zone=48,southern_hemisphere=True)
+
+if opts.mask_fnam is not None:
+    mask = np.loadtxt(opts.mask_fnam,usecols=(0,),dtype=np.int32)
+else:
+    mask = []
 
 block_shp = list(shpreader.Reader(opts.block_fnam).geometries())
 block_rec = list(shpreader.Reader(opts.block_fnam).records())
@@ -207,7 +214,13 @@ fig.clear()
 ax1 = plt.subplot(121,projection=prj)
 ax2 = plt.subplot(122,projection=prj)
 
-for shp,rec in zip(shapes,records):
+for iobj,(shp,rec) in enumerate(zip(shapes,records)):
+    if opts.use_index:
+        object_id = iobj+1
+    else:
+        object_id = getattr(rec,'OBJECTID')
+    if object_id in mask:
+        continue
     t = rec.attributes['trans_d']#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
     p = rec.attributes['trans_s']
     if not np.isnan(t):
@@ -222,8 +235,8 @@ ax12.xaxis.set_minor_locator(plt.FixedLocator(ticks))
 #ax1.set_title('(a)')
 for l in ax12.xaxis.get_ticklabels():
     l.set_rotation(30)
-ax12.xaxis.set_label_coords(0.5,-3.2)
 ax12.set_xlabel('Estimated transplanting date (MM/DD)')
+ax12.xaxis.set_label_coords(0.5,-2.8)
 ax1.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
 im2 = ax2.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=pmin,vmax=pmax,cmap=cm.jet)
@@ -231,7 +244,7 @@ ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax22.minorticks_on()
 #ax2.set_title('(b)')
 ax22.set_xlabel('Signal (dB)')
-ax22.xaxis.set_label_coords(0.5,-3.2)
+ax22.xaxis.set_label_coords(0.5,-2.6)
 ax2.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
 if opts.add_coords:
