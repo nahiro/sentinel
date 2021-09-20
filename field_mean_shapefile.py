@@ -27,6 +27,7 @@ parser.add_option('--true_file',default=None,help='True data file (%default)')
 parser.add_option('--inpnam',default=INPNAM,help='Input shapefile (%default)')
 parser.add_option('--outnam',default=OUTNAM,help='Output shapefile (%default)')
 parser.add_option('-n','--no_block',default=False,action='store_true',help='No block in area_file (%default)')
+parser.add_option('--use_index',default=False,action='store_true',help='Use index instead of OBJECTID (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 
@@ -66,6 +67,7 @@ object_ids = np.array(object_ids)
 blocks = np.array(blocks)
 inds = np.array(inds,dtype='object')
 areas = np.array(areas,dtype='object')
+nobject = object_ids.size
 
 scheduled = {}
 if opts.true_file is not None:
@@ -76,7 +78,10 @@ if opts.true_file is not None:
 
 data_dict = {}
 for i in range(object_ids.size):
-    object_id = object_ids[i]
+    if opts.use_index:
+        object_id = i+1
+    else:
+        object_id = object_ids[i]
     data_list = [None]*12
     # block, tanam_d
     if not opts.no_block:
@@ -148,8 +153,11 @@ for i in range(object_ids.size):
     wsum = wcnd.sum()
     risetime = (dcnd*wcnd).sum()/wsum
     data_list[11] = risetime
+    data_dict.update({object_id:data_list})
 
 r = shapefile.Reader(opts.inpnam)
+if len(r) != nobject:
+    raise ValueError('Error, len(r)={}, nobject={}'.format(len(r),nobject))
 w = shapefile.Writer(opts.outnam)
 w.shapeType = shapefile.POLYGON
 w.fields = r.fields[1:] # skip first deletion field
@@ -165,10 +173,14 @@ w.field('post_avg','F',13,6)
 w.field('post_min','F',13,6)
 w.field('post_max','F',13,6)
 w.field('risetime','F',13,6)
-for shaperec in r.iterShapeRecords():
+for iobj,shaperec in enumerate(r.iterShapeRecords()):
     rec = shaperec.record
     shp = shaperec.shape
-    data_list = data_dict[rec.OBJECTID]
+    if opts.use_index:
+        object_id = iobj+1
+    else:
+        object_id = getattr(rec,'OBJECTID')
+    data_list = data_dict[object_id]
     rec.extend(data_list)
     w.shape(shp)
     w.record(*rec)
