@@ -26,6 +26,7 @@ parser.add_option('--area_file',default=AREA_FILE,help='Area data file (%default
 parser.add_option('--true_file',default=None,help='True data file (%default)')
 parser.add_option('--inpnam',default=INPNAM,help='Input shapefile (%default)')
 parser.add_option('--outnam',default=OUTNAM,help='Output shapefile (%default)')
+parser.add_option('-n','--no_block',default=False,action='store_true',help='No block in area_file (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 
@@ -38,17 +39,25 @@ object_ids = []
 blocks = []
 inds = []
 areas = []
-with open(opts.area_file,'r') as fp:
+if opts.no_block:
+    n0 = 2
+else:
+    n0 = 3
+with open(opts.area_fnam,'r') as fp:
     for line in fp:
         item = line.split()
-        if len(item) < 5 or item[0] == '#':
+        nitem = len(item)
+        if nitem < n0 or item[0] == '#':
             continue
+        n = int(item[n0-1])
+        if nitem != n*2+n0:
+            raise ValueError('Error, nitem={}, n0={}, n={}'.format(nitem,n0,n))
         object_ids.append(int(item[0]))
-        blocks.append(item[1])
+        if not opts.no_block:
+            blocks.append(item[1])
         inds.append([])
         areas.append([])
-        n = int(item[2])
-        for nn in range(3,n*2+3,2):
+        for nn in range(n0,nitem,2):
             inds[-1].append(int(item[nn]))
             areas[-1].append(float(item[nn+1]))
         inds[-1] = np.array(inds[-1])
