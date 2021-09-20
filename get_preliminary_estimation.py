@@ -16,8 +16,9 @@ DATDIR = os.path.join(HOME,'Work','Sentinel-1')
 WRKDIR = os.path.join(HOME,'Work','SATREPS','Transplanting_date')
 END = datetime.now().strftime('%Y%m%d')
 SITES = ['Cihea','Bojongsoang']
+SUBDIRS = ['Cihea:sigma0','Bojongsoang:sigma0_speckle']
 OFFSETS = ['Cihea:-9.0','Bojongsoang:0.0']
-VERSIONS = ['Cihea:v1.1','Bojongsoang:v1.0']
+VERSIONS = ['Cihea:v1.2','Bojongsoang:v1.0']
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -27,6 +28,7 @@ parser.add_option('--wrkdir',default=WRKDIR,help='Work directory (%default)')
 parser.add_option('-s','--str',default=None,help='Start date of estimation in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=END,help='End date of estimation in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
+parser.add_option('--subdirs',default=None,action='append',help='Sub data directory, for example, Cihea:sigma0 ({})'.format(SUBDIRS))
 parser.add_option('--offsets',default=None,action='append',help='Offset of transplanting date, for example, Cihea:-9.0 ({})'.format(OFFSETS))
 parser.add_option('--versions',default=None,action='append',help='Version of transplanting estimation, for example, Cihea:v1.0 ({})'.format(VERSIONS))
 parser.add_option('--test',default=False,action='store_true',help='Test mode (%default)')
@@ -34,10 +36,18 @@ parser.add_option('-d','--debug',default=False,action='store_true',help='Debug m
 (opts,args) = parser.parse_args()
 if opts.sites is None:
     opts.sites = SITES
+if opts.subdirs is None:
+    opts.subdirs = SUBDIRS
 if opts.offsets is None:
     opts.offsets = OFFSETS
 if opts.versions is None:
     opts.versions = VERSIONS
+subdir = {}
+for s in opts.subdirs:
+    m = re.search('([^:]+):([^:]+)',s)
+    if not m:
+        raise ValueError('Error in subdir >>> '+s)
+    subdir.update({m.group(1).lower():float(m.group(2))})
 offset = {}
 for s in opts.offsets:
     m = re.search('([^:]+):([^:]+)',s)
@@ -55,7 +65,7 @@ dtims = {}
 for site in opts.sites:
     site_low = site.lower()
     dtim_list = []
-    for f in sorted(os.listdir(os.path.join(opts.datdir,site,'sigma0_speckle'))):
+    for f in sorted(os.listdir(os.path.join(opts.datdir,site,subdir[site_low]))):
         m = re.search('('+'\d'*8+')_resample.tif',f)
         if not m:
             continue
@@ -111,9 +121,10 @@ for site in opts.sites:
                 command += ' --data_tmax '+data_tmax
                 command += ' --offset {:.4f}'.format(offset[site_low])
                 command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
-                command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0_speckle')
+                command += ' --datdir '+os.path.join(opts.datdir,site,subdir[site_low])
                 command += ' --search_key resample'
                 command += ' --near_fnam '+os.path.join(opts.wrkdir,site,'find_nearest.npz')
+                command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask.tif')
                 command += ' --json_fnam '+jsn_fnam
                 command += ' --out_fnam '+tif_fnam
                 command += ' --early'
@@ -134,11 +145,11 @@ for site in opts.sites:
                     command += ' '+os.path.join(opts.scrdir,'draw_trans_pixel_{}.py'.format(site_low))
                     command += ' --tmin '+tmin
                     command += ' --tmax '+tmax
-                    command += ' --pmin 0'
-                    command += ' --pmax 300'
+                    command += ' --smin 0'
+                    command += ' --smax 6'
                     command += ' --title "Search Period: {} - {}"'.format(tmin,tmax)
                     command += ' --trans_fnam '+tif_fnam
-                    command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask.tif')
+                    command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask_studyarea.tif')
                     command += ' --output_fnam '+trans_pixel_image
                     command += ' --early'
                     command += ' --batch'
@@ -154,11 +165,13 @@ for site in opts.sites:
                     command += ' '+os.path.join(opts.scrdir,'draw_trans_field_{}.py'.format(site_low))
                     command += ' --tmin '+tmin
                     command += ' --tmax '+tmax
-                    command += ' --pmin 0'
-                    command += ' --pmax 300'
+                    command += ' --smin 0'
+                    command += ' --smax 6'
                     command += ' --title "Search Period: {} - {}"'.format(tmin,tmax)
                     command += ' --trans_fnam '+shp_fnam
+                    command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask_studyarea.dat')
                     command += ' --output_fnam '+trans_field_image
+                    command += ' --use_index'
                     command += ' --early'
                     command += ' --batch'
                     call(command,shell=True)
@@ -185,7 +198,7 @@ for site in opts.sites:
                 command += ' --data_tmax '+data_tmax
                 command += ' --offset {:.4f}'.format(offset[site_low])
                 command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
-                command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0_speckle')
+                command += ' --datdir '+os.path.join(opts.datdir,site,subdir[site_low])
                 command += ' --search_key resample'
                 command += ' --x_profile '+os.path.join(opts.wrkdir,site,'x_profile.npy')
                 command += ' --y_profile '+os.path.join(opts.wrkdir,site,'y_profile.npy')
