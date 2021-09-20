@@ -14,7 +14,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 HOME = os.environ.get('HOME')
 if HOME is None:
     HOME = os.environ.get('HOMEPATH')
-INPNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','cihea','New_Test_Sites')
+INPNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','All_area_polygon_20210914','All_area_polygon_20210914')
 OUTNAM = os.path.join('.','transplanting_date')
 DATA_FILE = 'output.tif'
 AREA_FILE = 'pixel_area_block.dat'
@@ -77,9 +77,12 @@ if opts.true_file is not None:
 data_dict = {}
 for i in range(object_ids.size):
     object_id = object_ids[i]
-    block = blocks[i]
-    if block in scheduled:
-        data_scheduled = scheduled[block]
+    if not opts.no_block:
+        block = blocks[i]
+        if block in scheduled:
+            data_scheduled = scheduled[block]
+        else:
+            data_scheduled = np.nan
     else:
         data_scheduled = np.nan
     data_value = data[0,inds[i]]
