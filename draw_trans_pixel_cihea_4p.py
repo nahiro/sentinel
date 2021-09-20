@@ -23,8 +23,8 @@ TMIN = '20190415'
 TMAX = '20190601'
 BMIN = -22.0
 BMAX = -12.0
-PMIN = 0.0
-PMAX = 3.0
+AMIN = 0.0
+AMAX = 3.0
 SMIN = 0.0
 SMAX = 6.0
 COORDS_COLOR = '#aaaaaa'
@@ -39,8 +39,8 @@ parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMM
 parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
 parser.add_option('--bmin',default=BMIN,type='float',help='Min bsc_min in dB (%default)')
 parser.add_option('--bmax',default=BMAX,type='float',help='Max bsc_min in dB (%default)')
-parser.add_option('--pmin',default=PMIN,type='float',help='Min post_avg in dB (%default)')
-parser.add_option('--pmax',default=PMAX,type='float',help='Max post_avg in dB (%default)')
+parser.add_option('--amin',default=AMIN,type='float',help='Min post_avg in dB (%default)')
+parser.add_option('--amax',default=AMAX,type='float',help='Max post_avg in dB (%default)')
 parser.add_option('--smin',default=SMIN,type='float',help='Min trans_s in dB (%default)')
 parser.add_option('--smax',default=SMAX,type='float',help='Max trans_s in dB (%default)')
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
@@ -130,16 +130,16 @@ tmin = np.nanmin(data[0])
 tmax = np.nanmax(data[0])
 bmin = np.nanmin(data[3])
 bmax = np.nanmax(data[3])
-pmin = np.nanmin(data[4])
-pmax = np.nanmax(data[4])
+amin = np.nanmin(data[4])
+amax = np.nanmax(data[4])
 smin = np.nanmin(data[1])
 smax = np.nanmax(data[1])
 sys.stderr.write('tmin: {}\n'.format(num2date(tmin).strftime('%Y%m%d')))
 sys.stderr.write('tmax: {}\n'.format(num2date(tmax).strftime('%Y%m%d')))
 sys.stderr.write('bmin: {}\n'.format(bmin))
 sys.stderr.write('bmax: {}\n'.format(bmax))
-sys.stderr.write('pmin: {}\n'.format(pmin))
-sys.stderr.write('pmax: {}\n'.format(pmax))
+sys.stderr.write('amin: {}\n'.format(amin))
+sys.stderr.write('amax: {}\n'.format(amax))
 sys.stderr.write('smin: {}\n'.format(smin))
 sys.stderr.write('smax: {}\n'.format(smax))
 if opts.tmin is not None:
@@ -150,10 +150,10 @@ if opts.bmin is not None:
     bmin = opts.bmin
 if opts.bmax is not None:
     bmax = opts.bmax
-if opts.pmin is not None:
-    pmin = opts.pmin
-if opts.pmax is not None:
-    pmax = opts.pmax
+if opts.amin is not None:
+    amin = opts.amin
+if opts.amax is not None:
+    amax = opts.amax
 if opts.smin is not None:
     smin = opts.smin
 if opts.smax is not None:
@@ -246,7 +246,7 @@ ax22.set_xlabel('BSC at transplanting (dB)')
 ax22.xaxis.set_label_coords(0.5,-2.8)
 ax2.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
-im3 = ax3.imshow(data[4],extent=(xmin,xmax,ymax,ymin),vmin=pmin,vmax=pmax,cmap=cm.jet)
+im3 = ax3.imshow(data[4],extent=(xmin,xmax,ymax,ymin),vmin=amin,vmax=amax,cmap=cm.jet)
 ax32 = plt.colorbar(im3,ax=ax3,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax32.minorticks_on()
 ax32.set_xlabel('BSC increase after transplanting (dB)')
