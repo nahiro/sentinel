@@ -120,8 +120,8 @@ tmax = -1.0e10
 pmin = 1.0e10
 pmax = -1.0e10
 for rec in records:
-    t = rec.attributes['trans_date']#+date2num(np.datetime64('0000-12-31'))
-    p = rec.attributes['peak_value']
+    t = rec.attributes['trans_d']#+date2num(np.datetime64('0000-12-31'))
+    p = rec.attributes['trans_s']
     if t > 1000.0:
         if t < tmin:
             tmin = t
@@ -212,8 +212,8 @@ ax1 = plt.subplot(121,projection=prj)
 ax2 = plt.subplot(122,projection=prj)
 
 for shp,rec in zip(shapes,records):
-    t = rec.attributes['trans_date']#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
-    p = rec.attributes['peak_value']
+    t = rec.attributes['trans_d']#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
+    p = rec.attributes['trans_s']
     if not np.isnan(t):
         ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
     if not np.isnan(p):
