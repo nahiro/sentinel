@@ -108,7 +108,7 @@ data_shape = data[0].shape
 ds = None
 if data_shape != mask_shape:
     raise ValueError('Error, data_shape={}, mask_shape={}'.format(data_shape,mask_shape))
-data[:,mask==0] = np.nan
+data[:,mask<0.5] = np.nan
 #data[0] -= 9.0 # offset corrected
 #data[0] += date2num(np.datetime64('0000-12-31')) # Matplotlib>3.3
 xmin = data_trans[0]
