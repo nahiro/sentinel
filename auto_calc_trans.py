@@ -14,6 +14,7 @@ SCRDIR = os.path.join(HOME,'Script')
 DATDIR = os.path.join(HOME,'Work','Sentinel-1')
 L2ADIR = os.path.join(HOME,'Work','Sentinel-2','L2A')
 SITES = ['Bojongsoang','Cihea']
+SUBDIRS = ['Cihea:sigma0','Bojongsoang:sigma0_speckle']
 DATE_FINAL = 5
 MAX_RETRY = 10
 
@@ -25,6 +26,7 @@ parser.add_option('--l2adir',default=L2ADIR,help='L2A data directory (%default)'
 parser.add_option('-s','--str',default=None,help='Start date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=None,help='End date in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
+parser.add_option('--subdirs',default=None,action='append',help='Sub data directory, for example, Cihea:sigma0 ({})'.format(SUBDIRS))
 parser.add_option('--date_final',default=DATE_FINAL,type='int',help='Date to calculate final estimation (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('--skip_upload',default=False,action='store_true',help='Skip upload (%default)')
@@ -32,8 +34,17 @@ parser.add_option('-d','--debug',default=False,action='store_true',help='Debug m
 (opts,args) = parser.parse_args()
 if opts.sites is None:
     opts.sites = SITES
+if opts.subdirs is None:
+    opts.subdirs = SUBDIRS
+subdir = {}
+for s in opts.subdirs:
+    m = re.search('([^:]+):([^:]+)',s)
+    if not m:
+        raise ValueError('Error in subdir >>> '+s)
+    subdir.update({m.group(1).lower():float(m.group(2))})
 
 for site in opts.sites:
+    site_low = site.lower()
     datdir = os.path.join(opts.datdir,site)
     log = os.path.join(datdir,site.lower()+'.log')
     command = 'python'
@@ -72,9 +83,10 @@ for site in opts.sites:
         command = 'python'
         command += ' '+os.path.join(opts.scrdir,'sentinel1_preprocess.py')
         command += ' '+fnam
-        command += ' --datdir '+os.path.join(datdir,'sigma0_speckle')
         command += ' --site '+site
-        command += ' --speckle'
+        command += ' --datdir '+os.path.join(datdir,subdir[site_low])
+        if 'speckle' in subdir[site_low].lower():
+            command += ' --speckle'
         command += ' --iangle_value'
         command += ' --std_grid'
         command += ' --tiff'
@@ -84,11 +96,11 @@ for site in opts.sites:
         command += ' '+os.path.join(opts.scrdir,'remove_snap_cache.py')
         call(command,shell=True)
     for dstr in dstrs:
-        fnam = os.path.join(datdir,'sigma0_speckle',dstr+'.tif')
+        fnam = os.path.join(datdir,subdir[site_low],dstr+'.tif')
         command = 'python'
         command += ' '+os.path.join(opts.scrdir,'sentinel_resample.py')
         command += ' '+fnam
-        command += ' --datdir '+os.path.join(datdir,'sigma0_speckle')
+        command += ' --datdir '+os.path.join(datdir,subdir[site_low])
         command += ' --site '+site
         command += ' --read_comments'
         call(command,shell=True)
