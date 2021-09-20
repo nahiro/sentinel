@@ -20,9 +20,9 @@ if HOME is None:
 TMIN = '20190415'
 TMAX = '20190601'
 PMIN = 0.0
-PMAX = 300.0
+PMAX = 6.0
 COORDS_COLOR = '#aaaaaa'
-BLOCK_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','cihea_testsite_200819','cihea_testsite_200819.shp')
+BLOCK_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','studyarea','studyarea.shp')
 TRANS_FNAM = os.path.join('.','transplanting_date.shp')
 OUTPUT_FNAM = 'trans_date_testsite.pdf'
 
@@ -110,10 +110,6 @@ xmin -= 10.0
 xmax += 10.0
 ymin -= 10.0
 ymax += 10.0
-
-xp = np.arange(xmin,xmax,10.0)
-yp = np.arange(ymin,ymax,10.0)
-xg,yg = np.meshgrid(xp,yp)
 
 tmin = 1.0e10
 tmax = -1.0e10
@@ -204,9 +200,9 @@ mymap2 = ListedColormap(newcolors)
 
 if not opts.batch:
     plt.interactive(True)
-fig = plt.figure(1,facecolor='w',figsize=(7.4,6.0))
+fig = plt.figure(1,facecolor='w',figsize=(8.3,5.8))
+plt.subplots_adjust(top=0.97,bottom=0.01,left=0.026,right=0.963,wspace=0.085,hspace=0.08)
 fig.clear()
-plt.subplots_adjust(top=0.93,bottom=0.01,left=0.030,right=0.940,wspace=0.145,hspace=0.0)
 
 ax1 = plt.subplot(121,projection=prj)
 ax2 = plt.subplot(122,projection=prj)
@@ -237,29 +233,6 @@ ax22.minorticks_on()
 ax22.set_xlabel('Signal (dB)')
 ax22.xaxis.set_label_coords(0.5,-3.2)
 ax2.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
-
-for bs,br in zip(block_shp,block_rec):
-    for n in range(len(bs)):
-        #xc = bs[0].boundary.centroid.x
-        #yc = bs[0].boundary.centroid.y
-        points = list(zip(*bs[n].exterior.coords.xy))
-        p = Path(points)
-        flags = p.contains_points(np.hstack((xg.flatten()[:,np.newaxis],yg.flatten()[:,np.newaxis]))).reshape(xg.shape)
-        distance = np.empty(xg.shape,dtype=np.float64)
-        for i,x_pt in enumerate(xp):
-            for j,y_pt in enumerate(yp):
-                if flags[j,i]:
-                    distance[j,i] = bs[n].exterior.distance(shapely.geometry.Point(x_pt,y_pt))
-                else:
-                    distance[j,i] = -1.0e10
-        indy,indx = np.unravel_index(np.argmax(distance),distance.shape)
-        if indx > 0 and indy > 0:
-            xt = xp[indx]
-            yt = yp[indy]
-            t = br.attributes['Blok']
-            ax1.text(xt,yt,t,transform=prj,ha='center',va='center')
-            ax2.text(xt,yt,t,transform=prj,ha='center',va='center')
-        #break
 
 if opts.add_coords:
     ax1.xaxis.set_tick_params(labelsize=6,direction='in',pad=2)

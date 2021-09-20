@@ -22,7 +22,7 @@ if HOME is None:
 TMIN = '20190415'
 TMAX = '20190601'
 PMIN = 0.0
-PMAX = 300.0
+PMAX = 6.0
 COORDS_COLOR = '#aaaaaa'
 BLOCK_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','studyarea','studyarea.shp')
 TRANS_FNAM = os.path.join('.','output.tif')
@@ -192,8 +192,8 @@ mymap2 = ListedColormap(newcolors)
 if not opts.batch:
     plt.interactive(True)
 fig = plt.figure(1,facecolor='w',figsize=(8.3,5.8))
-fig.clear()
 plt.subplots_adjust(top=0.97,bottom=0.01,left=0.026,right=0.963,wspace=0.085,hspace=0.08)
+fig.clear()
 
 ax1 = plt.subplot(121,projection=prj)
 ax2 = plt.subplot(122,projection=prj)
