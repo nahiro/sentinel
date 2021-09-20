@@ -21,8 +21,8 @@ if HOME is None:
     HOME = os.environ.get('HOMEPATH')
 TMIN = '20190415'
 TMAX = '20190601'
-PMIN = 0.0
-PMAX = 6.0
+SMIN = 0.0
+SMAX = 6.0
 COORDS_COLOR = '#aaaaaa'
 BLOCK_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','studyarea','studyarea.shp')
 TRANS_FNAM = os.path.join('.','output.tif')
@@ -33,8 +33,8 @@ OUTPUT_FNAM = 'trans_date_cihea.pdf'
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
-parser.add_option('-p','--pmin',default=PMIN,type='float',help='Min signal in dB (%default)')
-parser.add_option('-P','--pmax',default=PMAX,type='float',help='Max signal in dB (%default)')
+parser.add_option('--smin',default=SMIN,type='float',help='Min trans_s in dB (%default)')
+parser.add_option('--smax',default=SMAX,type='float',help='Max trans_s in dB (%default)')
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--block_fnam',default=BLOCK_FNAM,help='Block shape file (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting tiff file (%default)')
@@ -120,18 +120,17 @@ ymin = ymax+ystp*data_shape[0]
 
 sys.stderr.write('tmin: {}\n'.format(num2date(np.nanmin(data[0])).strftime('%Y%m%d')))
 sys.stderr.write('tmax: {}\n'.format(num2date(np.nanmax(data[0])).strftime('%Y%m%d')))
-sys.stderr.write('pmin: {}\n'.format(np.nanmin(data[1])))
-sys.stderr.write('pmax: {}\n'.format(np.nanmax(data[1])))
+sys.stderr.write('smin: {}\n'.format(np.nanmin(data[1])))
+sys.stderr.write('smax: {}\n'.format(np.nanmax(data[1])))
 if opts.tmin is not None:
     tmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 if opts.tmax is not None:
     tmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
-if opts.pmin is not None:
-    pmin = opts.pmin
-if opts.pmax is not None:
-    pmax = opts.pmax
+if opts.smin is not None:
+    smin = opts.smin
+if opts.smax is not None:
+    smax = opts.smax
 tdif = tmax-tmin
-pdif = pmax-pmin
 
 values = []
 labels = []
@@ -210,7 +209,7 @@ ax12.set_xlabel('Estimated transplanting date (MM/DD)')
 ax12.xaxis.set_label_coords(0.5,-2.8)
 ax1.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
-im2 = ax2.imshow(data[1],extent=(xmin,xmax,ymax,ymin),vmin=pmin,vmax=pmax,cmap=cm.jet)
+im2 = ax2.imshow(data[1],extent=(xmin,xmax,ymax,ymin),vmin=smin,vmax=smax,cmap=cm.jet)
 ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=1.0,pad=0.01).ax
 #ax22.xaxis.set_major_locator(plt.FixedLocator(values))
 #ax22.xaxis.set_major_formatter(plt.FixedFormatter(labels))
