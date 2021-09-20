@@ -21,17 +21,17 @@ AREA_FILE = 'pixel_area_block.dat'
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
-parser.add_option('--data_file',default=DATA_FILE,help='Estimation data file (%default)')
-parser.add_option('--area_file',default=AREA_FILE,help='Area data file (%default)')
-parser.add_option('--true_file',default=None,help='True data file (%default)')
+parser.add_option('--data_fnam',default=DATA_FILE,help='Estimation data file (%default)')
+parser.add_option('--area_fnam',default=AREA_FILE,help='Area data file (%default)')
+parser.add_option('--true_fnam',default=None,help='True data file (%default)')
 parser.add_option('--inpnam',default=INPNAM,help='Input shapefile (%default)')
 parser.add_option('--outnam',default=OUTNAM,help='Output shapefile (%default)')
-parser.add_option('-n','--no_block',default=False,action='store_true',help='No block in area_file (%default)')
+parser.add_option('-n','--no_block',default=False,action='store_true',help='No block in area_fnam (%default)')
 parser.add_option('--use_index',default=False,action='store_true',help='Use index instead of OBJECTID (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 
-ds = gdal.Open(opts.data_file)
+ds = gdal.Open(opts.data_fnam)
 data = ds.ReadAsArray()
 ds = None
 data = data.reshape(len(data),-1).astype(np.float64)
@@ -70,8 +70,8 @@ areas = np.array(areas,dtype='object')
 nobject = object_ids.size
 
 scheduled = {}
-if opts.true_file is not None:
-    with open(opts.true_file,'r') as fp:
+if opts.true_fnam is not None:
+    with open(opts.true_fnam,'r') as fp:
         for line in fp:
             item = line.split()
             scheduled.update({item[0]:date2num(datetime.strptime(item[1],'%Y/%m/%d'))})

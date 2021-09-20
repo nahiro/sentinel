@@ -102,8 +102,8 @@ for site in opts.sites:
                     #file_list.append(tif_fnam)
                     command = 'python'
                     command += ' '+os.path.join(opts.scrdir,'field_mean_shapefile.py')
-                    command += ' --data_file '+tif_fnam
-                    command += ' --area_file '+os.path.join(opts.wrkdir,site,'pixel_area_block.dat')
+                    command += ' --data_fnam '+tif_fnam
+                    command += ' --area_fnam '+os.path.join(opts.wrkdir,site,'pixel_area_block.dat')
                     command += ' --outnam '+shp_bnam
                     #call(command,shell=True)
                     command = 'python'
