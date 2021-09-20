@@ -23,6 +23,7 @@ TMGN = 30.0 # day
 TSTP = 0.1 # day
 TSTR = -20.0 # day
 TEND = 20.0 # day
+TADD = 20.0 # day
 TPST = 30.0 # day
 SMOOTH = 0.01
 SEN1_DISTANCE = 10
@@ -50,6 +51,7 @@ parser.add_option('--tmgn',default=TMGN,type='float',help='Margin of input data 
 parser.add_option('--tstp',default=TSTP,type='float',help='Precision of transplanting date in day (%default)')
 parser.add_option('--tstr',default=TSTR,type='float',help='Start day of transplanting period seen from the min. peak (%default)')
 parser.add_option('--tend',default=TEND,type='float',help='End day of transplanting period seen from the min. peak (%default)')
+parser.add_option('--tadd',default=TADD,type='float',help='Days to calculate additional parameters (%default)')
 parser.add_option('--tpst',default=TPST,type='float',help='Days to calculate BSC change after transplanting (%default)')
 parser.add_option('-x','--xmin',default=None,type='int',help='Min X index (inclusive, %default)')
 parser.add_option('-X','--xmax',default=None,type='int',help='Max X index (exclusive, %default)')
@@ -89,6 +91,7 @@ data_info['tmgn'] = opts.tmgn
 data_info['tstp'] = opts.tstp
 data_info['tstr'] = opts.tstr
 data_info['tend'] = opts.tend
+data_info['tadd'] = opts.tadd
 data_info['tpst'] = opts.tpst
 data_info['xmin'] = opts.xmin
 data_info['xmax'] = opts.xmax
@@ -432,6 +435,31 @@ with open(opts.temp_fnam,'rb') as fp:
             output_data[0,indy,indx] = xp[k]
             output_data[1,indy,indx] = yp[k]
             min_peaks = min_peaks_list[indp]
+            if len(min_peaks) < 1:
+                continue
+            xpek = np.array([xx[k] if k == xc_ind_1 else xx[k]+opts.offset for k in min_peaks])
+            cnd = np.abs(xpek-output_data[0,indy,indx]) < opts.tadd+0.1
+            xcnd = xpek[cnd]
+            if len(xcnd) < 1:
+                continue
+            kcnd = min_peaks[cnd]
+            ycnd = yy[kcnd]
+            indk = np.argmin(ycnd)
+            k = kcnd[indk]
+            output_data[2,indy,indx] = xcnd[indk] # trans_n
+            output_data[3,indy,indx] = yy[k] # bsc_min
+            cnd = (xx > xx[k]) & (xx < xx[k]+opts.tpst)
+            yinc = yy[cnd]-yy[k]
+            if len(yinc) < 1:
+                continue
+            output_data[4,indy,indx] = yinc.mean() # post_avg
+            output_data[5,indy,indx] = yinc.min() # post_min
+            output_data[6,indy,indx] = yinc.max() # post_max
+            cnd = (xx > xx[k]) & (yy > yy[k]+3.0)
+            xcnd = xx[cnd]
+            if len(xcnd) < 1:
+                continue
+            output_data[7,indy,indx] = xcnd.min()-xx[k] # risetime
 if not np.all(yy == yy_check):
     raise ValueError('Error, yy != yy_check.')
 if opts.npy_fnam is not None:
