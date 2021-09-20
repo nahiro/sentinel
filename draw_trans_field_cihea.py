@@ -19,8 +19,8 @@ if HOME is None:
     HOME = os.environ.get('HOMEPATH')
 TMIN = '20190415'
 TMAX = '20190601'
-PMIN = 0.0
-PMAX = 6.0
+SMIN = 0.0
+SMAX = 6.0
 COORDS_COLOR = '#aaaaaa'
 BLOCK_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','studyarea','studyarea.shp')
 TRANS_FNAM = os.path.join('.','transplanting_date.shp')
@@ -30,8 +30,8 @@ OUTPUT_FNAM = 'trans_date_testsite.pdf'
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-s','--tmin',default=TMIN,help='Min date in the format YYYYMMDD (%default)')
 parser.add_option('-e','--tmax',default=TMAX,help='Max date in the format YYYYMMDD (%default)')
-parser.add_option('-p','--pmin',default=PMIN,type='float',help='Min signal in dB (%default)')
-parser.add_option('-P','--pmax',default=PMAX,type='float',help='Max signal in dB (%default)')
+parser.add_option('--smin',default=SMIN,type='float',help='Min trans_s in dB (%default)')
+parser.add_option('--smax',default=SMAX,type='float',help='Max trans_s in dB (%default)')
 parser.add_option('-t','--title',default=None,help='Figure title (%default)')
 parser.add_option('--block_fnam',default=BLOCK_FNAM,help='Block shape file (%default)')
 parser.add_option('--trans_fnam',default=TRANS_FNAM,help='Transplanting shape file (%default)')
@@ -119,35 +119,35 @@ ymin -= 10.0
 ymax += 10.0
 
 tmin = 1.0e10
+smin = 1.0e10
 tmax = -1.0e10
-pmin = 1.0e10
-pmax = -1.0e10
+smax = -1.0e10
 for rec in records:
     t = rec.attributes['trans_d']#+date2num(np.datetime64('0000-12-31'))
-    p = rec.attributes['trans_s']
+    s = rec.attributes['trans_s']
     if t > 1000.0:
         if t < tmin:
             tmin = t
         if t > tmax:
             tmax = t
-        if p < pmin:
-            pmin = p
-        if p > pmax:
-            pmax = p
+        if s < smin:
+            smin = s
+        if s > smax:
+            smax = s
 sys.stderr.write('tmin: {}\n'.format(num2date(tmin).strftime('%Y%m%d')))
 sys.stderr.write('tmax: {}\n'.format(num2date(tmax).strftime('%Y%m%d')))
-sys.stderr.write('pmin: {}\n'.format(pmin))
-sys.stderr.write('pmax: {}\n'.format(pmax))
+sys.stderr.write('smin: {}\n'.format(smin))
+sys.stderr.write('smax: {}\n'.format(smax))
 if opts.tmin is not None:
     tmin = date2num(datetime.strptime(opts.tmin,'%Y%m%d'))
 if opts.tmax is not None:
     tmax = date2num(datetime.strptime(opts.tmax,'%Y%m%d'))
-if opts.pmin is not None:
-    pmin = opts.pmin
-if opts.pmax is not None:
-    pmax = opts.pmax
+if opts.smin is not None:
+    smin = opts.smin
+if opts.smax is not None:
+    smax = opts.smax
 tdif = tmax-tmin
-pdif = pmax-pmin
+sdif = smax-smin
 
 values = []
 labels = []
@@ -222,11 +222,11 @@ for iobj,(shp,rec) in enumerate(zip(shapes,records)):
     if object_id in mask:
         continue
     t = rec.attributes['trans_d']#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
-    p = rec.attributes['trans_s']
+    s = rec.attributes['trans_s']
     if not np.isnan(t):
         ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
-    if not np.isnan(p):
-        ax2.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
+    if not np.isnan(s):
+        ax2.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((s-smin)/sdif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=mymap2)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))
@@ -239,7 +239,7 @@ ax12.set_xlabel('Estimated transplanting date (MM/DD)')
 ax12.xaxis.set_label_coords(0.5,-2.8)
 ax1.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
-im2 = ax2.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=pmin,vmax=pmax,cmap=cm.jet)
+im2 = ax2.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=smin,vmax=smax,cmap=cm.jet)
 ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax22.minorticks_on()
 #ax2.set_title('(b)')
