@@ -17,7 +17,7 @@ WRKDIR = os.path.join(HOME,'Work','SATREPS','Transplanting_date')
 END = datetime.now().strftime('%Y%m%d')
 SITES = ['Cihea','Bojongsoang']
 OFFSETS = ['Cihea:-9.0','Bojongsoang:0.0']
-VERSIONS = ['Cihea:v1.1','Bojongsoang:v1.0']
+VERSIONS = ['Cihea:v1.4','Bojongsoang:v1.0']
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -81,9 +81,9 @@ for site in opts.sites:
         try:
             if site_low == 'cihea':
                 t1 = datetime(d.year,d.month,1) # the first day of the month
-                tmin = (t1-relativedelta(months=4)).strftime('%Y%m%d')
-                tmax = (t1-relativedelta(months=1)-timedelta(days=1)).strftime('%Y%m%d')
-                data_tmin = (t1-relativedelta(months=6)).strftime('%Y%m%d')
+                tmin = (t1-relativedelta(months=6)).strftime('%Y%m%d')
+                tmax = (t1-relativedelta(months=3)-timedelta(days=1)).strftime('%Y%m%d')
+                data_tmin = (t1-relativedelta(months=9)).strftime('%Y%m%d')
                 data_tmax = dstr
                 jsn_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.json'.format(site_low,dstr))
                 tif_fnam = os.path.join(wrkdir,'trans_date_{}_{}_final.tif'.format(site_low,dstr))
@@ -100,9 +100,10 @@ for site in opts.sites:
                 command += ' --data_tmax '+data_tmax
                 command += ' --offset {:.4f}'.format(offset[site_low])
                 command += ' --incidence_list '+os.path.join(opts.wrkdir,site,'incidence_list.dat')
-                command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0_speckle')
+                command += ' --datdir '+os.path.join(opts.datdir,site,'sigma0')
                 command += ' --search_key resample'
                 command += ' --near_fnam '+os.path.join(opts.wrkdir,site,'find_nearest.npz')
+                command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask.tif')
                 command += ' --json_fnam '+jsn_fnam
                 command += ' --out_fnam '+tif_fnam
                 command += ' 2>'+os.path.join(wrkdir,'err')
@@ -122,11 +123,11 @@ for site in opts.sites:
                     command += ' '+os.path.join(opts.scrdir,'draw_trans_pixel_{}.py'.format(site_low))
                     command += ' --tmin '+tmin
                     command += ' --tmax '+tmax
-                    command += ' --pmin 0'
-                    command += ' --pmax 300'
+                    command += ' --smin 0'
+                    command += ' --smax 6'
                     command += ' --title "Search Period: {} - {}"'.format(tmin,tmax)
                     command += ' --trans_fnam '+tif_fnam
-                    command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask.tif')
+                    command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask_studyarea.tif')
                     command += ' --output_fnam '+trans_pixel_image
                     command += ' --add_tmax'
                     command += ' --batch'
@@ -142,11 +143,13 @@ for site in opts.sites:
                     command += ' '+os.path.join(opts.scrdir,'draw_trans_field_{}.py'.format(site_low))
                     command += ' --tmin '+tmin
                     command += ' --tmax '+tmax
-                    command += ' --pmin 0'
-                    command += ' --pmax 300'
+                    command += ' --smin 0'
+                    command += ' --smax 6'
                     command += ' --title "Search Period: {} - {}"'.format(tmin,tmax)
                     command += ' --trans_fnam '+shp_fnam
+                    command += ' --mask_fnam '+os.path.join(opts.wrkdir,site,'paddy_mask_studyarea.dat')
                     command += ' --output_fnam '+trans_field_image
+                    command += ' --use_index'
                     command += ' --add_tmax'
                     command += ' --batch'
                     call(command,shell=True)
