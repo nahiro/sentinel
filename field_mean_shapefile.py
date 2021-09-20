@@ -33,7 +33,7 @@ parser.add_option('-d','--debug',default=False,action='store_true',help='Debug m
 ds = gdal.Open(opts.data_file)
 data = ds.ReadAsArray()
 ds = None
-data = data.reshape(len(data),-1)
+data = data.reshape(len(data),-1).astype(np.float64)
 
 object_ids = []
 blocks = []
@@ -77,39 +77,85 @@ if opts.true_file is not None:
 data_dict = {}
 for i in range(object_ids.size):
     object_id = object_ids[i]
+    data_list = [None]*12
+    # block, tanam_d
     if not opts.no_block:
         block = blocks[i]
         if block in scheduled:
-            data_scheduled = scheduled[block]
+            tanam_d = scheduled[block]
         else:
-            data_scheduled = np.nan
+            tanam_d = np.nan
     else:
-        data_scheduled = np.nan
+        block = 'None'
+        tanam_d = np.nan
+    data_list[0] = block
+    data_list[1] = tanam_d
+    # tanam_t
+    tanam_t = 'N/A' if np.isnan(tanam_d) else num2date(np.round(tanam_d)+0.1).strftime('%Y/%m/%d')
+    data_list[2] = tanam_t
+    # trans_d
     data_value = data[0,inds[i]]
-    signal_value = data[1,inds[i]]
-    data_weight = signal_value
-    #signal_weight = areas[i]
+    #data_weight = areas[i]
+    data_weight = data[1,inds[i]]
     cnd = ~np.isnan(data_value)
-    if cnd.sum() <= 1:
-        data_avg = data_value[cnd].mean()
-        signal_avg = signal_value[cnd].mean()
-        data_std = 0.0
-        signal_std = 0.0
-    else:
-        data_weighted_stats = DescrStatsW(data_value[cnd],weights=data_weight[cnd],ddof=0)
-        data_avg = data_weighted_stats.mean
-        data_std = data_weighted_stats.std
-        signal_avg = signal_value[cnd].mean()
-        signal_std = signal_value[cnd].std()
-    data_dict.update({object_id:[block,data_scheduled,data_avg,signal_avg]})
+    dcnd = data_value[cnd].copy()
+    wcnd = data_weight[cnd].copy()
+    wsum = wcnd.sum()
+    trans_d = (dcnd*wcnd).sum()/wsum
+    data_list[3] = trans_d
+    # trans_t
+    trans_t = 'N/A' if np.isnan(trans_d) else num2date(np.round(trans_d)+0.1).strftime('%Y/%m/%d')
+    data_list[4] = trans_t
+    # trans_s
+    trans_s = wsum/wcnd.size
+    data_list[5] = trans_s
+    # trans_n
+    data_value = data[2,inds[i]]
+    cnd = ~np.isnan(data_value)
+    dcnd = data_value[cnd].copy()
+    wcnd = data_weight[cnd].copy()
+    wsum = wcnd.sum()
+    trans_n = (dcnd*wcnd).sum()/wsum
+    data_list[6] = trans_n
+    # bsc_min
+    data_value = data[3,inds[i]]
+    dcnd = data_value[cnd].copy()
+    bsc_min = (dcnd*wcnd).sum()/wsum
+    data_list[7] = bsc_min
+    # post_avg
+    data_value = data[4,inds[i]]
+    cnd = ~np.isnan(data_value)
+    dcnd = data_value[cnd].copy()
+    wcnd = data_weight[cnd].copy()
+    wsum = wcnd.sum()
+    post_avg = (dcnd*wcnd).sum()/wsum
+    data_list[8] = post_avg
+    # post_min
+    data_value = data[5,inds[i]]
+    dcnd = data_value[cnd].copy()
+    post_min = (dcnd*wcnd).sum()/wsum
+    data_list[9] = post_min
+    # post_max
+    data_value = data[6,inds[i]]
+    dcnd = data_value[cnd].copy()
+    post_max = (dcnd*wcnd).sum()/wsum
+    data_list[10] = post_max
+    # risetime
+    data_value = data[7,inds[i]]
+    cnd = ~np.isnan(data_value)
+    dcnd = data_value[cnd].copy()
+    wcnd = data_weight[cnd].copy()
+    wsum = wcnd.sum()
+    risetime = (dcnd*wcnd).sum()/wsum
+    data_list[11] = risetime
 
 r = shapefile.Reader(opts.inpnam)
 w = shapefile.Writer(opts.outnam)
 w.shapeType = shapefile.POLYGON
 w.fields = r.fields[1:] # skip first deletion field
-w.field('Block','C',6,0)
-w.field('TANAM','F',13,6)
-w.field('TANAM_text','C',10,0)
+w.field('block','C',6,0)
+w.field('tanam_d','F',13,6)
+w.field('tanam_t','C',10,0)
 w.field('trans_d','F',13,6)
 w.field('trans_t','C',10,0)
 w.field('trans_s','F',13,6)
@@ -122,9 +168,7 @@ w.field('risetime','F',13,6)
 for shaperec in r.iterShapeRecords():
     rec = shaperec.record
     shp = shaperec.shape
-    data_list = data_dict[rec.OBJECTID].copy()
-    data_list.insert(2,'N/A' if np.isnan(data_dict[rec.OBJECTID][1]) else num2date(np.round(data_dict[rec.OBJECTID][1])+0.1).strftime('%Y/%m/%d'))
-    data_list.insert(4,'N/A' if np.isnan(data_dict[rec.OBJECTID][2]) else num2date(np.round(data_dict[rec.OBJECTID][2])+0.1).strftime('%Y/%m/%d'))
+    data_list = data_dict[rec.OBJECTID]
     rec.extend(data_list)
     w.shape(shp)
     w.record(*rec)
