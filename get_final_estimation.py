@@ -116,6 +116,7 @@ for site in opts.sites:
                     command += ' --data_fnam '+tif_fnam
                     command += ' --area_fnam '+os.path.join(opts.wrkdir,site,'pixel_area_block.dat')
                     command += ' --outnam '+shp_bnam
+                    command += ' --use_index'
                     call(command,shell=True)
                     command = 'python'
                     command += ' '+os.path.join(opts.scrdir,'draw_trans_pixel_{}.py'.format(site_low))
