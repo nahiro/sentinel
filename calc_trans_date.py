@@ -31,6 +31,7 @@ SEN1_PROMINENCE = 0.1
 SIG_DISTANCE = 10
 SIG_PROMINENCE = 0.1
 VTHR = -13.0 # dB
+VRIS = 3.0 # dB
 XSGM = 12.0 # day
 LSGM = 30.0 # m
 N_NEAREST = 120 # pixel
@@ -63,6 +64,7 @@ parser.add_option('--sen1_prominence',default=SEN1_PROMINENCE,type='float',help=
 parser.add_option('--sig_distance',default=SIG_DISTANCE,type='int',help='Minimum peak distance in tstp for synthesized signal (%default)')
 parser.add_option('--sig_prominence',default=SIG_PROMINENCE,type='float',help='Minimum prominence in dB for synthesized signal (%default)')
 parser.add_option('-v','--vthr',default=VTHR,type='float',help='Threshold (max value) of minimum VH in dB (%default)')
+parser.add_option('--vris',default=VRIS,type='float',help='Threshold of VH to calculate risetime in dB (%default)')
 parser.add_option('-w','--xsgm',default=XSGM,type='float',help='Standard deviation of gaussian in day (%default)')
 parser.add_option('-W','--lsgm',default=LSGM,type='float',help='Standard deviation of gaussian in m (%default)')
 parser.add_option('--n_nearest',default=N_NEAREST,type='int',help='Number of nearest pixels to be considered (%default)')
@@ -103,6 +105,7 @@ data_info['sen1_prominence'] = opts.sen1_prominence
 data_info['sig_distance'] = opts.sig_distance
 data_info['sig_prominence'] = opts.sig_prominence
 data_info['vthr'] = opts.vthr
+data_info['vris'] = opts.vris
 data_info['xsgm'] = opts.xsgm
 data_info['lsgm'] = opts.lsgm
 data_info['n_nearest'] = opts.n_nearest
@@ -455,7 +458,7 @@ with open(opts.temp_fnam,'rb') as fp:
             output_data[4,indy,indx] = yinc.mean() # post_avg
             output_data[5,indy,indx] = yinc.min() # post_min
             output_data[6,indy,indx] = yinc.max() # post_max
-            cnd = (xx > xx[k]) & (yy > yy[k]+3.0)
+            cnd = (xx > xx[k]) & (yy > yy[k]+opts.vris)
             xcnd = xx[cnd]
             if len(xcnd) < 1:
                 continue
