@@ -104,7 +104,7 @@ for site in opts.sites:
             if site_low == 'cihea':
                 tmin = (d-timedelta(days=90)).strftime('%Y%m%d')
                 tmax = dstr
-                data_tmin = (d-timedelta(days=150)).strftime('%Y%m%d')
+                data_tmin = (d-timedelta(days=180)).strftime('%Y%m%d')
                 data_tmax = dstr
                 jsn_fnam = os.path.join(wrkdir,'trans_date_{}_{}_preliminary.json'.format(site_low,dstr))
                 tif_fnam = os.path.join(wrkdir,'trans_date_{}_{}_preliminary.tif'.format(site_low,dstr))
