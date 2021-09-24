@@ -199,10 +199,46 @@ if trg_fnam is not None:
             else:
                 opts.minimum_gcps = int(opts.minimum_ratio*xi.size+0.5)
         command += ' -refine_gcps {} {}'.format(opts.refine_gcps,opts.minimum_gcps)
-    command += ' -r {}'.format(opts.resampling)
-    command += ' '+tmp_fnam
-    command += ' '+out_fnam
-    call(command,shell=True)
+    if opts.resampling2_band is not None:
+        tmp2_fnam = trg_bnam+'_tmp2.tif'
+        out1_fnam = trg_bnam+'_geocor1.tif'
+        out2_fnam = trg_bnam+'_geocor2.tif'
+        command1 = command + ' -r {}'.format(opts.resampling)
+        command1 += ' '+tmp_fnam
+        command1 += ' '+out1_fnam
+        command2 = command + ' -r {}'.format(opts.resampling2)
+        command2 += ' '+tmp2_fnam
+        command2 += ' '+out2_fnam
+        command = 'gdal_translate'
+        for i in opts.resampling2_band:
+            command += ' -b {}'.format(i+1)
+        command += ' '+tmp_fnam
+        command += ' '+tmp2_fnam
+        call(command,shell=True)
+        call(command1,shell=True)
+        call(command2,shell=True)
+        ds1 = gdal.Open(out1_fnam)
+        ds2 = gdal.Open(out2_fnam)
+        drv = gdal.GetDriverByName('GTiff')
+        ds = drv.CreateCopy(out_fnam,ds1,strict=0)
+        for i in opts.resampling2_band:
+            band = ds2.GetRasterBand(i+1)
+            ds.GetRasterBand(i+1).WriteArray(band.ReadAsArray())
+        ds.FlushCache()
+        ds = None
+        ds1 = None
+        ds2 = None
+        if os.path.exists(tmp2_fnam):
+            os.remove(tmp2_fnam)
+        if os.path.exists(out1_fnam):
+            os.remove(out1_fnam)
+        if os.path.exists(out2_fnam):
+            os.remove(out2_fnam)
+    else:
+        command += ' -r {}'.format(opts.resampling)
+        command += ' '+tmp_fnam
+        command += ' '+out_fnam
+        call(command,shell=True)
     if os.path.exists(tmp_fnam):
         os.remove(tmp_fnam)
 
