@@ -16,6 +16,7 @@ SCRDIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 #REF_DATA_MIN = None
 REF_DATA_MIN = 1.0e-5 # for WorldView DN image
 RESAMPLING = 'cubic'
+RESAMPLING2 = 'near'
 MINIMUM_RATIO = 0.9
 MINIMUM_NUMBER = 20
 REFINE_NUMBER = 10
@@ -55,6 +56,8 @@ parser.add_option('--trg_shapefile',default=None,help='Target shapefile (%defaul
 parser.add_option('-e','--trg_epsg',default=None,help='Target EPSG (guessed from target data)')
 parser.add_option('-n','--npoly',default=None,type='int',help='Order of polynomial used for warping between 1 and 3 (selected based on the number of GCPs)')
 parser.add_option('-R','--resampling',default=RESAMPLING,help='Resampling method (%default)')
+parser.add_option('--resampling2',default=RESAMPLING2,help='Another resampling method (%default)')
+parser.add_option('--resampling2_band',default=None,type='int',action='append',help='Target band# for another resampling method (%default)')
 parser.add_option('--minimum_number',default=MINIMUM_NUMBER,type='int',help='Minimum number of GCPs to perform geometric correction (%default)')
 parser.add_option('--refine_gcps',default=None,type='float',help='Tolerance to refine GCPs for polynomial interpolation (%default)')
 parser.add_option('--minimum_gcps',default=None,type='int',help='Minimum number of GCPs to be left after refine_gcps (available number - discard_number or available number x minimum_ratio)')
