@@ -210,8 +210,8 @@ if trg_fnam is not None:
         command2 += ' '+tmp2_fnam
         command2 += ' '+out2_fnam
         command = 'gdal_translate'
-        for i in opts.resampling2_band:
-            command += ' -b {}'.format(i+1)
+        for band_index in opts.resampling2_band:
+            command += ' -b {}'.format(band_index+1)
         command += ' '+tmp_fnam
         command += ' '+tmp2_fnam
         call(command,shell=True)
@@ -221,9 +221,9 @@ if trg_fnam is not None:
         ds2 = gdal.Open(out2_fnam)
         drv = gdal.GetDriverByName('GTiff')
         ds = drv.CreateCopy(out_fnam,ds1,strict=0)
-        for i in opts.resampling2_band:
+        for i,band_index in enumerate(opts.resampling2_band):
             band = ds2.GetRasterBand(i+1)
-            ds.GetRasterBand(i+1).WriteArray(band.ReadAsArray())
+            ds.GetRasterBand(band_index+1).WriteArray(band.ReadAsArray())
         ds.FlushCache()
         ds = None
         ds1 = None
