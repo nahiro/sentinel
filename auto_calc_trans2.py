@@ -183,6 +183,7 @@ for site in opts.sites:
             command += ' --out_fnam '+gnam
             command += ' --tr 10.0'
             command += ' --use_gcps '+sel_fnam # use
+            command += ' --resampling2_band 16'
             try:
                 call(command,shell=True)
             except Exception:
