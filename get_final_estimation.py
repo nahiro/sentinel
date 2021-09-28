@@ -49,7 +49,7 @@ for s in opts.subdirs:
     m = re.search('([^:]+):([^:]+)',s)
     if not m:
         raise ValueError('Error in subdir >>> '+s)
-    subdir.update({m.group(1).lower():float(m.group(2))})
+    subdir.update({m.group(1).lower():m.group(2)})
 offset = {}
 for s in opts.offsets:
     m = re.search('([^:]+):([^:]+)',s)
