@@ -94,7 +94,7 @@ def upload_file(fnam,gnam):
             if opts.verbose:
                 sys.stderr.write('File exists, skip   >>> '+f['title']+'\n')
                 sys.stderr.flush()
-            return f['title'],f['fileSize'],f['modifiedDate'],f['md5Checksum']
+            return f['title'],int(f['fileSize']),f['modifiedDate'],f['md5Checksum']
     # Upload file
     f = drive.CreateFile({'parents':[{'id':folders[parent]['id']}]})
     f.SetContentFile(fnam)
@@ -107,7 +107,7 @@ def upload_file(fnam,gnam):
         raise ValueError('Error, n_list={} >>> {}'.format(n_list,gnam))
     else:
         f = l[0]
-        return f['title'],f['fileSize'],f['modifiedDate'],f['md5Checksum']
+        return f['title'],int(f['fileSize']),f['modifiedDate'],f['md5Checksum']
 
 def upload_and_check_file(fnam,gnam):
     title = os.path.basename(gnam)
