@@ -27,6 +27,8 @@ parser.add_option('--overwrite',default=False,action='store_true',help='Overwrit
 (opts,args) = parser.parse_args()
 if opts.srcdir is None or opts.subdir is None or opts.dstdir is None or opts.locdir is None:
     raise ValueError('Error, srcdir={}, subdir={}, dstdir={}, locdir={}'.format(opts.srcdir,opts.subdir,opts.dstdir,opts.locdir))
+if opts.ignore is None:
+    opts.ignore = []
 
 opts.srcdir = os.path.abspath(opts.srcdir)
 topdir = os.getcwd()
@@ -164,7 +166,7 @@ for subdir in opts.subdir:
         if not os.path.isdir(locdir):
             raise IOError('Error, no such folder >>> '+locdir)
         for f in fs:
-            if opts.ignore is not None and f in opts.ignore:
+            if f in opts.ignore:
                 continue
             fnam = os.path.join(srcdir,f)
             gnam = os.path.join(dstdir,f)
