@@ -21,6 +21,7 @@ parser.add_option('-s','--subdir',default=None,action='append',help='Sub directo
 parser.add_option('-D','--dstdir',default=None,help='Destination directory (%default)')
 parser.add_option('-L','--locdir',default=None,help='Local destination directory (%default)')
 parser.add_option('--drvdir',default=DRVDIR,help='GoogleDrive directory (%default)')
+parser.add_option('-I','--ignore',default=None,action='append',help='File to ignore (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 (opts,args) = parser.parse_args()
@@ -163,6 +164,8 @@ for subdir in opts.subdir:
         if not os.path.isdir(locdir):
             raise IOError('Error, no such folder >>> '+locdir)
         for f in fs:
+            if opts.ignore is not None and f in opts.ignore:
+                continue
             fnam = os.path.join(srcdir,f)
             gnam = os.path.join(dstdir,f)
             lnam = os.path.join(locdir,f)
