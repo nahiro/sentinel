@@ -2,6 +2,7 @@
 import os
 import sys
 import shutil
+import hashlib
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from optparse import OptionParser,IndentedHelpFormatter
@@ -67,7 +68,7 @@ def make_folders(path):
         dnam = os.path.join(dnam,p)
         make_folder(dnam)
 
-def copy_file(fnam,gnam):
+def upload_file(fnam,gnam):
     parent = os.path.dirname(gnam)
     target = os.path.basename(gnam)
     if parent == '':
@@ -93,10 +94,12 @@ def copy_file(fnam,gnam):
                 sys.stderr.write('File exists, skip   >>> '+f['title']+'\n')
                 sys.stderr.flush()
             return f['title'],f['fileSize'],f['modifiedDate'],f['md5Checksum']
+    # Upload file
     f = drive.CreateFile({'parents':[{'id':folders[parent]['id']}]})
     f.SetContentFile(fnam)
     f['title'] = target
     f.Upload()
+    # Check uploaded file
     l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType != "application/vnd.google-apps.folder" and title = "{}"'.format(folders[parent]['id'],target)}).GetList()
     n_list = len(l)
     if n_list != 1:
@@ -105,6 +108,26 @@ def copy_file(fnam,gnam):
     else:
         f = l[0]
         return f['title'],f['fileSize'],f['modifiedDate'],f['md5Checksum']
+
+def upload_and_check_file(fnam,gnam):
+    title = os.path.basename(gnam)
+    size = os.path.getsize(fnam)
+    title_dst,size_dst,mdate_dst,md5_dst = upload_file(fnam,gnam)
+    if (title_dst.lower() == title.lower()) and (size_dst == size):
+        with open(fnam,'rb') as fp:
+            md5 = hashlib.md5(fp.read()).hexdigest()
+        if (md5_dst.lower() == md5.lower()):
+            return 0
+        else:
+            if opts.verbose:
+                sys.stderr.write('Warning, title={} ({}), size={} ({}), md5={} ({})\n'.format(title_dst,title,size_dst,size,md5_dst,md5))
+                sys.stderr.flush()
+            return -1
+    else:
+        if opts.verbose:
+            sys.stderr.write('Warning, title={} ({}), size={} ({})\n'.format(title_dst,title,size_dst,size))
+            sys.stderr.flush()
+        return -1
 
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
@@ -133,5 +156,5 @@ for subdir in opts.subdir:
         for f in fs:
             fnam = os.path.join(srcdir,f)
             gnam = os.path.join(dstdir,f)
-            copy_file(fnam,gnam)
+            upload_and_check_file(fnam,gnam)
 os.chdir(topdir)
