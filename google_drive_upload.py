@@ -3,6 +3,7 @@ import os
 import sys
 import shutil
 import hashlib
+import atexit
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from optparse import OptionParser,IndentedHelpFormatter
@@ -18,14 +19,20 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.add_option('-S','--srcdir',default=None,help='Source directory (%default)')
 parser.add_option('-s','--subdir',default=None,action='append',help='Sub directory (%default)')
 parser.add_option('-D','--dstdir',default=None,help='Destination directory (%default)')
+parser.add_option('-L','--locdir',default=None,help='Local destination directory (%default)')
 parser.add_option('--drvdir',default=DRVDIR,help='GoogleDrive directory (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 (opts,args) = parser.parse_args()
+if opts.srcdir is None or opts.subdir is None or opts.dstdir is None or opts.locdir is None:
+    raise ValueError('Error, srcdir={}, subdir={}, dstdir={}, locdir={}'.format(opts.srcdir,opts.subdir,opts.dstdir,opts.locdir))
 
 opts.srcdir = os.path.abspath(opts.srcdir)
 topdir = os.getcwd()
 os.chdir(opts.drvdir)
+def clean_up():
+    os.chdir(topdir)
+atexit.register(clean_up)
 
 folders = {}
 
@@ -37,17 +44,14 @@ def make_folder(path):
         l = drive.ListFile({'q': '"root" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title = "{}"'.format(target)}).GetList()
         n_list = len(l)
         if n_list != 1:
-            os.chdir(topdir)
             raise ValueError('Error in finding folder, n_list={} >>> {}'.format(n_list,path))
         folders.update({path:l[0]})
         return 0
     elif not parent in folders:
-        os.chdir(topdir)
         raise IOError('Error, no such folder >>> '+parent)
     l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title = "{}"'.format(folders[parent]['id'],target)}).GetList()
     n_list = len(l)
     if n_list > 1:
-        os.chdir(topdir)
         raise ValueError('Error in finding folder, n_list={} >>> {}'.format(n_list,path))
     elif n_list == 1:
         if not path in folders:
@@ -72,15 +76,12 @@ def upload_file(fnam,gnam):
     parent = os.path.dirname(gnam)
     target = os.path.basename(gnam)
     if parent == '':
-        os.chdir(topdir)
         raise ValueError('Error in parent >>> {}'.format(gnam))
     elif not parent in folders:
-        os.chdir(topdir)
         raise IOError('Error, no such folder >>> '+parent)
     l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType != "application/vnd.google-apps.folder" and title = "{}"'.format(folders[parent]['id'],target)}).GetList()
     n_list = len(l)
     if n_list > 1:
-        os.chdir(topdir)
         raise ValueError('Error, n_list={} >>> {}'.format(n_list,gnam))
     elif n_list == 1:
         f = l[0]
@@ -103,7 +104,6 @@ def upload_file(fnam,gnam):
     l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType != "application/vnd.google-apps.folder" and title = "{}"'.format(folders[parent]['id'],target)}).GetList()
     n_list = len(l)
     if n_list != 1:
-        os.chdir(topdir)
         raise ValueError('Error, n_list={} >>> {}'.format(n_list,gnam))
     else:
         f = l[0]
@@ -117,6 +117,9 @@ def upload_and_check_file(fnam,gnam):
         with open(fnam,'rb') as fp:
             md5 = hashlib.md5(fp.read()).hexdigest()
         if (md5_dst.lower() == md5.lower()):
+            if opts.verbose:
+                sys.stderr.write('Successfully uploaded >>> {}\n'.format(fnam))
+                sys.stderr.flush()
             return 0
         else:
             if opts.verbose:
@@ -146,15 +149,24 @@ for subdir in opts.subdir:
         if curdir == os.curdir:
             srcdir = opts.srcdir
             dstdir = opts.dstdir
+            locdir = opts.locdir
         else:
             srcdir = os.path.join(opts.srcdir,curdir)
             dstdir = os.path.join(opts.dstdir,curdir)
+            locdir = os.path.join(opts.locdir,curdir)
         #print(srcdir,'-----',dstdir)
         if not dstdir in folders:
             if make_folder(dstdir) != 0:
                 raise IOError('Error, faild in making folder >>> '+dstdir)
+        if not os.path.exists(locdir):
+            os.makedirs(locdir)
+        if not os.path.isdir(locdir):
+            raise IOError('Error, no such folder >>> '+locdir)
         for f in fs:
             fnam = os.path.join(srcdir,f)
             gnam = os.path.join(dstdir,f)
-            upload_and_check_file(fnam,gnam)
-os.chdir(topdir)
+            lnam = os.path.join(locdir,f)
+            if upload_and_check_file(fnam,gnam) == 0:
+                shutil.move(fnam,lnam)
+        if len(os.listdir(srcdir)) == 0:
+            os.rmdir(srcdir)
