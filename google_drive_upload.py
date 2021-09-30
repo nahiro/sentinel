@@ -92,12 +92,19 @@ def copy_file(fnam,gnam):
             if opts.verbose:
                 sys.stderr.write('File exists, skip   >>> '+f['title']+'\n')
                 sys.stderr.flush()
-            return 0
+            return f['title'],f['fileSize'],f['modifiedDate'],f['md5Checksum']
     f = drive.CreateFile({'parents':[{'id':folders[parent]['id']}]})
     f.SetContentFile(fnam)
     f['title'] = target
     f.Upload()
-    return 0
+    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType != "application/vnd.google-apps.folder" and title = "{}"'.format(folders[parent]['id'],target)}).GetList()
+    n_list = len(l)
+    if n_list != 1:
+        os.chdir(topdir)
+        raise ValueError('Error, n_list={} >>> {}'.format(n_list,gnam))
+    else:
+        f = l[0]
+        return f['title'],f['fileSize'],f['modifiedDate'],f['md5Checksum']
 
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
