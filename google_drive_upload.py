@@ -59,6 +59,14 @@ def make_folder(path):
         return 0
     return -1
 
+def make_folders(path):
+    normalized_path = os.path.normpath(path)
+    path_components = normalized_path.split(os.sep)
+    dnam = ''
+    for p in path_components:
+        dnam = os.path.join(dnam,p)
+        make_folder(dnam)
+
 def copy_file(fnam,gnam):
     parent = os.path.dirname(gnam)
     target = os.path.basename(gnam)
@@ -96,6 +104,7 @@ gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
 
 for subdir in opts.subdir:
+    make_folders(os.path.join(opts.dstdir,subdir))
     for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir)):
         curdir = os.path.relpath(root,opts.srcdir)
         if opts.verbose:
