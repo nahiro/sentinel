@@ -15,6 +15,7 @@ DRVDIR = os.path.join(HOME,'Work','SATREPS','IPB_Satreps')
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('-S','--srcdir',default=None,help='Source directory (%default)')
+parser.add_option('-s','--subdir',default=None,action='append',help='Sub directory (%default)')
 parser.add_option('-D','--dstdir',default=None,help='Destination directory (%default)')
 parser.add_option('--drvdir',default=DRVDIR,help='GoogleDrive directory (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
@@ -94,26 +95,27 @@ gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
 
-for root,ds,fs in os.walk(opts.srcdir):
-    curdir = os.path.relpath(root,opts.srcdir)
-    if opts.verbose:
-        sys.stderr.write('#####################\n')
-        sys.stderr.write(curdir+'\n')
-        sys.stderr.write(str(ds)+'\n')
-        sys.stderr.write(str(fs)+'\n')
-        sys.stderr.flush()
-    if curdir == os.curdir:
-        srcdir = opts.srcdir
-        dstdir = opts.dstdir
-    else:
-        srcdir = os.path.join(opts.srcdir,curdir)
-        dstdir = os.path.join(opts.dstdir,curdir)
-    #print(srcdir,'-----',dstdir)
-    if not dstdir in folders:
-        if make_folder(dstdir) != 0:
-            raise IOError('Error, faild in making folder >>> '+dstdir)
-    for f in fs:
-        fnam = os.path.join(srcdir,f)
-        gnam = os.path.join(dstdir,f)
-        copy_file(fnam,gnam)
+for subdir in opts.subdir:
+    for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir)):
+        curdir = os.path.relpath(root,opts.srcdir)
+        if opts.verbose:
+            sys.stderr.write('#####################\n')
+            sys.stderr.write(curdir+'\n')
+            sys.stderr.write(str(ds)+'\n')
+            sys.stderr.write(str(fs)+'\n')
+            sys.stderr.flush()
+        if curdir == os.curdir:
+            srcdir = opts.srcdir
+            dstdir = opts.dstdir
+        else:
+            srcdir = os.path.join(opts.srcdir,curdir)
+            dstdir = os.path.join(opts.dstdir,curdir)
+        #print(srcdir,'-----',dstdir)
+        if not dstdir in folders:
+            if make_folder(dstdir) != 0:
+                raise IOError('Error, faild in making folder >>> '+dstdir)
+        for f in fs:
+            fnam = os.path.join(srcdir,f)
+            gnam = os.path.join(dstdir,f)
+            copy_file(fnam,gnam)
 os.chdir(topdir)
