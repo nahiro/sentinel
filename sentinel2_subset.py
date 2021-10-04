@@ -18,6 +18,7 @@ RESOLUTION = 10 # m
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('-o','--output_fnam',default=None,help='Output file name (%default)')
 parser.add_option('-D','--datdir',default=DATDIR,help='Output data directory (%default)')
 parser.add_option('--site',default=SITE,help='Site name for preset coordinates (%default)')
 parser.add_option('--polygon',default=None,help='Polygon of ROI in WKT format (%default)')
@@ -37,11 +38,12 @@ if not m:
         raise ValueError('Error in file name >>> '+input_fnam)
     safe_flag = True
 dstr = m.group(1)[:8]
-if opts.geotiff:
-    output_fnam = os.path.join(opts.datdir,'{}.tif'.format(dstr))
-else:
-    output_fnam = os.path.join(opts.datdir,'{}.dim'.format(dstr))
-if os.path.exists(output_fnam):
+if opts.output_fnam is None:
+    if opts.geotiff:
+        opts.output_fnam = os.path.join(opts.datdir,'{}.tif'.format(dstr))
+    else:
+        opts.output_fnam = os.path.join(opts.datdir,'{}.dim'.format(dstr))
+if os.path.exists(opts.output_fnam):
     sys.exit()
 
 if opts.site is not None:
@@ -76,6 +78,6 @@ params.put('geoRegion',geom)
 data_tmp = GPF.createProduct('Subset',params,data)
 data = data_tmp
 if opts.geotiff:
-    ProductIO.writeProduct(data,output_fnam,'GeoTiff')
+    ProductIO.writeProduct(data,opts.output_fnam,'GeoTiff')
 else:
-    ProductIO.writeProduct(data,output_fnam,'BEAM-DIMAP')
+    ProductIO.writeProduct(data,opts.output_fnam,'BEAM-DIMAP')
