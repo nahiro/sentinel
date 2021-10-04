@@ -4,6 +4,7 @@ import sys
 import shutil
 import hashlib
 import atexit
+from glob import glob
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from optparse import OptionParser,IndentedHelpFormatter
@@ -21,12 +22,15 @@ parser.add_option('-s','--subdir',default=None,action='append',help='Sub directo
 parser.add_option('-D','--dstdir',default=None,help='Destination directory (%default)')
 parser.add_option('-L','--locdir',default=None,help='Local destination directory (%default)')
 parser.add_option('--drvdir',default=DRVDIR,help='GoogleDrive directory (%default)')
+parser.add_option('-K','--keep_folder',default=None,action='append',help='Directory to keep (%default)')
 parser.add_option('-I','--ignore_file',default=None,action='append',help='File to ignore (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 (opts,args) = parser.parse_args()
 if opts.srcdir is None or opts.subdir is None or opts.dstdir is None or opts.locdir is None:
     raise ValueError('Error, srcdir={}, subdir={}, dstdir={}, locdir={}'.format(opts.srcdir,opts.subdir,opts.dstdir,opts.locdir))
+if opts.keep_folder is None:
+    opts.keep_folder = []
 if opts.ignore_file is None:
     opts.ignore_file = []
 
