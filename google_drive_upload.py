@@ -29,11 +29,16 @@ parser.add_option('--overwrite',default=False,action='store_true',help='Overwrit
 (opts,args) = parser.parse_args()
 if opts.srcdir is None or opts.subdir is None or opts.dstdir is None or opts.locdir is None:
     raise ValueError('Error, srcdir={}, subdir={}, dstdir={}, locdir={}'.format(opts.srcdir,opts.subdir,opts.dstdir,opts.locdir))
-if opts.keep_folder is None:
-    opts.keep_folder = []
-if opts.ignore_file is None:
-    opts.ignore_file = []
+keep_folder = []
+if opts.keep_folder is not None:
+    for f in opts.keep_folder:
+        keep_folder.extend(glob(os.path.normpath(f)))
+ignore_file = []
+if opts.ignore_file is not None:
+    for f in opts.ignore_file:
+        ignore_file.extend(glob(os.path.normpath(f)))
 
+"""
 opts.srcdir = os.path.abspath(opts.srcdir)
 topdir = os.getcwd()
 os.chdir(opts.drvdir)
@@ -170,7 +175,7 @@ for subdir in opts.subdir:
         if not os.path.isdir(locdir):
             raise IOError('Error, no such folder >>> '+locdir)
         for f in fs:
-            if f in opts.ignore_file:
+            if f in ignore_file:
                 continue
             fnam = os.path.join(srcdir,f)
             gnam = os.path.join(dstdir,f)
@@ -179,3 +184,4 @@ for subdir in opts.subdir:
                 shutil.move(fnam,lnam)
         if len(os.listdir(srcdir)) == 0:
             os.rmdir(srcdir)
+"""
