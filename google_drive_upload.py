@@ -25,6 +25,7 @@ parser.add_option('--drvdir',default=DRVDIR,help='GoogleDrive directory (%defaul
 parser.add_option('-K','--keep_folder',default=None,action='append',help='Directory to keep (%default)')
 parser.add_option('-I','--ignore_file',default=None,action='append',help='File to ignore (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
+parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 (opts,args) = parser.parse_args()
 if opts.srcdir is None or opts.subdir is None or opts.dstdir is None or opts.locdir is None:
@@ -32,13 +33,24 @@ if opts.srcdir is None or opts.subdir is None or opts.dstdir is None or opts.loc
 keep_folder = []
 if opts.keep_folder is not None:
     for f in opts.keep_folder:
-        keep_folder.extend(glob(os.path.normpath(f)))
+        for p in glob(os.path.normpath(os.path.join(opts.srcdir,f))):
+            if os.path.isdir(p):
+                keep_folder.append(p)
 ignore_file = []
 if opts.ignore_file is not None:
     for f in opts.ignore_file:
-        ignore_file.extend(glob(os.path.normpath(f)))
+        for p in glob(os.path.normpath(os.path.join(opts.srcdir,f))):
+            if not os.path.isdir(p):
+                ignore_file.extend(p)
+if opts.verbose:
+    sys.stderr.write('keep_folder:\n')
+    for f in keep_folder:
+        sys.stderr.write(f+'\n')
+    sys.stderr.write('ignore_file:\n')
+    for f in ignore_file:
+        sys.stderr.write(f+'\n')
+    sys.stderr.flush()
 
-"""
 opts.srcdir = os.path.abspath(opts.srcdir)
 topdir = os.getcwd()
 os.chdir(opts.drvdir)
@@ -175,13 +187,19 @@ for subdir in opts.subdir:
         if not os.path.isdir(locdir):
             raise IOError('Error, no such folder >>> '+locdir)
         for f in fs:
-            if f in ignore_file:
-                continue
             fnam = os.path.join(srcdir,f)
             gnam = os.path.join(dstdir,f)
             lnam = os.path.join(locdir,f)
+            if fnam in ignore_file:
+                continue
             if upload_and_check_file(fnam,gnam) == 0:
                 shutil.move(fnam,lnam)
+                if opts.debug and not os.path.exists(fnam) and os.path.exists(lnam):
+                    sys.stderr.write('Moved {} to {}\n'.format(fnam,lnam))
+                    sys.stderr.flush()
         if len(os.listdir(srcdir)) == 0:
-            os.rmdir(srcdir)
-"""
+            if not srcdir in keep_folder:
+                os.rmdir(srcdir)
+                if opts.debug and not os.path.exists(srcdir):
+                    sys.stderr.write('Removed {}\n'.format(srcdir))
+                    sys.stderr.flush()
