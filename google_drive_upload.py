@@ -41,15 +41,18 @@ if opts.ignore_file is not None:
     for f in opts.ignore_file:
         for p in glob(os.path.normpath(os.path.join(opts.srcdir,f))):
             if not os.path.isdir(p):
-                ignore_file.extend(p)
+                ignore_file.append(p)
 if opts.verbose:
-    sys.stderr.write('keep_folder:\n')
-    for f in keep_folder:
-        sys.stderr.write(f+'\n')
-    sys.stderr.write('ignore_file:\n')
-    for f in ignore_file:
-        sys.stderr.write(f+'\n')
-    sys.stderr.flush()
+    if len(keep_folder) > 0:
+        sys.stderr.write('keep_folder:\n')
+        for f in keep_folder:
+            sys.stderr.write(f+'\n')
+        sys.stderr.flush()
+    if len(ignore_file) > 0:
+        sys.stderr.write('ignore_file:\n')
+        for f in ignore_file:
+            sys.stderr.write(f+'\n')
+        sys.stderr.flush()
 
 opts.srcdir = os.path.abspath(opts.srcdir)
 topdir = os.getcwd()
