@@ -174,8 +174,10 @@ for subdir in opts.subdir:
         if opts.verbose:
             sys.stderr.write('#####################\n')
             sys.stderr.write(curdir+'\n')
-            sys.stderr.write(str(ds)+'\n')
-            sys.stderr.write(str(fs)+'\n')
+            if len(ds) > 0:
+                sys.stderr.write('Folders: ',str(ds)+'\n')
+            if len(fs) > 0:
+                sys.stderr.write('Files  : ',str(fs)+'\n')
             sys.stderr.flush()
         if curdir == os.curdir:
             srcdir = opts.srcdir
