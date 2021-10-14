@@ -227,7 +227,7 @@ ax2 = plt.subplot(222,projection=prj)
 ax3 = plt.subplot(223,projection=prj)
 ax4 = plt.subplot(224,projection=prj)
 
-im1 = ax1.imshow(data[0],extent=(xmin,xmax,ymax,ymin),vmin=tmin,vmax=tmax,cmap=mymap2)
+im1 = ax1.imshow(data[0],extent=(xmin,xmax,ymax,ymin),vmin=tmin,vmax=tmax,cmap=mymap2,interpolation='none')
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))
 ax12.xaxis.set_major_formatter(plt.FixedFormatter(labels))
@@ -239,21 +239,21 @@ ax12.set_xlabel('Estimated transplanting date (MM/DD)')
 ax12.xaxis.set_label_coords(0.5,-2.8)
 ax1.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
-im2 = ax2.imshow(data[3],extent=(xmin,xmax,ymax,ymin),vmin=bmin,vmax=bmax,cmap=cm.jet)
+im2 = ax2.imshow(data[3],extent=(xmin,xmax,ymax,ymin),vmin=bmin,vmax=bmax,cmap=cm.jet,interpolation='none')
 ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax22.minorticks_on()
 ax22.set_xlabel('BSC at transplanting (dB)')
 ax22.xaxis.set_label_coords(0.5,-2.8)
 ax2.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
-im3 = ax3.imshow(data[4],extent=(xmin,xmax,ymax,ymin),vmin=amin,vmax=amax,cmap=cm.jet)
+im3 = ax3.imshow(data[4],extent=(xmin,xmax,ymax,ymin),vmin=amin,vmax=amax,cmap=cm.jet,interpolation='none')
 ax32 = plt.colorbar(im3,ax=ax3,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax32.minorticks_on()
 ax32.set_xlabel('BSC increase after transplanting (dB)')
 ax32.xaxis.set_label_coords(0.5,-2.6)
 ax3.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
-im4 = ax4.imshow(data[1],extent=(xmin,xmax,ymax,ymin),vmin=smin,vmax=smax,cmap=cm.jet)
+im4 = ax4.imshow(data[1],extent=(xmin,xmax,ymax,ymin),vmin=smin,vmax=smax,cmap=cm.jet,interpolation='none')
 ax42 = plt.colorbar(im4,ax=ax4,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax42.minorticks_on()
 ax42.set_xlabel('Signal at transplanting (dB)')
