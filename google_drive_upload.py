@@ -31,25 +31,32 @@ parser.add_option('--overwrite',default=False,action='store_true',help='Overwrit
 if opts.srcdir is None or opts.subdir is None or opts.dstdir is None or opts.locdir is None:
     raise ValueError('Error, srcdir={}, subdir={}, dstdir={}, locdir={}'.format(opts.srcdir,opts.subdir,opts.dstdir,opts.locdir))
 keep_folder = []
+keep_folder_lower = []
 if opts.keep_folder is not None:
     for f in opts.keep_folder:
         for p in glob(os.path.normpath(os.path.join(opts.srcdir,f))):
             if os.path.isdir(p):
                 keep_folder.append(p)
+                keep_folder_lower.append(p.lower())
 ignore_file = []
+ignore_file_lower = []
 if opts.ignore_file is not None:
     for f in opts.ignore_file:
         for p in glob(os.path.normpath(os.path.join(opts.srcdir,f))):
             if not os.path.isdir(p):
-                ignore_file.extend(p)
+                ignore_file.append(p)
+                ignore_file_lower.append(p.lower())
 if opts.verbose:
-    sys.stderr.write('keep_folder:\n')
-    for f in keep_folder:
-        sys.stderr.write(f+'\n')
-    sys.stderr.write('ignore_file:\n')
-    for f in ignore_file:
-        sys.stderr.write(f+'\n')
-    sys.stderr.flush()
+    if len(keep_folder) > 0:
+        sys.stderr.write('keep_folder:\n')
+        for f in keep_folder:
+            sys.stderr.write(f+'\n')
+        sys.stderr.flush()
+    if len(ignore_file) > 0:
+        sys.stderr.write('ignore_file:\n')
+        for f in ignore_file:
+            sys.stderr.write(f+'\n')
+        sys.stderr.flush()
 
 opts.srcdir = os.path.abspath(opts.srcdir)
 topdir = os.getcwd()
@@ -167,8 +174,10 @@ for subdir in opts.subdir:
         if opts.verbose:
             sys.stderr.write('#####################\n')
             sys.stderr.write(curdir+'\n')
-            sys.stderr.write(str(ds)+'\n')
-            sys.stderr.write(str(fs)+'\n')
+            if len(ds) > 0:
+                sys.stderr.write('Folders: {}\n'.format(ds))
+            if len(fs) > 0:
+                sys.stderr.write('Files  : {}\n'.format(fs))
             sys.stderr.flush()
         if curdir == os.curdir:
             srcdir = opts.srcdir
@@ -190,7 +199,7 @@ for subdir in opts.subdir:
             fnam = os.path.join(srcdir,f)
             gnam = os.path.join(dstdir,f)
             lnam = os.path.join(locdir,f)
-            if fnam in ignore_file:
+            if fnam.lower() in ignore_file_lower:
                 continue
             if upload_and_check_file(fnam,gnam) == 0:
                 shutil.move(fnam,lnam)
@@ -198,7 +207,7 @@ for subdir in opts.subdir:
                     sys.stderr.write('Moved {} to {}\n'.format(fnam,lnam))
                     sys.stderr.flush()
         if len(os.listdir(srcdir)) == 0:
-            if not srcdir in keep_folder:
+            if not srcdir.lower() in keep_folder_lower:
                 os.rmdir(srcdir)
                 if opts.debug and not os.path.exists(srcdir):
                     sys.stderr.write('Removed {}\n'.format(srcdir))
