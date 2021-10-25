@@ -63,8 +63,10 @@ folder_level = l[0]
 # Get version folder
 l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_level['id'],opts.version)}).GetList()
 if len(l) != 1:
-    raise ValueError('Error in finding {} folder'.format(opts.version))
-folder_version = l[0]
+    folder_version = drive.CreateFile({'parents':[{'id':folder_level['id']}],'mimeType':'application/vnd.google-apps.folder','title':opts.version})
+    folder_version.Upload()
+else:
+    folder_version = l[0]
 # Get year folder
 dstr_year = datetime.strptime(opts.date,'%Y%m%d').strftime('%Y')
 l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_version['id'],dstr_year)}).GetList()
