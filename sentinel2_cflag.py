@@ -73,26 +73,14 @@ cloud_flag = []
 for iobj in range(nobject):
     object_id = iobj+1
     yorg = data[:,iobj]
-    ysmo = csaps(xorg,yorg,xorg,smooth=opts.smooth)
-    inds = []
-    for itim in range(xorg.size):
-        if yorg[itim] < ysmo[itim]-opts.vthr1:
-            inds.append(itim)
-    inds = np.array(inds)
-    if inds.size > 0:
-        xinp = np.delete(xorg,inds)
-        yinp = np.delete(yorg,inds)
-    else:
-        xinp = xorg.copy()
-        yinp = yorg.copy()
-    yref = csaps(xinp,yinp,xorg,smooth=opts.smooth)
-    flag = []
-    for itim in range(ntim.size):
-        if (np.abs(yorg[itim]-yref[itim]) > opts.vthr2):
-            flag.append(True)
-        else:
-            flag.append(False)
-    flag = np.array(flag)
+    cnd1 = ~np.isnan(yorg)
+    ysmo = csaps(xorg[cnd1],yorg[cnd1],xorg,smooth=opts.smooth)
+    cnd2 = (yorg >= ysmo-opts.vthr1)
+    cnd3 = cnd1 & cnd2
+    yref = csaps(xorg[cnd3],yorg[cnd3],xorg,smooth=opts.smooth)
+    cnd4 = (np.abs(yorg-yref) <= opts.vthr2)
+    cnd5 = cnd1 & cnd4
+    flag = ~cnd5
     cloud_flag.append(flag)
 cloud_flag = np.array(cloud_flag).swapaxes(0,1)
 
