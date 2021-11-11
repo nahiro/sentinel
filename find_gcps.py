@@ -44,8 +44,11 @@ parser.add_option('--margin_width',default=MARGIN_WIDTH,type='int',help='Margin 
 parser.add_option('--margin_height',default=MARGIN_HEIGHT,type='int',help='Margin height in target pixel (%default)')
 parser.add_option('--ref_data_min',default=None,type='float',help='Minimum reference data value (%default)')
 parser.add_option('--ref_data_max',default=None,type='float',help='Maximum reference data value (%default)')
+parser.add_option('--trg_data_min',default=None,type='float',help='Minimum target data value (%default)')
+parser.add_option('--trg_data_max',default=None,type='float',help='Maximum target data value (%default)')
 parser.add_option('-r','--rthr',default=RTHR,type='float',help='Threshold of correlation coefficient (%default)')
 parser.add_option('-E','--feps',default=FEPS,type='float',help='Step length for curve_fit (%default)')
+parser.add_option('--img_fnam',default=None,help='Image file name (%default)')
 parser.add_option('-e','--exp',default=False,action='store_true',help='Output in exp format (%default)')
 parser.add_option('-u','--use_edge',default=False,action='store_true',help='Use GCPs near the edge of the correction range (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
@@ -56,6 +59,11 @@ if len(args) < 2:
     sys.exit(0)
 trg_fnam = args[0]
 ref_fnam = args[1]
+
+def interp_img(p,refx,refy,refz,trgx,trgy,trgz):
+    f = interp2d(trgx+p[0],trgy+p[1],trgz,kind='linear')
+    intz = f(refx,refy)[::-1]
+    return refz,intz
 
 def residuals(p,refx,refy,refz,trgx,trgy,trgz,pmax):
     if opts.debug:
@@ -197,6 +205,10 @@ for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_
         trg_subset_xp0 = trg_xp0[trg_indx1:trg_indx2]
         trg_subset_yp0 = trg_yp0[trg_indy1:trg_indy2]
         trg_subset_data = trg_data[trg_indy1:trg_indy2,trg_indx1:trg_indx2]
+        if opts.trg_data_min is not None and trg_subset_data.min() < opts.trg_data_min:
+            continue
+        if opts.trg_data_max is not None and trg_subset_data.max() > opts.trg_data_max:
+            continue
         # reference subset
         ref_subset_xp0 = ref_xp0[ref_indx1:ref_indx2]
         ref_subset_yp0 = ref_yp0[ref_indy1:ref_indy2]
@@ -232,5 +244,9 @@ for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_
             else:
                 line = '{:8.1f} {:8.1f} {:8.2f} {:8.2f} {:6.2f} {:6.2f} {:8.3f}\n'.format(trg_indxc+0.5,trg_indyc+0.5,trg_xp0[trg_indxc]+p2[0],trg_yp0[trg_indyc]+p2[1],p2[0],p2[1],r)
             sys.stdout.write(line)
+            if opts.img_fnam is not None:
+                img_fnam = opts.img_fnam.replace('.npz','_{:05d}_{:05d}.npz'.format(trg_indxc,trg_indyc))
+                ref_img,trg_img = interp_img(p2,ref_subset_xp0,ref_subset_yp0,ref_subset_data,trg_subset_xp0,trg_subset_yp0,trg_subset_data)
+                np.savez(img_fnam,ref_img=ref_img,trg_img=trg_img)
             if opts.verbose:
                 sys.stderr.write(line)
