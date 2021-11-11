@@ -48,8 +48,11 @@ parser.add_option('--margin_width',default=None,type='int',help='Margin width in
 parser.add_option('--margin_height',default=None,type='int',help='Margin height in target pixel (%default)')
 parser.add_option('--ref_data_min',default=REF_DATA_MIN,type='float',help='Minimum reference data value (%default)')
 parser.add_option('--ref_data_max',default=None,type='float',help='Maximum reference data value (%default)')
+parser.add_option('--trg_data_min',default=None,type='float',help='Minimum target data value (%default)')
+parser.add_option('--trg_data_max',default=None,type='float',help='Maximum target data value (%default)')
 parser.add_option('-r','--rthr',default=None,type='float',help='Threshold of correlation coefficient (%default)')
 parser.add_option('-E','--feps',default=None,type='float',help='Step length for curve_fit (%default)')
+parser.add_option('--img_fnam',default=None,help='Image file name (%default)')
 parser.add_option('-g','--use_gcps',default=None,help='GCP file name to use (%default)')
 parser.add_option('-G','--save_gcps',default=None,help='GCP file name to save (%default)')
 parser.add_option('--trg_shapefile',default=None,help='Target shapefile (%default)')
@@ -105,8 +108,8 @@ if opts.use_gcps is not None:
 else:
     command = 'python'
     command += ' '+os.path.join(opts.scrdir,'find_gcps.py')
-    command += ' '+ref_fnam
     command += ' '+trg_fnam
+    command += ' '+ref_fnam
     command += ' -v'
     if opts.ref_band is not None:
         command += ' --ref_band {}'.format(opts.ref_band)
@@ -152,10 +155,16 @@ else:
         command += ' --ref_data_min {}'.format(opts.ref_data_min)
     if opts.ref_data_max is not None:
         command += ' --ref_data_max {}'.format(opts.ref_data_max)
+    if opts.trg_data_min is not None:
+        command += ' --trg_data_min {}'.format(opts.trg_data_min)
+    if opts.trg_data_max is not None:
+        command += ' --trg_data_max {}'.format(opts.trg_data_max)
     if opts.rthr is not None:
         command += ' --rthr {}'.format(opts.rthr)
     if opts.feps is not None:
         command += ' --feps {}'.format(opts.feps)
+    if opts.img_fnam is not None:
+        command += ' --img_fnam {}'.format(opts.img_fnam)
     if opts.exp:
         command += ' --exp'
     if opts.use_edge:
