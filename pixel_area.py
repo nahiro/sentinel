@@ -89,8 +89,20 @@ with open(opts.datnam,'w') as fp:
             poly_buffer = Polygon(shp.points).buffer(opts.buffer)
         else:
             poly_buffer = Polygon(shp.points)
-        path_search = Path(np.array(poly_buffer.buffer(opts.radius).exterior.coords.xy).swapaxes(0,1))
-        flags = path_search.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=0.0).reshape(data_shape)
+        if poly_buffer.type == 'MultiPolygon':
+            sys.stderr.write('Warning, poly_buffer.type={} >>> FID {}, OBJECTID {}\n'.format(poly_buffer.type,ii,object_id))
+            path_search = []
+            flags = None
+            for p in poly_buffer:
+                p_search = Path(np.array(p.buffer(opts.radius).exterior.coords.xy).swapaxes(0,1))
+                path_search.append(p_search)
+                if flags is None:
+                    flags = p_search.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=0.0).reshape(data_shape)
+                else:
+                    flags |= p_search.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=0.0).reshape(data_shape)
+        else:
+            path_search = Path(np.array(poly_buffer.buffer(opts.radius).exterior.coords.xy).swapaxes(0,1))
+            flags = path_search.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=0.0).reshape(data_shape)
         if opts.debug or opts.check:
             flags_inside = []
             flags_near = []
@@ -151,12 +163,23 @@ with open(opts.datnam,'w') as fp:
                 ax1.add_patch(patch)
             patch = patches.PathPatch(path_original,facecolor='none',lw=2)
             ax1.add_patch(patch)
-            patch = patches.PathPatch(path_search,facecolor='none',lw=2,ls='--')
-            ax1.add_patch(patch)
-            if opts.buffer is not None:
-                path_buffer = Path(np.array(poly_buffer.exterior.coords.xy).swapaxes(0,1))
-                patch = patches.PathPatch(path_buffer,facecolor='none',edgecolor='#888888',lw=2)
+            if poly_buffer.type == 'MultiPolygon':
+                for p_search in path_search:
+                    patch = patches.PathPatch(p_search,facecolor='none',lw=2,ls='--')
+                    ax1.add_patch(patch)
+            else:
+                patch = patches.PathPatch(path_search,facecolor='none',lw=2,ls='--')
                 ax1.add_patch(patch)
+            if opts.buffer is not None:
+                if poly_buffer.type == 'MultiPolygon':
+                    for p in poly_buffer:
+                        p_buffer = Path(np.array(p.exterior.coords.xy).swapaxes(0,1))
+                        patch = patches.PathPatch(p_buffer,facecolor='none',edgecolor='#888888',lw=2)
+                        ax1.add_patch(patch)
+                else:
+                    path_buffer = Path(np.array(poly_buffer.exterior.coords.xy).swapaxes(0,1))
+                    patch = patches.PathPatch(path_buffer,facecolor='none',edgecolor='#888888',lw=2)
+                    ax1.add_patch(patch)
             ax1.plot(xp,yp,'o',color='#888888')
             for j,(x,y) in enumerate(zip(xp[flags],yp[flags])):
                 if flags_inside[j]:
