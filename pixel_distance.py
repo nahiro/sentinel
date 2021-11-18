@@ -74,10 +74,6 @@ if opts.debug or opts.check:
     pdf = PdfPages(opts.fignam)
 with open(opts.datnam,'w') as fp:
     for ii,shaperec in enumerate(r.iterShapeRecords()):
-        #if ii < 10086:
-        #if ii < 10088:
-        if ii < 13481:
-            continue
         if ii%100 == 0:
             sys.stderr.write('{}\n'.format(ii))
             sys.stderr.flush()
@@ -207,29 +203,29 @@ with open(opts.datnam,'w') as fp:
                 patch = patches.PathPatch(path_inner,facecolor='none',edgecolor='#888888',lw=2)
                 ax1.add_patch(patch)
             ax1.plot(xp,yp,'o',color='#888888')
+            xmin = 1.0e10
+            xmax = -1.0e10
+            ymin = 1.0e10
+            ymax = -1.0e10
             for j,(x,y) in enumerate(zip(xp[flags],yp[flags])):
                 if flags_near[j]:
                     ax1.plot(x,y,'mo')
                 elif flags_inside[j]:
                     ax1.plot(x,y,'ro')
                 ax1.text(x,y,str(j),ha='center',va='center')
+                xmin = min(xmin,x)
+                xmax = max(xmax,x)
+                ymin = min(ymin,y)
+                ymax = max(ymax,y)
             ax1.plot([xctr],[yctr],'rx',ms=10)
-            xmin = 1.0e10
-            xmax = -1.0e10
-            ymin = 1.0e10
-            ymax = -1.0e10
             for pp in shp.points:
                 ax1.plot(pp[0],pp[1],'bo')
-                xmin = min(xmin,pp[0])
-                xmax = max(xmax,pp[0])
-                ymin = min(ymin,pp[1])
-                ymax = max(ymax,pp[1])
             ax1.set_xlim(xmin-opts.xmgn,xmax+opts.xmgn)
             ax1.set_ylim(ymin-opts.ymgn,ymax+opts.ymgn)
             ax1.ticklabel_format(useOffset=False,style='plain')
             plt.savefig(pdf,format='pdf')
             plt.draw()
             plt.pause(0.1)
-        break
+        #break
 if opts.debug or opts.check:
     pdf.close()
