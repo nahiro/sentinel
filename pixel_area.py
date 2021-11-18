@@ -89,14 +89,16 @@ with open(opts.datnam,'w') as fp:
             poly_buffer = Polygon(shp.points).buffer(opts.buffer)
         else:
             poly_buffer = Polygon(shp.points)
-        if poly_buffer.type == 'MultiPolygon':
+        flags = []
+        path_search = []
+        if poly_buffer.area <= 0.0:
+            sys.stderr.write('Warning, poly_buffer.area={} >>> FID {}, OBJECTID {}\n'.format(poly_buffer.area,ii,object_id))
+        elif poly_buffer.type == 'MultiPolygon':
             sys.stderr.write('Warning, poly_buffer.type={} >>> FID {}, OBJECTID {}\n'.format(poly_buffer.type,ii,object_id))
-            path_search = []
-            flags = None
             for p in poly_buffer:
                 p_search = Path(np.array(p.buffer(opts.radius).exterior.coords.xy).swapaxes(0,1))
                 path_search.append(p_search)
-                if flags is None:
+                if not flags:
                     flags = p_search.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=0.0).reshape(data_shape)
                 else:
                     flags |= p_search.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=0.0).reshape(data_shape)
@@ -163,7 +165,9 @@ with open(opts.datnam,'w') as fp:
                 ax1.add_patch(patch)
             patch = patches.PathPatch(path_original,facecolor='none',lw=2)
             ax1.add_patch(patch)
-            if poly_buffer.type == 'MultiPolygon':
+            if poly_buffer.area <= 0.0:
+                pass
+            elif poly_buffer.type == 'MultiPolygon':
                 for p_search in path_search:
                     patch = patches.PathPatch(p_search,facecolor='none',lw=2,ls='--')
                     ax1.add_patch(patch)
@@ -171,7 +175,9 @@ with open(opts.datnam,'w') as fp:
                 patch = patches.PathPatch(path_search,facecolor='none',lw=2,ls='--')
                 ax1.add_patch(patch)
             if opts.buffer is not None:
-                if poly_buffer.type == 'MultiPolygon':
+                if poly_buffer.area <= 0.0:
+                    pass
+                elif poly_buffer.type == 'MultiPolygon':
                     for p in poly_buffer:
                         p_buffer = Path(np.array(p.exterior.coords.xy).swapaxes(0,1))
                         patch = patches.PathPatch(p_buffer,facecolor='none',edgecolor='#888888',lw=2)
