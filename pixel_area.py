@@ -98,7 +98,7 @@ with open(opts.datnam,'w') as fp:
             for p in poly_buffer:
                 p_search = Path(np.array(p.buffer(opts.radius).exterior.coords.xy).swapaxes(0,1))
                 path_search.append(p_search)
-                if not flags:
+                if len(flags) < 1:
                     flags = p_search.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=0.0).reshape(data_shape)
                 else:
                     flags |= p_search.contains_points(np.hstack((xp.reshape(-1,1),yp.reshape(-1,1))),radius=0.0).reshape(data_shape)
