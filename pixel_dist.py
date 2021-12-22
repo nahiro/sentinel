@@ -38,13 +38,19 @@ if ds.RasterCount < 2:
     data_shape = data.shape
 else:
     data_shape = data[0].shape
-trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
+data_trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
+data_xmin = data_trans[0]
+data_xstp = data_trans[1]
+data_xmax = data_xmin+data_xstp*data_shape[1]
+data_ymax = data_trans[3]
+data_ystp = data_trans[5]
+data_ymin = data_ymax+data_ystp*data_shape[0]
 indy,indx = np.indices(data_shape)
-xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
-yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
+xp = data_trans[0]+(indx+0.5)*data_trans[1]+(indy+0.5)*data_trans[2]
+yp = data_trans[3]+(indx+0.5)*data_trans[4]+(indy+0.5)*data_trans[5]
 ds = None
-xstp = abs(xp[0,1]-xp[0,0])
-ystp = abs(yp[1,0]-yp[0,0])
+xstp = abs(data_xstp)
+ystp = abs(data_ystp)
 xhlf = 0.5*xstp
 yhlf = 0.5*ystp
 if opts.max_distance is None:
@@ -86,9 +92,10 @@ with open(opts.datnam,'w') as fp:
         if len(shp.points) < 1:
             sys.stderr.write('Warning, len(shp.points)={}, ii={}\n'.format(len(shp.points),ii))
             continue
-        poly_original = Polygon(shp.points)
-        path_original = Path(shp.points)
         poly_outer = Polygon(shp.points).buffer(opts.radius)
+        xmin_outer,ymin_outer,xmax_outer,ymax_outer = poly_outer.bounds
+        if (xmin_outer > data_xmax) or (xmax_outer < data_xmin) or (ymin_outer > data_ymax) or (ymax_outer < data_ymin):
+            continue
         path_outer = []
         flags_outer = []
         if poly_outer.area <= 0.0:
@@ -126,6 +133,8 @@ with open(opts.datnam,'w') as fp:
             flags = flags_outer
         else:
             flags = flags_outer & (~flags_inner)
+        poly_original = Polygon(shp.points)
+        path_original = Path(shp.points)
         if opts.debug or opts.check:
             flags_inside = []
             flags_near = []
@@ -226,6 +235,6 @@ with open(opts.datnam,'w') as fp:
             plt.savefig(pdf,format='pdf')
             plt.draw()
             plt.pause(0.1)
-        #break
+        #break # for debug
 if opts.debug or opts.check:
     pdf.close()
