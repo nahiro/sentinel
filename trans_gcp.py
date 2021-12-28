@@ -15,7 +15,6 @@ parser.add_option('-O','--dst_geotiff',default=None,help='Destination GeoTIFF na
 (opts,args) = parser.parse_args()
 
 ds = gdal.Open(opts.src_geotiff)
-src_data = ds.ReadAsArray()
 src_trans = ds.GetGeoTransform()
 if src_trans[2] != 0.0 or src_trans[4] != 0.0:
     raise ValueError('Error, src_trans={}'.format(src_trans))
@@ -23,13 +22,9 @@ src_xmin = src_trans[0]
 src_xstp = src_trans[1]
 src_ymax = src_trans[3]
 src_ystp = src_trans[5]
-src_indy,src_indx = np.indices(src_data[0].shape)
-src_xgrd = src_xmin+(src_indx[0,:]+0.5)*src_xstp
-src_ygrd = src_ymax+(src_indy[:,0]+0.5)*src_ystp
 ds = None
 
 ds = gdal.Open(opts.dst_geotiff)
-dst_data = ds.ReadAsArray()
 dst_trans = ds.GetGeoTransform()
 if dst_trans[2] != 0.0 or dst_trans[4] != 0.0:
     raise ValueError('Error, dst_trans={}'.format(dst_trans))
@@ -52,11 +47,11 @@ with open(opts.src_fnam,'r') as fp:
         src_xi.append(float(m.group(1)))
         src_yi.append(float(m.group(2)))
         src_line.append(m.group(3))
-src_xi = np.array(src_xi).astype(np.int32)
-src_yi = np.array(src_yi).astype(np.int32)
+src_xi = np.array(src_xi)
+src_yi = np.array(src_yi)
 
-dst_xi = (src_xgrd[src_xi]-dst_xmin)/dst_xstp-0.5
-dst_yi = (src_ygrd[src_yi]-dst_ymax)/dst_ystp-0.5
+dst_xi = (src_xmin+src_xstp*src_xi-dst_xmin)/dst_xstp
+dst_yi = (src_ymax+src_ystp*src_yi-dst_ymax)/dst_ystp
 with open(opts.dst_fnam,'w') as fp:
     for xi,yi,line in zip(dst_xi,dst_yi,src_line):
         fp.write('{:11.4f} {:11.4f} {}\n'.format(xi,yi,line))
