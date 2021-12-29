@@ -30,6 +30,7 @@ src_band = []
 for iband in range(src_nb):
     band = ds.GetRasterBand(iband+1)
     src_band.append(band.GetDescription())
+src_nodata = band.GetNoDataValue()
 src_xmin = src_trans[0]
 src_xstp = src_trans[1]
 src_ymax = src_trans[3]
@@ -63,6 +64,7 @@ for iband in range(dst_nb):
     dst_data.append(src_data[iband,opts.jmin:opts.jmin+opts.jstp*dst_ny,opts.imin:opts.imin+opts.istp*dst_nx].reshape(dst_ny,opts.jstp,dst_nx,opts.istp).mean(axis=-1).mean(axis=1))
     dst_band.append(src_band[iband])
 dst_data = np.array(dst_data).astype(np.float32)
+dst_nodata = src_nodata
 
 drv = gdal.GetDriverByName('GTiff')
 ds = drv.Create(opts.dst_geotiff,dst_nx,dst_ny,dst_nb,gdal.GDT_Float32)
@@ -73,6 +75,9 @@ for iband in range(dst_nb):
     band = ds.GetRasterBand(iband+1)
     band.WriteArray(dst_data[iband])
     band.SetDescription(dst_band[iband])
-band.SetNoDataValue(np.nan) # The TIFFTAG_GDAL_NODATA only support one value per dataset
+if dst_nodata is None:
+    band.SetNoDataValue(np.nan) # The TIFFTAG_GDAL_NODATA only support one value per dataset
+else:
+    band.SetNoDataValue(dst_nodata) # The TIFFTAG_GDAL_NODATA only support one value per dataset
 ds.FlushCache()
 ds = None # close dataset
