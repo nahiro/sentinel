@@ -2,6 +2,7 @@
 import gdal
 import osr
 import numpy as np
+import warnings
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Read options
@@ -61,7 +62,29 @@ dst_meta = src_meta
 dst_data = []
 dst_band = []
 for iband in range(dst_nb):
-    dst_data.append(src_data[iband,opts.jmin:opts.jmin+opts.jstp*dst_ny,opts.imin:opts.imin+opts.istp*dst_nx].reshape(dst_ny,opts.jstp,dst_nx,opts.istp).mean(axis=-1).mean(axis=1))
+    tmp_data = src_data[iband,opts.jmin:opts.jmin+opts.jstp*dst_ny,opts.imin:opts.imin+opts.istp*dst_nx].reshape(dst_ny,opts.jstp,dst_nx,opts.istp)
+    if src_nodata is None:
+        dst_data.append(tmp_data.mean(axis=-1).mean(axis=1))
+    elif np.isnan(src_nodata):
+        cnd = np.isnan(tmp_data)
+        if cnd.sum() > 0:
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action='ignore',message='Mean of empty slice')
+                dst_data.append(np.nanmean(np.nanmean(tmp_data,axis=-1),axis=1))
+        else:
+            dst_data.append(tmp_data.mean(axis=-1).mean(axis=1))
+    else:
+        cnd = (tmp_data == src_nodata)
+        if cnd.sum() > 0:
+            tmp_data[cnd] = np.nan
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action='ignore',message='Mean of empty slice')
+                avg_data = np.nanmean(np.nanmean(tmp_data,axis=-1),axis=1)
+            cnd = np.isnan(avg_data)
+            avg_data[cnd] = src_nodata
+            dst_data.append(avg_data)
+        else:
+            dst_data.append(tmp_data.mean(axis=-1).mean(axis=1))
     dst_band.append(src_band[iband])
 dst_data = np.array(dst_data).astype(np.float32)
 dst_nodata = src_nodata
