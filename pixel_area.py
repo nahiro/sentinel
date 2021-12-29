@@ -38,13 +38,19 @@ if ds.RasterCount < 2:
     data_shape = data.shape
 else:
     data_shape = data[0].shape
-trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
+data_trans = ds.GetGeoTransform() # maybe obtained from tif_tags['ModelTransformationTag']
+data_xmin = data_trans[0]
+data_xstp = data_trans[1]
+data_xmax = data_xmin+data_xstp*data_shape[1]
+data_ymax = data_trans[3]
+data_ystp = data_trans[5]
+data_ymin = data_ymax+data_ystp*data_shape[0]
 indy,indx = np.indices(data_shape)
-xp = trans[0]+(indx+0.5)*trans[1]+(indy+0.5)*trans[2]
-yp = trans[3]+(indx+0.5)*trans[4]+(indy+0.5)*trans[5]
+xp = data_trans[0]+(indx+0.5)*data_trans[1]+(indy+0.5)*data_trans[2]
+yp = data_trans[3]+(indx+0.5)*data_trans[4]+(indy+0.5)*data_trans[5]
 ds = None
-xstp = abs(xp[0,1]-xp[0,0])
-ystp = abs(yp[1,0]-yp[0,0])
+xstp = abs(data_xstp)
+ystp = abs(data_ystp)
 xhlf = 0.5*xstp
 yhlf = 0.5*ystp
 if opts.radius is None:
@@ -89,6 +95,9 @@ with open(opts.datnam,'w') as fp:
             poly_buffer = Polygon(shp.points).buffer(opts.buffer)
         else:
             poly_buffer = Polygon(shp.points)
+        xmin_buffer,ymin_buffer,xmax_buffer,ymax_buffer = poly_buffer.bounds
+        if (xmin_buffer > data_xmax+opts.radius) or (xmax_buffer < data_xmin-opts.radius) or (ymin_buffer > data_ymax+opts.radius) or (ymax_buffer < data_ymin-opts.radius):
+            continue
         flags = []
         path_search = []
         if poly_buffer.area <= 0.0:
