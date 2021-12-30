@@ -26,7 +26,7 @@ src_trans = ds.GetGeoTransform()
 if src_trans[2] != 0.0 or src_trans[4] != 0.0:
     raise ValueError('Error, src_trans={}'.format(src_trans))
 src_meta = ds.GetMetadata()
-src_data = ds.ReadAsArray().astype(np.float64)
+src_data = ds.ReadAsArray().astype(np.float64).reshape(src_nb,src_ny,src_nx)
 src_band = []
 for iband in range(src_nb):
     band = ds.GetRasterBand(iband+1)
