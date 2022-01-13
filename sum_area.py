@@ -53,8 +53,8 @@ for area_file in opts.area_fnams:
             inds[-1] = np.array(inds[-1])
             areas[-1] = np.array(areas[-1])
     object_ids = np.array(object_ids)
-    inds = np.array(inds)
-    areas = np.array(areas)
+    inds = np.array(inds,dtype='object')
+    areas = np.array(areas,dtype='object')
 
     for i in range(len(object_ids)):
         #object_id = i+1
