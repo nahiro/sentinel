@@ -2,6 +2,7 @@
 import os
 import sys
 import hashlib
+from dateutil.parser import parse
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from subprocess import call
@@ -95,6 +96,7 @@ while len(qs) != 0:
                 os.makedirs(dnam)
             flag = False
             src_md5 = f['md5Checksum'].upper()
+            src_tim = parse(f['modifiedDate']).timestamp()
             for ntry in range(opts.max_retry): # loop to download 1 file
                 f.GetContentFile(fnam)
                 if os.path.exists(fnam):
@@ -104,6 +106,7 @@ while len(qs) != 0:
                         sys.stderr.write('Warning, dst_md5={}, src_md5={} >>> {}\n'.format(dst_md5,src_md5,fnam))
                         sys.stderr.flush()
                     else:
+                        os.utime(fnam,(src_tim,src_tim))
                         flag = True
                         break
             if not flag:
