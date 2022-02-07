@@ -72,14 +72,21 @@ for i in range(len(l)):
     query_folder(d)
     #print(d)
 
-qs = [folders[opts.srcdir]['id']]
-ds = [os.path.join(opts.dstdir,os.path.basename(opts.srcdir))]
+srcdir = folders[opts.srcdir]['id']
+dstdir = os.path.join(opts.dstdir,os.path.basename(opts.srcdir))
+qs = [srcdir]
+ds = [dstdir]
+ts = {}
+if not os.path.exists(dstdir):
+    src_tim = parse(folders[opts.srcdir]['modifiedDate']).timestamp()
+    ts[dstdir] = src_tim
 while len(qs) != 0:
     srcdir = qs.pop(0)
     dstdir = ds.pop(0)
     fs = drive.ListFile({'q':'"{}" in parents and trashed = false'.format(srcdir)}).GetList()
     for f in fs:
         dst_nam = os.path.join(dstdir,f['title'])
+        src_tim = parse(f['modifiedDate']).timestamp()
         if opts.verbose:
             sys.stderr.write(dst_nam+'\n')
             sys.stderr.flush()
@@ -87,6 +94,7 @@ while len(qs) != 0:
             dnam = dst_nam
             if not os.path.exists(dnam):
                 os.makedirs(dnam)
+                ts[dnam] = src_tim
             qs.append(f['id'])
             ds.append(dnam)
         else:
@@ -96,7 +104,6 @@ while len(qs) != 0:
                 os.makedirs(dnam)
             flag = False
             src_md5 = f['md5Checksum'].upper()
-            src_tim = parse(f['modifiedDate']).timestamp()
             for ntry in range(opts.max_retry): # loop to download 1 file
                 f.GetContentFile(fnam)
                 if os.path.exists(fnam):
@@ -112,4 +119,6 @@ while len(qs) != 0:
             if not flag:
                 sys.stderr.write('Warning, faild in downloading >>> {}\n'.format(fnam))
                 sys.stderr.flush()
+for dnam in ts.keys():
+    os.utime(dnam,(ts[dnam],ts[dnam]))
 os.chdir(topdir)
