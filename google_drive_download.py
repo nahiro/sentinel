@@ -103,14 +103,31 @@ while len(qs) != 0:
             if not os.path.exists(dnam):
                 os.makedirs(dnam)
             flag = False
+            src_siz = int(f['fileSize'])
             src_md5 = f['md5Checksum'].upper()
+            if os.path.exists(fnam):
+                if opts.overwrite:
+                    if opts.verbose:
+                        sys.stderr.write('File exists, remove >>> {}\n'.format(fnam))
+                        sys.stderr.flush()
+                    os.remove(fnam)
+                else:
+                    dst_siz = os.path.getsize(fnam)
+                    with open(fnam,'rb') as fp:
+                        dst_md5 = hashlib.md5(fp.read()).hexdigest().upper()
+                    if (dst_siz == src_siz) and (dst_md5 == src_md5):
+                        if opts.verbose:
+                            sys.stderr.write('File exists, skip >>> {}\n'.format(fnam))
+                            sys.stderr.flush()
+                        continue
             for ntry in range(opts.max_retry): # loop to download 1 file
                 f.GetContentFile(fnam)
                 if os.path.exists(fnam):
+                    dst_siz = os.path.getsize(fnam)
                     with open(fnam,'rb') as fp:
                         dst_md5 = hashlib.md5(fp.read()).hexdigest().upper()
-                    if dst_md5 != src_md5:
-                        sys.stderr.write('Warning, dst_md5={}, src_md5={} >>> {}\n'.format(dst_md5,src_md5,fnam))
+                    if (dst_siz != src_siz) or (dst_md5 != src_md5):
+                        sys.stderr.write('Warning, dst_siz={}, dst_md5={}, src_siz={}, src_md5={} >>> {}\n'.format(dst_siz,dst_md5,src_siz,src_md5,fnam))
                         sys.stderr.flush()
                     else:
                         os.utime(fnam,(src_tim,src_tim))
