@@ -21,6 +21,7 @@ parser.add_option('-S','--srcdir',default=None,help='GoogleDrive source director
 parser.add_option('-D','--dstdir',default=None,help='Local destination directory (%default)')
 parser.add_option('--drvdir',default=DRVDIR,help='GoogleDrive directory (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
+parser.add_option('-m','--modify_time',default=False,action='store_true',help='Modify last modification time (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 (opts,args) = parser.parse_args()
@@ -77,7 +78,7 @@ dstdir = os.path.join(opts.dstdir,os.path.basename(opts.srcdir))
 qs = [srcdir]
 ds = [dstdir]
 ts = {}
-if not os.path.exists(dstdir):
+if not os.path.exists(dstdir) or opts.modify_time:
     src_tim = parse(folders[opts.srcdir]['modifiedDate']).timestamp()
     ts[dstdir] = src_tim
 while len(qs) != 0:
@@ -94,6 +95,8 @@ while len(qs) != 0:
             dnam = dst_nam
             if not os.path.exists(dnam):
                 os.makedirs(dnam)
+                ts[dnam] = src_tim
+            elif opts.modify_time:
                 ts[dnam] = src_tim
             qs.append(f['id'])
             ds.append(dnam)
@@ -116,6 +119,8 @@ while len(qs) != 0:
                     with open(fnam,'rb') as fp:
                         dst_md5 = hashlib.md5(fp.read()).hexdigest().upper()
                     if (dst_siz == src_siz) and (dst_md5 == src_md5):
+                        if opts.modify_time:
+                            os.utime(fnam,(src_tim,src_tim))
                         if opts.verbose:
                             sys.stderr.write('File exists, skip >>> {}\n'.format(fnam))
                             sys.stderr.flush()
