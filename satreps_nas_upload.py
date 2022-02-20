@@ -1,0 +1,123 @@
+import os
+import sys
+import re
+import time
+from pathlib import Path
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.keys import Keys
+from optparse import OptionParser,IndentedHelpFormatter
+
+# Default values
+HOME = os.environ.get('HOME')
+if HOME is None:
+    HOME = os.environ.get('HOMEPATH')
+RCDIR = HOME
+DRVDIR = os.path.join(HOME,'local','bin')
+
+# Read options
+parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.add_option('-S','--srcdir',default=None,help='Source directory (%default)')
+parser.add_option('-s','--subdir',default=None,action='append',help='Sub directory (%default)')
+parser.add_option('-D','--dstdir',default=None,help='Destination directory (%default)')
+parser.add_option('-L','--locdir',default=None,help='Local destination directory (%default)')
+parser.add_option('--drvdir',default=DRVDIR,help='Directory where chromedriver exists (%default)')
+parser.add_option('--rcdir',default=RCDIR,help='Directory where .netrc exists (%default)')
+parser.add_option('-K','--keep_folder',default=None,action='append',help='Directory to keep (%default)')
+parser.add_option('-I','--ignore_file',default=None,action='append',help='File to ignore (%default)')
+parser.add_option('-p','--port',default=None,type='int',help='Port# of Chrome to use (%default)')
+parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
+parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
+parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
+(opts,args) = parser.parse_args()
+
+fnam = os.path.join(opts.rcdir,'.netrc')
+if not os.path.exists(fnam):
+    raise IOError('Error, no such file >>> '+fnam)
+server = None
+username = None
+password = None
+flag = False
+with open(fnam,'r') as fp:
+    for line in fp:
+        m = re.search('machine\s+(\S+)',line)
+        if m:
+            if re.search('satreps',m.group(1)):
+                flag = True
+                server = m.group(1)
+            else:
+                flag = False
+            continue
+        m = re.search('login\s+(\S+)',line)
+        if m:
+            if flag:
+                username = m.group(1)
+            continue
+        m = re.search('password\s+(\S+)',line)
+        if m:
+            if flag:
+                password = m.group(1)
+            continue
+if server is None or username is None or password is None:
+    raise ValueError('Error, server={}, username={}, password={}'.format(server,username,password))
+
+if opts.port is not None:
+    options = Options()
+    options.add_experimental_option('debuggerAddress','localhost:{}'.format(opts.port))
+    driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'),options=options)
+else:
+    driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'))
+
+# Login to the NAS server
+driver.get('https://{}/login'.format(server))
+time.sleep(1)
+inputs = driver.find_elements_by_class_name('input')
+if len(inputs) != 2:
+    raise ValueError('Error, len(inputs)={}'.format(len(inputs)))
+inputs[0].send_keys((Keys.CONTROL+'a'))
+inputs[0].send_keys(Keys.DELETE)
+inputs[0].send_keys(username)
+time.sleep(1)
+inputs[1].send_keys((Keys.CONTROL+'a'))
+inputs[1].send_keys(Keys.DELETE)
+inputs[1].send_keys(password)
+time.sleep(1)
+buttons = driver.find_elements_by_class_name('button')
+if len(buttons) != 1:
+    raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
+buttons[0].click()
+time.sleep(1)
+driver.get('https://{}/files/{}'.format(server,opts.dstdir))
+time.sleep(1)
+"""
+sender = driver.find_element_by_id('upload-input')
+sender.send_keys(os.path.join(opts.srcdir,'test.txt'))
+time.sleep(1)
+progress = driver.find_element_by_id('progress')
+bar = progress.find_element_by_xpath('div')
+while True:
+    total_size = float(progress.value_of_css_property('width').replace('px',''))
+    transfered_size = float(bar.value_of_css_property('width').replace('px',''))
+    if transfered_size == 0.0:
+        break
+    print(transfered_size,'/',total_size)
+items = driver.find_elements_by_class_name('item')
+for item in items:
+    lines = item.text.splitlines()
+    if (len(lines) > 2) and lines[1] == 'test.txt':
+        item.click()
+dropdown = driver.find_element_by_id('dropdown')
+actions = dropdown.find_elements_by_class_name('action')
+actions[8].click()
+card_content = driver.find_element_by_class_name('card-content')
+ps = card_content.find_elements_by_tag_name('p')
+a = ps[4].find_element_by_tag_name('a')
+a.click()
+while True:
+    dst_md5 = a.text
+    if dst_md5 == 'Show':
+        time.sleep(1)
+        continue
+    break
+dst_size = ps[1].text
+"""
