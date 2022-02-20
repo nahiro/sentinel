@@ -1,7 +1,11 @@
 import os
 import sys
 import re
+import shutil
+import hashlib
+import atexit
 import time
+from glob import glob
 from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -30,6 +34,44 @@ parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbo
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 (opts,args) = parser.parse_args()
+if opts.srcdir is None or opts.subdir is None or opts.dstdir is None or opts.locdir is None:
+    raise ValueError('Error, srcdir={}, subdir={}, dstdir={}, locdir={}'.format(opts.srcdir,opts.subdir,opts.dstdir,opts.locdir))
+keep_folder = []
+keep_folder_lower = []
+if opts.keep_folder is not None:
+    for f in opts.keep_folder:
+        for p in glob(os.path.normpath(os.path.join(opts.srcdir,f))):
+            if os.path.isdir(p):
+                keep_folder.append(p)
+                keep_folder_lower.append(p.lower())
+ignore_file = []
+ignore_file_lower = []
+if opts.ignore_file is not None:
+    for f in opts.ignore_file:
+        for p in glob(os.path.normpath(os.path.join(opts.srcdir,f))):
+            if not os.path.isdir(p):
+                ignore_file.append(p)
+                ignore_file_lower.append(p.lower())
+if opts.verbose:
+    if len(keep_folder) > 0:
+        sys.stderr.write('keep_folder:\n')
+        for f in keep_folder:
+            sys.stderr.write(f+'\n')
+        sys.stderr.flush()
+    if len(ignore_file) > 0:
+        sys.stderr.write('ignore_file:\n')
+        for f in ignore_file:
+            sys.stderr.write(f+'\n')
+        sys.stderr.flush()
+
+opts.srcdir = os.path.abspath(opts.srcdir)
+topdir = os.getcwd()
+os.chdir(opts.drvdir)
+def clean_up():
+    os.chdir(topdir)
+atexit.register(clean_up)
+
+folders = {}
 
 fnam = os.path.join(opts.rcdir,'.netrc')
 if not os.path.exists(fnam):
@@ -87,8 +129,11 @@ if len(buttons) != 1:
     raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
 buttons[0].click()
 time.sleep(1)
-driver.get('https://{}/files/{}'.format(server,opts.dstdir))
+url = 'https://{}/files/{}'.format(server,opts.dstdir)
+driver.get(url)
 time.sleep(1)
+if re.search('This location can\'t be reached.',driver.page_source):
+    raise IOError('No such page >>> '+url)
 """
 sender = driver.find_element_by_id('upload-input')
 sender.send_keys(os.path.join(opts.srcdir,'test.txt'))
