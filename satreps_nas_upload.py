@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import sys
 import re
@@ -68,10 +69,75 @@ opts.srcdir = os.path.abspath(opts.srcdir)
 topdir = os.getcwd()
 os.chdir(opts.drvdir)
 def clean_up():
+    sys.stderr.write('clean_up called.\n')
+    sys.stderr.flush()
     os.chdir(topdir)
 atexit.register(clean_up)
 
-folders = {}
+def list_file(path):
+    ds = []
+    fs = []
+    if len(path) < 1:
+        url = 'https://{}/files/'.format(server)
+    elif path[0] == '/':
+        url = 'https://{}/files{}'.format(server,path)
+    else:
+        url = 'https://{}/files/{}'.format(server,path)
+    driver.get(url)
+    time.sleep(1)
+    if re.search('This location can\'t be reached',driver.page_source):
+        return ds,fs
+    items = driver.find_elements_by_class_name('item')
+    for item in items:
+        lines = item.text.splitlines()
+        nline = len(lines)
+        if nline == 3:
+            if lines[0] == 'folder':
+                ds.append(lines[1])
+            elif lines[0] == 'insert_drive_file':
+                fs.append(lines[1])
+            else:
+                raise ValueError('Error, lines[0]={}'.format(lines[0]))
+        elif nline == 2:
+            fs.append(lines[0])
+    return ds,fs
+
+folders = []
+
+def make_folder(path):
+    global folders
+    if path in folders:
+        return 0
+    parent = os.path.dirname(path)
+    target = os.path.basename(path)
+    ds,fs = list_file(parent)
+    if target in ds:
+        folders.append(path)
+        return 0
+    else:
+        action_new_folder = None
+        actions = driver.find_elements_by_class_name('action')
+        for action in actions:
+            if action.get_attribute('title') == 'New folder':
+                action_new_folder = action
+                break
+        if action_new_folder is None:
+            raise ValueError('Error in finding New folder.')
+        action_new_folder.click()
+        time.sleep(1)
+        inputs = driver.find_elements_by_class_name('input')
+        if len(inputs) != 1:
+            raise ValueError('Error, len(inputs)={}'.format(len(inputs)))
+        inputs[0].send_keys(target)
+        buttons = driver.find_elements_by_class_name('button')
+        if len(buttons) != 2:
+            raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
+        if buttons[1].text != 'CREATE':
+            raise ValueError('Error, buttons[1].text={}'.format(buttons[1].text))
+        buttons[1].click()
+        folders.append(path)
+        return 0
+    return -1
 
 fnam = os.path.join(opts.rcdir,'.netrc')
 if not os.path.exists(fnam):
