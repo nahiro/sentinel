@@ -67,38 +67,41 @@ if opts.verbose:
 
 opts.srcdir = os.path.abspath(opts.srcdir)
 topdir = os.getcwd()
-os.chdir(opts.drvdir)
+#os.chdir(opts.drvdir)
 def clean_up():
-    sys.stderr.write('clean_up called.\n')
+    sys.stderr.write('clean_up called.\n\n')
     sys.stderr.flush()
     os.chdir(topdir)
 atexit.register(clean_up)
 
-def list_file(path):
+def list_file(path=None):
     ds = []
     fs = []
-    if len(path) < 1:
-        url = 'https://{}/files/'.format(server)
-    elif path[0] == '/':
-        url = 'https://{}/files{}'.format(server,path)
+    if path is None or path == '.':
+        pass
     else:
-        url = 'https://{}/files/{}'.format(server,path)
-    driver.get(url)
-    time.sleep(1)
-    if re.search('This location can\'t be reached',driver.page_source):
-        return ds,fs
+        if len(path) < 1:
+            url = 'https://{}/files/'.format(server)
+        elif path[0] == '/':
+            url = 'https://{}/files{}'.format(server,path)
+        else:
+            url = 'https://{}/files/{}'.format(server,path)
+        driver.get(url)
+        time.sleep(1)
+        if re.search('This location can\'t be reached',driver.page_source):
+            return None,None
     items = driver.find_elements_by_class_name('item')
     for item in items:
         lines = item.text.splitlines()
         nline = len(lines)
-        if nline == 3:
+        if nline == 4:
             if lines[0] == 'folder':
                 ds.append(lines[1])
             elif lines[0] == 'insert_drive_file':
                 fs.append(lines[1])
             else:
                 raise ValueError('Error, lines[0]={}'.format(lines[0]))
-        elif nline == 2:
+        elif nline == 3:
             fs.append(lines[0])
     return ds,fs
 
@@ -111,6 +114,8 @@ def make_folder(path):
     parent = os.path.dirname(path)
     target = os.path.basename(path)
     ds,fs = list_file(parent)
+    if ds is None or fs is None:
+        raise IOError('Error, no such folder >>> '+parent)
     if target in ds:
         folders.append(path)
         return 0
