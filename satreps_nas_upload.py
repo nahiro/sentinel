@@ -6,12 +6,20 @@ import shutil
 import hashlib
 import atexit
 import time
+from datetime import datetime,timedelta
 from glob import glob
 from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from optparse import OptionParser,IndentedHelpFormatter
+
+# Constants
+B = 1
+KB = 1024
+MB = KB*1024
+GB = MB*1024
+TB = GB*1024
 
 # Default values
 HOME = os.environ.get('HOME')
@@ -74,9 +82,43 @@ def clean_up():
     os.chdir(topdir)
 atexit.register(clean_up)
 
+def get_size(s):
+    m = re.search('(\S+)\s+(\S+)',s)
+    if m:
+        size_unit = m.group(2).upper()
+        if size_unit == 'B':
+            size = int(m.group(1))
+            size_error = 0
+        elif size_unit == 'KB':
+            size = float(m.group(1))*KB
+            size_error = KB//10
+        elif size_unit == 'MB':
+            size = float(m.group(1))*MB
+            size_error = MB//10
+        elif size_unit == 'GB':
+            size = float(m.group(1))*GB
+            size_error = GB//10
+        elif size_unit == 'TB':
+            size = float(m.group(1))*TB
+            size_error = TB//10
+        else:
+            raise ValueError('Error in size unit >>> '+s)
+    else:
+        raise ValueError('Error in size >>> '+s)
+    return size,size_error
+
+def get_time(s):
+    # '2021-11-26T09:24:23.01891815Z'
+    m = re.search('(\d\d\d\d-\d\d-\d\dT\d\d:\d\d):(\d\d\.\d+)Z',s)
+    if m:
+        t = datetime.strptime(m.group(1)+'Z','%Y-%m-%dT%H:%M%z')+timedelta(seconds=float(m.group(2)))
+    else:
+        raise ValueError('Error in time >>> '+s)
+    return t
+
 def list_file(path=None):
-    ds = []
-    fs = []
+    ds = {}
+    fs = {}
     if path is None or path == '.':
         pass
     else:
@@ -96,13 +138,15 @@ def list_file(path=None):
         nline = len(lines)
         if nline == 4:
             if lines[0] == 'folder':
-                ds.append(lines[1])
+                ds.update({lines[1]:item})
             elif lines[0] == 'insert_drive_file':
-                fs.append(lines[1])
+                size,size_error = get_size(lines[2])
+                t = get_time(item.find_element_by_tag_name('time').get_attribute('datetime'))
+                fs.update({lines[1]:{'element':item,'size':size,'size_error':size_error,'mtime':t}})
             else:
                 raise ValueError('Error, lines[0]={}'.format(lines[0]))
         elif nline == 3:
-            fs.append(lines[0])
+            fs.update({lines[0]:item})
     return ds,fs
 
 folders = []
@@ -236,4 +280,197 @@ while True:
         continue
     break
 dst_size = ps[1].text
+"""
+
+def upload_file(fnam,gnam):
+    parent = os.path.dirname(gnam)
+    target = os.path.basename(gnam)
+    if parent == '':
+        raise ValueError('Error in parent >>> {}'.format(gnam))
+    elif not parent in folders:
+        raise IOError('Error, no such folder >>> '+parent)
+    ds,fs = list_file(parent)
+    if target in fs:
+        if opts.overwrite:
+            if opts.verbose:
+                sys.stderr.write('File exists, delete >>> '+f['title']+'\n')
+                sys.stderr.flush()
+            fs[target]['element'].click()
+            time.sleep(1)
+            action_delete = None
+            actions = driver.find_elements_by_class_name('action')
+            for action in actions:
+                if action.get_attribute('title') == 'Delete':
+                    action_delete = action
+                    break
+            if action_delete is None:
+                raise ValueError('Error in finding Delete.')
+            action_delete.click()
+            time.sleep(1)
+            buttons = driver.find_elements_by_class_name('button')
+            if len(buttons) != 2:
+                raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
+            if buttons[1].text != 'DELETE':
+                raise ValueError('Error, buttons[1].text={}'.format(buttons[1].text))
+            buttons[1].click()
+            time.sleep(1)
+        else:
+            if opts.verbose:
+                sys.stderr.write('File exists, skip   >>> '+target+'\n')
+                sys.stderr.flush()
+            return fs[target]
+    # Upload file
+    sender = driver.find_element_by_id('upload-input')
+    sender.send_keys(fnam)
+    time.sleep(1)
+    progress = driver.find_element_by_id('progress')
+    bar = progress.find_element_by_xpath('div')
+    previous_size = -1
+    while True:
+        total_size = float(progress.value_of_css_property('width').replace('px',''))
+        transfered_size = float(bar.value_of_css_property('width').replace('px',''))
+        if transfered_size == 0.0:
+            break
+        elif transfered_size != previous_size:
+            sys.stderr.write('{:8.4f}%\n'.format(100.0*transfered_size/total_size))
+            sys.stderr.flush()
+            previous_size = transfered_size
+        time.sleep(5)
+    # Check uploaded file
+    ds,fs = list_file(parent)
+    if target in fs:
+        return fs[target]
+    else:
+        sys.stderr.write('Warning, faild in uploading '+gnam)
+        sys.stderr.flush()
+        return None
+
+def upload_and_check_file(fnam,gnam):
+    title = os.path.basename(gnam)
+    size = os.path.getsize(fnam)
+    f = upload_file(fnam,gnam)
+    if f is not None:
+        f.click()
+        action_info = None
+        dropdown = driver.find_element_by_id('dropdown')
+        actions = dropdown.find_elements_by_class_name('action')
+        for action in actions:
+            if action.get_attribute('title') == 'Info':
+                action_info = action
+                break
+        if action_info is None:
+            raise ValueError('Error in finding Info.')
+        action_info.click()
+        card_contents = driver.find_elements_by_class_name('card-content')
+        if len(card_contents) != 1:
+            raise ValueError('Error, len(card_contents)={}'.format(len(card_contents)))
+        ps = card_contents[0].find_elements_by_tag_name('p')
+        dst_size = None
+        for p in ps:
+            m = re.search('Size\s*:\s*(\S+)\s+(\S+)',p.text)
+            if m:
+                dst_size_label = m.group(1)+' '+m.group(2)
+                dst_size_unit = m.group(2).upper()
+                if dst_size_unit == 'B':
+                    dst_size = int(m.group(1))
+                    dst_size_error = 0
+                elif dst_size_unit == 'KB':
+                    dst_size = float(m.group(1))*KB
+                    dst_size_error = KB//10
+                elif dst_size_unit == 'MB':
+                    dst_size = float(m.group(1))*MB
+                    dst_size_error = MB//10
+                elif dst_size_unit == 'GB':
+                    dst_size = float(m.group(1))*GB
+                    dst_size_error = GB//10
+                elif dst_size_unit == 'TB':
+                    dst_size = float(m.group(1))*TB
+                    dst_size_error = TB//10
+                else:
+                    raise ValueError('Error in size unit >>> '+p.text)
+                break
+        if dst_size is None:
+            raise ValueError('Error in finding Size.')
+        p_md5 = None
+        for p in ps:
+            if re.search('MD5',p.text):
+                p_md5 = p
+                break
+        if p_md5 is None:
+            raise ValueError('Error in finding MD5.')
+        aa = p_md5.find_elements_by_tag_name('a')
+        if len(aa) != 1:
+            raise ValueError('Error, len(aa)={}'.format(len(aa)))
+        aa[0].click()
+        while aa[0].text == 'Show':
+            time.sleep(1)
+        dst_md5 = aa[0].text
+
+
+
+
+        with open(fnam,'rb') as fp:
+            md5 = hashlib.md5(fp.read()).hexdigest()
+        if (md5_dst.lower() == md5.lower()):
+            if opts.verbose:
+                sys.stderr.write('Successfully uploaded >>> {}\n'.format(fnam))
+                sys.stderr.flush()
+            return 0
+        else:
+            if opts.verbose:
+                sys.stderr.write('Warning, title={} ({}), size={} ({}), md5={} ({})\n'.format(title_dst,title,size_dst,size,md5_dst,md5))
+                sys.stderr.flush()
+            return -1
+    else:
+        if opts.verbose:
+            sys.stderr.write('Warning, failed checking file >>> {}\n'.format(gnam))
+            sys.stderr.flush()
+        return -1
+
+"""
+for subdir in opts.subdir:
+    make_folders(os.path.join(opts.dstdir,subdir))
+    for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir)):
+        curdir = os.path.relpath(root,opts.srcdir)
+        if opts.verbose:
+            sys.stderr.write('#####################\n')
+            sys.stderr.write(curdir+'\n')
+            if len(ds) > 0:
+                sys.stderr.write('Folders: {}\n'.format(ds))
+            if len(fs) > 0:
+                sys.stderr.write('Files  : {}\n'.format(fs))
+            sys.stderr.flush()
+        if curdir == os.curdir:
+            srcdir = opts.srcdir
+            dstdir = opts.dstdir
+            locdir = opts.locdir
+        else:
+            srcdir = os.path.join(opts.srcdir,curdir)
+            dstdir = os.path.join(opts.dstdir,curdir)
+            locdir = os.path.join(opts.locdir,curdir)
+        #print(srcdir,'-----',dstdir)
+        if not dstdir in folders:
+            if make_folder(dstdir) != 0:
+                raise IOError('Error, faild in making folder >>> '+dstdir)
+        if not os.path.exists(locdir):
+            os.makedirs(locdir)
+        if not os.path.isdir(locdir):
+            raise IOError('Error, no such folder >>> '+locdir)
+        for f in fs:
+            fnam = os.path.join(srcdir,f)
+            gnam = os.path.join(dstdir,f)
+            lnam = os.path.join(locdir,f)
+            if fnam.lower() in ignore_file_lower:
+                continue
+            if upload_and_check_file(fnam,gnam) == 0:
+                shutil.move(fnam,lnam)
+                if opts.debug and not os.path.exists(fnam) and os.path.exists(lnam):
+                    sys.stderr.write('Moved {} to {}\n'.format(fnam,lnam))
+                    sys.stderr.flush()
+        if len(os.listdir(srcdir)) == 0:
+            if not srcdir.lower() in keep_folder_lower:
+                os.rmdir(srcdir)
+                if opts.debug and not os.path.exists(srcdir):
+                    sys.stderr.write('Removed {}\n'.format(srcdir))
+                    sys.stderr.flush()
 """
