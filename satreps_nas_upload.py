@@ -233,28 +233,40 @@ def upload_file(fnam,gnam):
             return fs[target]
     # Upload file
     if opts.verbose:
-        sys.stderr.write('Uploading file >>> '+fnam+'\n')
+        tstr = datetime.now()
+        sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file >>> {}\n'.format(tstr,fnam))
         sys.stderr.flush()
-        t1 = datetime.now()
     sender = driver.find_element_by_id('upload-input')
     sender.send_keys(fnam)
     time.sleep(1)
+    bit_size = os.path.getsize(fnam)*8
     progress = driver.find_element_by_id('progress')
     bar = progress.find_element_by_xpath('div')
     previous_size = -1
+    t1 = tstr
     while True:
         total_size = float(progress.value_of_css_property('width').replace('px',''))
         transfered_size = float(bar.value_of_css_property('width').replace('px',''))
         if transfered_size == 0.0:
             break
         elif transfered_size != previous_size:
-            sys.stderr.write('{:6.2f} %\n'.format(100.0*transfered_size/total_size))
+            t2 = datetime.now()
+            dt = (t2-t1).total_seconds()
+            if previous_size < 0:
+                ds = bit_size*transfered_size/total_size
+            else
+                ds = bit_size*(transfered_size-previous_size)/total_size
+            remaining_size = bit_size*(total_size-transfered_size)/total_size
+            rate = ds/dt
+            t3 = t2+timedelta(seconds=remaining_size/rate)
+            sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploaded {:6.2f} % @ {:8.3} Mbps, Expected completion at {:%Y-%m-%dT%H:%M:%S}\n'.format(t2,rate*1.0e-6,100.0*transfered_size/total_size,t3))
             sys.stderr.flush()
             previous_size = transfered_size
+            t1 = t2
         time.sleep(1)
     if opts.verbose:
-        t2 = datetime.now()
-        sys.stderr.write('Upload completed in {:.2f} seconds >>> {}\n'.format((t2-t1).total_seconds(),fnam))
+        tend = datetime.now()
+        sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload completed in {:.2f} seconds >>> {}\n'.format(tend,(tend-tstr).total_seconds(),fnam))
         sys.stderr.flush()
     # Check uploaded file
     ds,fs = list_file(parent)
