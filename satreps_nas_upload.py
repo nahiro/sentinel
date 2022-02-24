@@ -253,16 +253,18 @@ def upload_file(fnam,gnam):
             t2 = datetime.now()
             dt = (t2-t1).total_seconds()
             if previous_size < 0:
-                ds = bit_size*transfered_size/total_size
+                ds = transfered_size/total_size
             else:
-                ds = bit_size*(transfered_size-previous_size)/total_size
-            remaining_size = bit_size*(total_size-transfered_size)/total_size
-            rate = ds/dt
-            t3 = t2+timedelta(seconds=remaining_size/rate)
-            sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploaded {:6.2f} % @ {:8.3f} Mbps, Expected completion at {:%Y-%m-%dT%H:%M:%S}\n'.format(t2,100.0*transfered_size/total_size,rate*1.0e-6,t3))
-            sys.stderr.flush()
-            previous_size = transfered_size
-            t1 = t2
+                ds = (transfered_size-previous_size)/total_size
+            if ds > 0.99e-2:
+                ds *= bit_size
+                remaining_size = bit_size*(total_size-transfered_size)/total_size
+                rate = ds/dt
+                t3 = t2+timedelta(seconds=remaining_size/rate)
+                sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploaded {:6.2f} % @ {:8.3f} Mbps, Expected completion at {:%Y-%m-%dT%H:%M:%S}\n'.format(t2,100.0*transfered_size/total_size,rate*1.0e-6,t3))
+                sys.stderr.flush()
+                previous_size = transfered_size
+                t1 = t2
         time.sleep(1)
     if opts.verbose:
         tend = datetime.now()
