@@ -204,7 +204,7 @@ def upload_file(fnam,gnam):
     if target in fs:
         if opts.overwrite:
             if opts.verbose:
-                sys.stderr.write('File exists, delete >>> '+f['title']+'\n')
+                sys.stderr.write('File exists, delete >>> '+target+'\n')
                 sys.stderr.flush()
             fs[target]['element'].click()
             time.sleep(1)
@@ -381,8 +381,7 @@ if not opts.skip_login:
         raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
     buttons[0].click()
     time.sleep(1)
-#make_folder(opts.dstdir)
-#"""
+# Upload file
 for subdir in opts.subdir:
     make_folder(os.path.join(opts.dstdir,subdir))
     for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir)):
@@ -428,4 +427,3 @@ for subdir in opts.subdir:
                 if opts.debug and not os.path.exists(srcdir):
                     sys.stderr.write('Removed {}\n'.format(srcdir))
                     sys.stderr.flush()
-#"""
