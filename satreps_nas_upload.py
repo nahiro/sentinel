@@ -189,6 +189,7 @@ def make_folder(path):
         if buttons[1].text != 'CREATE':
             raise ValueError('Error, buttons[1].text={}'.format(buttons[1].text))
         buttons[1].click()
+        time.sleep(1)
         folders.append(path)
         return 0
     return -1
@@ -261,7 +262,26 @@ def upload_and_check_file(fnam,gnam):
     size = os.path.getsize(fnam)
     f = upload_file(fnam,gnam)
     if f is not None and (abs(size-f['size']) <= f['size_error']):
-        f['element'].click()
+        itry = 0
+        while f['element'].get_attribute('aria-selected') != 'true':
+            itry += 1
+            try:
+                f['element'].click()
+            except Exception:
+                pass
+            if itry%10 == 0:
+                driver.refresh()
+            if opts.verbose:
+                # for debug
+                sys.stderr.write('current_url={}\n'.format(driver.current_url))
+                sys.stderr.write('is_displayed={}\n'.format(f['element'].is_displayed()))
+                sys.stderr.write('is_enabled={}\n'.format(f['element'].is_enabled()))
+                sys.stderr.write('is_selected={}\n'.format(f['element'].is_selected()))
+                # for debug
+                if itry > 1:
+                    sys.stderr.write('Wating for button to be ready >>> {}\n'.format(gnam))
+                    sys.stderr.flush()
+            time.sleep(1)
         action_info = None
         dropdown = driver.find_element_by_id('dropdown')
         actions = dropdown.find_elements_by_class_name('action')
@@ -272,6 +292,7 @@ def upload_and_check_file(fnam,gnam):
         if action_info is None:
             raise ValueError('Error in finding Info.')
         action_info.click()
+        time.sleep(1)
         card_contents = driver.find_elements_by_class_name('card-content')
         if len(card_contents) != 1:
             raise ValueError('Error, len(card_contents)={}'.format(len(card_contents)))
@@ -286,8 +307,13 @@ def upload_and_check_file(fnam,gnam):
         aa = p_md5.find_elements_by_tag_name('a')
         if len(aa) != 1:
             raise ValueError('Error, len(aa)={}'.format(len(aa)))
-        aa[0].click()
+        itry = 0
         while aa[0].text == 'Show':
+            itry += 1
+            aa[0].click()
+            if opts.verbose and itry > 1:
+                sys.stderr.write('Waiting for MD5 to be ready >>> {}\n'.format(gnam))
+                sys.stderr.flush()
             time.sleep(1)
         md5_dst = aa[0].text
         buttons = driver.find_elements_by_class_name('button')
@@ -296,6 +322,7 @@ def upload_and_check_file(fnam,gnam):
         if buttons[0].text != 'OK':
             raise ValueError('Error, buttons[0].text={}'.format(buttons[0].text))
         buttons[0].click()
+        time.sleep(1)
         with open(fnam,'rb') as fp:
             md5 = hashlib.md5(fp.read()).hexdigest()
         if (md5_dst.lower() == md5.lower()):
