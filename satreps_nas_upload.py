@@ -40,6 +40,7 @@ parser.add_option('-K','--keep_folder',default=None,action='append',help='Direct
 parser.add_option('-I','--ignore_file',default=None,action='append',help='File to ignore (%default)')
 parser.add_option('-p','--port',default=None,type='int',help='Port# of Chrome to use (%default)')
 parser.add_option('--skip_login',default=False,action='store_true',help='Skip login procedure (%default)')
+parser.add_option('-H','--headless',default=False,action='store_true',help='Headless mode (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
@@ -304,7 +305,7 @@ def upload_and_check_file(fnam,gnam):
             return 0
         else:
             if opts.verbose:
-                sys.stderr.write('Warning, title={} ({}), size={} ({}), md5={} ({})\n'.format(title_dst,title,size_dst,size,md5_dst,md5))
+                sys.stderr.write('Warning, size={}, size_error={} ({}), md5={} ({}) >>> {}\n'.format(f['size'],f['size_error'],size,md5_dst,md5,gnam))
                 sys.stderr.flush()
             return -1
     elif f is None:
@@ -348,9 +349,14 @@ with open(fnam,'r') as fp:
 if server is None or username is None or password is None:
     raise ValueError('Error, server={}, username={}, password={}'.format(server,username,password))
 
-if opts.port is not None:
+if opts.port is not None or opts.headless:
     options = Options()
-    options.add_experimental_option('debuggerAddress','localhost:{}'.format(opts.port))
+    if opts.port:
+        options.add_experimental_option('debuggerAddress','localhost:{}'.format(opts.port))
+    if opts.headless:
+        options.add_argument('--headless')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1080')
     driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'),options=options)
 else:
     driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'))
