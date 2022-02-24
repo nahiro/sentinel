@@ -440,7 +440,7 @@ for subdir in opts.subdir:
             os.makedirs(locdir)
         if not os.path.isdir(locdir):
             raise IOError('Error, no such folder >>> '+locdir)
-        for f in fs:
+        for f in sorted(fs):
             fnam = os.path.join(srcdir,f)
             gnam = os.path.join(dstdir,f)
             lnam = os.path.join(locdir,f)
