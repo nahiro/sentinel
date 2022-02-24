@@ -254,7 +254,7 @@ def upload_file(fnam,gnam):
             dt = (t2-t1).total_seconds()
             if previous_size < 0:
                 ds = bit_size*transfered_size/total_size
-            else
+            else:
                 ds = bit_size*(transfered_size-previous_size)/total_size
             remaining_size = bit_size*(total_size-transfered_size)/total_size
             rate = ds/dt
