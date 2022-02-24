@@ -235,6 +235,7 @@ def upload_file(fnam,gnam):
     if opts.verbose:
         sys.stderr.write('Uploading file >>> '+fnam+'\n')
         sys.stderr.flush()
+        t1 = datetime.now()
     sender = driver.find_element_by_id('upload-input')
     sender.send_keys(fnam)
     time.sleep(1)
@@ -250,7 +251,11 @@ def upload_file(fnam,gnam):
             sys.stderr.write('{:6.2f} %\n'.format(100.0*transfered_size/total_size))
             sys.stderr.flush()
             previous_size = transfered_size
-        time.sleep(5)
+        time.sleep(1)
+    if opts.verbose:
+        t2 = datetime.now()
+        sys.stderr.write('Upload completed in {:.2f} seconds >>> {}\n'.format((t2-t1).total_seconds(),fnam))
+        sys.stderr.flush()
     # Check uploaded file
     ds,fs = list_file(parent)
     if target in fs:
