@@ -39,6 +39,7 @@ parser.add_option('--rcdir',default=RCDIR,help='Directory where .netrc exists (%
 parser.add_option('-K','--keep_folder',default=None,action='append',help='Directory to keep (%default)')
 parser.add_option('-I','--ignore_file',default=None,action='append',help='File to ignore (%default)')
 parser.add_option('-p','--port',default=None,type='int',help='Port# of Chrome to use (%default)')
+parser.add_option('--skip_login',default=False,action='store_true',help='Skip login procedure (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
@@ -128,7 +129,8 @@ def list_file(path=None):
             url = 'https://{}/files{}'.format(server,path)
         else:
             url = 'https://{}/files/{}'.format(server,path)
-        driver.get(url)
+        if driver.current_url != url:
+            driver.get(url)
         time.sleep(1)
         if re.search('This location can\'t be reached',driver.page_source):
             return None,None
@@ -145,7 +147,7 @@ def list_file(path=None):
                 fs.update({lines[1]:{'element':item,'size':size,'size_error':size_error,'mtime':t}})
             else:
                 raise ValueError('Error, lines[0]={}'.format(lines[0]))
-        elif nline == 3:
+        elif nline == 3 and lines[1] != 'Size':
             size,size_error = get_size(lines[1])
             t = get_time(item.find_element_by_tag_name('time').get_attribute('datetime'))
             fs.update({lines[0]:{'element':item,'size':size,'size_error':size_error,'mtime':t}})
@@ -257,7 +259,7 @@ def upload_and_check_file(fnam,gnam):
     title = os.path.basename(gnam)
     size = os.path.getsize(fnam)
     f = upload_file(fnam,gnam)
-    if f is not None and (np.abs(size-f['size']) <= f['size_error']):
+    if f is not None and (abs(size-f['size']) <= f['size_error']):
         f['element'].click()
         action_info = None
         dropdown = driver.find_element_by_id('dropdown')
@@ -286,7 +288,13 @@ def upload_and_check_file(fnam,gnam):
         aa[0].click()
         while aa[0].text == 'Show':
             time.sleep(1)
-        dst_md5 = aa[0].text
+        md5_dst = aa[0].text
+        buttons = driver.find_elements_by_class_name('button')
+        if len(buttons) != 1:
+            raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
+        if buttons[0].text != 'OK':
+            raise ValueError('Error, buttons[0].text={}'.format(buttons[0].text))
+        buttons[0].click()
         with open(fnam,'rb') as fp:
             md5 = hashlib.md5(fp.read()).hexdigest()
         if (md5_dst.lower() == md5.lower()):
@@ -348,32 +356,29 @@ else:
     driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'))
 
 # Login to the NAS server
-driver.get('https://{}/login'.format(server))
-time.sleep(1)
-inputs = driver.find_elements_by_class_name('input')
-if len(inputs) != 2:
-    raise ValueError('Error, len(inputs)={}'.format(len(inputs)))
-inputs[0].send_keys((Keys.CONTROL+'a'))
-inputs[0].send_keys(Keys.DELETE)
-inputs[0].send_keys(username)
-time.sleep(1)
-inputs[1].send_keys((Keys.CONTROL+'a'))
-inputs[1].send_keys(Keys.DELETE)
-inputs[1].send_keys(password)
-time.sleep(1)
-buttons = driver.find_elements_by_class_name('button')
-if len(buttons) != 1:
-    raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
-buttons[0].click()
-time.sleep(1)
-url = 'https://{}/files/{}'.format(server,opts.dstdir)
-driver.get(url)
-time.sleep(1)
-if re.search('This location can\'t be reached.',driver.page_source):
-    raise IOError('No such page >>> '+url)
-
+if not opts.skip_login:
+    driver.get('https://{}/login'.format(server))
+    time.sleep(1)
+    inputs = driver.find_elements_by_class_name('input')
+    if len(inputs) != 2:
+        raise ValueError('Error, len(inputs)={}'.format(len(inputs)))
+    inputs[0].send_keys((Keys.CONTROL+'a'))
+    inputs[0].send_keys(Keys.DELETE)
+    inputs[0].send_keys(username)
+    time.sleep(1)
+    inputs[1].send_keys((Keys.CONTROL+'a'))
+    inputs[1].send_keys(Keys.DELETE)
+    inputs[1].send_keys(password)
+    time.sleep(1)
+    buttons = driver.find_elements_by_class_name('button')
+    if len(buttons) != 1:
+        raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
+    buttons[0].click()
+    time.sleep(1)
+#make_folder(opts.dstdir)
+#"""
 for subdir in opts.subdir:
-    make_folders(os.path.join(opts.dstdir,subdir))
+    make_folder(os.path.join(opts.dstdir,subdir))
     for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir)):
         curdir = os.path.relpath(root,opts.srcdir)
         if opts.verbose:
@@ -417,3 +422,4 @@ for subdir in opts.subdir:
                 if opts.debug and not os.path.exists(srcdir):
                     sys.stderr.write('Removed {}\n'.format(srcdir))
                     sys.stderr.flush()
+#"""
