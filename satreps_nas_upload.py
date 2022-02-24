@@ -259,7 +259,7 @@ def upload_file(fnam,gnam):
             remaining_size = bit_size*(total_size-transfered_size)/total_size
             rate = ds/dt
             t3 = t2+timedelta(seconds=remaining_size/rate)
-            sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploaded {:6.2f} % @ {:8.3} Mbps, Expected completion at {:%Y-%m-%dT%H:%M:%S}\n'.format(t2,rate*1.0e-6,100.0*transfered_size/total_size,t3))
+            sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploaded {:6.2f} % @ {:8.3f} Mbps, Expected completion at {:%Y-%m-%dT%H:%M:%S}\n'.format(t2,100.0*transfered_size/total_size,rate*1.0e-6,t3))
             sys.stderr.flush()
             previous_size = transfered_size
             t1 = t2
