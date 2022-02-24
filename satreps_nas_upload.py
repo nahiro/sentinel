@@ -146,7 +146,9 @@ def list_file(path=None):
             else:
                 raise ValueError('Error, lines[0]={}'.format(lines[0]))
         elif nline == 3:
-            fs.update({lines[0]:item})
+            size,size_error = get_size(lines[1])
+            t = get_time(item.find_element_by_tag_name('time').get_attribute('datetime'))
+            fs.update({lines[0]:{'element':item,'size':size,'size_error':size_error,'mtime':t}})
     return ds,fs
 
 folders = []
@@ -187,100 +189,6 @@ def make_folder(path):
         folders.append(path)
         return 0
     return -1
-
-fnam = os.path.join(opts.rcdir,'.netrc')
-if not os.path.exists(fnam):
-    raise IOError('Error, no such file >>> '+fnam)
-server = None
-username = None
-password = None
-flag = False
-with open(fnam,'r') as fp:
-    for line in fp:
-        m = re.search('machine\s+(\S+)',line)
-        if m:
-            if re.search('satreps',m.group(1)):
-                flag = True
-                server = m.group(1)
-            else:
-                flag = False
-            continue
-        m = re.search('login\s+(\S+)',line)
-        if m:
-            if flag:
-                username = m.group(1)
-            continue
-        m = re.search('password\s+(\S+)',line)
-        if m:
-            if flag:
-                password = m.group(1)
-            continue
-if server is None or username is None or password is None:
-    raise ValueError('Error, server={}, username={}, password={}'.format(server,username,password))
-
-if opts.port is not None:
-    options = Options()
-    options.add_experimental_option('debuggerAddress','localhost:{}'.format(opts.port))
-    driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'),options=options)
-else:
-    driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'))
-
-# Login to the NAS server
-driver.get('https://{}/login'.format(server))
-time.sleep(1)
-inputs = driver.find_elements_by_class_name('input')
-if len(inputs) != 2:
-    raise ValueError('Error, len(inputs)={}'.format(len(inputs)))
-inputs[0].send_keys((Keys.CONTROL+'a'))
-inputs[0].send_keys(Keys.DELETE)
-inputs[0].send_keys(username)
-time.sleep(1)
-inputs[1].send_keys((Keys.CONTROL+'a'))
-inputs[1].send_keys(Keys.DELETE)
-inputs[1].send_keys(password)
-time.sleep(1)
-buttons = driver.find_elements_by_class_name('button')
-if len(buttons) != 1:
-    raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
-buttons[0].click()
-time.sleep(1)
-url = 'https://{}/files/{}'.format(server,opts.dstdir)
-driver.get(url)
-time.sleep(1)
-if re.search('This location can\'t be reached.',driver.page_source):
-    raise IOError('No such page >>> '+url)
-"""
-sender = driver.find_element_by_id('upload-input')
-sender.send_keys(os.path.join(opts.srcdir,'test.txt'))
-time.sleep(1)
-progress = driver.find_element_by_id('progress')
-bar = progress.find_element_by_xpath('div')
-while True:
-    total_size = float(progress.value_of_css_property('width').replace('px',''))
-    transfered_size = float(bar.value_of_css_property('width').replace('px',''))
-    if transfered_size == 0.0:
-        break
-    print(transfered_size,'/',total_size)
-items = driver.find_elements_by_class_name('item')
-for item in items:
-    lines = item.text.splitlines()
-    if (len(lines) > 2) and lines[1] == 'test.txt':
-        item.click()
-dropdown = driver.find_element_by_id('dropdown')
-actions = dropdown.find_elements_by_class_name('action')
-actions[8].click()
-card_content = driver.find_element_by_class_name('card-content')
-ps = card_content.find_elements_by_tag_name('p')
-a = ps[4].find_element_by_tag_name('a')
-a.click()
-while True:
-    dst_md5 = a.text
-    if dst_md5 == 'Show':
-        time.sleep(1)
-        continue
-    break
-dst_size = ps[1].text
-"""
 
 def upload_file(fnam,gnam):
     parent = os.path.dirname(gnam)
@@ -349,8 +257,8 @@ def upload_and_check_file(fnam,gnam):
     title = os.path.basename(gnam)
     size = os.path.getsize(fnam)
     f = upload_file(fnam,gnam)
-    if f is not None:
-        f.click()
+    if f is not None and (np.abs(size-f['size']) <= f['size_error']):
+        f['element'].click()
         action_info = None
         dropdown = driver.find_element_by_id('dropdown')
         actions = dropdown.find_elements_by_class_name('action')
@@ -364,34 +272,8 @@ def upload_and_check_file(fnam,gnam):
         card_contents = driver.find_elements_by_class_name('card-content')
         if len(card_contents) != 1:
             raise ValueError('Error, len(card_contents)={}'.format(len(card_contents)))
-        ps = card_contents[0].find_elements_by_tag_name('p')
-        dst_size = None
-        for p in ps:
-            m = re.search('Size\s*:\s*(\S+)\s+(\S+)',p.text)
-            if m:
-                dst_size_label = m.group(1)+' '+m.group(2)
-                dst_size_unit = m.group(2).upper()
-                if dst_size_unit == 'B':
-                    dst_size = int(m.group(1))
-                    dst_size_error = 0
-                elif dst_size_unit == 'KB':
-                    dst_size = float(m.group(1))*KB
-                    dst_size_error = KB//10
-                elif dst_size_unit == 'MB':
-                    dst_size = float(m.group(1))*MB
-                    dst_size_error = MB//10
-                elif dst_size_unit == 'GB':
-                    dst_size = float(m.group(1))*GB
-                    dst_size_error = GB//10
-                elif dst_size_unit == 'TB':
-                    dst_size = float(m.group(1))*TB
-                    dst_size_error = TB//10
-                else:
-                    raise ValueError('Error in size unit >>> '+p.text)
-                break
-        if dst_size is None:
-            raise ValueError('Error in finding Size.')
         p_md5 = None
+        ps = card_contents[0].find_elements_by_tag_name('p')
         for p in ps:
             if re.search('MD5',p.text):
                 p_md5 = p
@@ -405,10 +287,6 @@ def upload_and_check_file(fnam,gnam):
         while aa[0].text == 'Show':
             time.sleep(1)
         dst_md5 = aa[0].text
-
-
-
-
         with open(fnam,'rb') as fp:
             md5 = hashlib.md5(fp.read()).hexdigest()
         if (md5_dst.lower() == md5.lower()):
@@ -421,13 +299,79 @@ def upload_and_check_file(fnam,gnam):
                 sys.stderr.write('Warning, title={} ({}), size={} ({}), md5={} ({})\n'.format(title_dst,title,size_dst,size,md5_dst,md5))
                 sys.stderr.flush()
             return -1
+    elif f is None:
+        if opts.verbose:
+            sys.stderr.write('Warning, failed in checking file >>> {}\n'.format(gnam))
+            sys.stderr.flush()
+        return -1
     else:
         if opts.verbose:
-            sys.stderr.write('Warning, failed checking file >>> {}\n'.format(gnam))
+            sys.stderr.write('Warning, size={}, size_error={} ({}) >>> {}\n'.format(f['size'],f['size_error'],size,gnam))
             sys.stderr.flush()
         return -1
 
-"""
+fnam = os.path.join(opts.rcdir,'.netrc')
+if not os.path.exists(fnam):
+    raise IOError('Error, no such file >>> '+fnam)
+server = None
+username = None
+password = None
+flag = False
+with open(fnam,'r') as fp:
+    for line in fp:
+        m = re.search('machine\s+(\S+)',line)
+        if m:
+            if re.search('satreps',m.group(1)):
+                flag = True
+                server = m.group(1)
+            else:
+                flag = False
+            continue
+        m = re.search('login\s+(\S+)',line)
+        if m:
+            if flag:
+                username = m.group(1)
+            continue
+        m = re.search('password\s+(\S+)',line)
+        if m:
+            if flag:
+                password = m.group(1)
+            continue
+if server is None or username is None or password is None:
+    raise ValueError('Error, server={}, username={}, password={}'.format(server,username,password))
+
+if opts.port is not None:
+    options = Options()
+    options.add_experimental_option('debuggerAddress','localhost:{}'.format(opts.port))
+    driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'),options=options)
+else:
+    driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'))
+
+# Login to the NAS server
+driver.get('https://{}/login'.format(server))
+time.sleep(1)
+inputs = driver.find_elements_by_class_name('input')
+if len(inputs) != 2:
+    raise ValueError('Error, len(inputs)={}'.format(len(inputs)))
+inputs[0].send_keys((Keys.CONTROL+'a'))
+inputs[0].send_keys(Keys.DELETE)
+inputs[0].send_keys(username)
+time.sleep(1)
+inputs[1].send_keys((Keys.CONTROL+'a'))
+inputs[1].send_keys(Keys.DELETE)
+inputs[1].send_keys(password)
+time.sleep(1)
+buttons = driver.find_elements_by_class_name('button')
+if len(buttons) != 1:
+    raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
+buttons[0].click()
+time.sleep(1)
+url = 'https://{}/files/{}'.format(server,opts.dstdir)
+driver.get(url)
+time.sleep(1)
+if re.search('This location can\'t be reached.',driver.page_source):
+    raise IOError('No such page >>> '+url)
+
 for subdir in opts.subdir:
     make_folders(os.path.join(opts.dstdir,subdir))
     for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir)):
@@ -473,4 +417,3 @@ for subdir in opts.subdir:
                 if opts.debug and not os.path.exists(srcdir):
                     sys.stderr.write('Removed {}\n'.format(srcdir))
                     sys.stderr.flush()
-"""
