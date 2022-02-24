@@ -256,7 +256,7 @@ def upload_file(fnam,gnam):
     if target in fs:
         return fs[target]
     else:
-        sys.stderr.write('Warning, faild in uploading '+gnam)
+        sys.stderr.write('Warning, faild in uploading file >>> {}\n'.format(gnam))
         sys.stderr.flush()
         return None
 
