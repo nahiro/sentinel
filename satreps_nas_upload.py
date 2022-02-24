@@ -228,10 +228,13 @@ def upload_file(fnam,gnam):
             time.sleep(1)
         else:
             if opts.verbose:
-                sys.stderr.write('File exists, skip   >>> '+target+'\n')
+                sys.stderr.write('File exists, skip >>> '+target+'\n')
                 sys.stderr.flush()
             return fs[target]
     # Upload file
+    if opts.verbose:
+        sys.stderr.write('Uploading file >>> '+fnam+'\n')
+        sys.stderr.flush()
     sender = driver.find_element_by_id('upload-input')
     sender.send_keys(fnam)
     time.sleep(1)
@@ -244,7 +247,7 @@ def upload_file(fnam,gnam):
         if transfered_size == 0.0:
             break
         elif transfered_size != previous_size:
-            sys.stderr.write('{:8.4f}%\n'.format(100.0*transfered_size/total_size))
+            sys.stderr.write('{:6.2f} %\n'.format(100.0*transfered_size/total_size))
             sys.stderr.flush()
             previous_size = transfered_size
         time.sleep(5)
