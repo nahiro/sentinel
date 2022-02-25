@@ -248,6 +248,12 @@ def upload_file(fnam,gnam):
         total_size = float(progress.value_of_css_property('width').replace('px',''))
         transfered_size = float(bar.value_of_css_property('width').replace('px',''))
         if transfered_size == 0.0:
+            # for debug
+            if previous_size > 0 and previous_size != total_size:
+                sys.stderr.write('Warning, transfered_size={}\n'.format(transfered_size))
+                sys.stderr.flush()
+                continue
+            # for debug
             break
         elif transfered_size != previous_size:
             t2 = datetime.now()
