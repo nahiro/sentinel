@@ -109,6 +109,22 @@ def get_size(s):
         raise ValueError('Error in size >>> '+s)
     return size,size_error
 
+def get_size_string(fnam):
+    s = 'None'
+    if os.path.exists(fnam):
+        size = os.path.getsize(fnam)
+        if size > TB:
+            s = '{:.2f} TB'.format(size/TB)
+        elif size > GB:
+            s = '{:.2f} GB'.format(size/GB)
+        elif size > MB:
+            s = '{:.2f} MB'.format(size/MB)
+        elif size > KB:
+            s = '{:.2f} KB'.format(size/KB)
+        else:
+            s = '{} B'.format(size)
+    return s
+
 def get_time(s):
     # '2021-11-26T09:24:23.01891815Z'
     m = re.search('(\d\d\d\d-\d\d-\d\dT\d\d:\d\d):(\d\d\.\d+)Z',s)
@@ -234,7 +250,7 @@ def upload_file(fnam,gnam):
     # Upload file
     if opts.verbose:
         tstr = datetime.now()
-        sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file >>> {}\n'.format(tstr,fnam))
+        sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file ({}) >>> {}\n'.format(tstr,get_size_string(fnam),fnam))
         sys.stderr.flush()
     sender = driver.find_element_by_id('upload-input')
     sender.send_keys(fnam)
