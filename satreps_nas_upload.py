@@ -490,3 +490,17 @@ for subdir in opts.subdir:
                 if opts.debug and not os.path.exists(srcdir):
                     sys.stderr.write('Removed {}\n'.format(srcdir))
                     sys.stderr.flush()
+# Remove empty directories
+for subdir in opts.subdir:
+    for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir),topdown=False):
+        curdir = os.path.relpath(root,opts.srcdir)
+        if curdir == os.curdir:
+            srcdir = opts.srcdir
+        else:
+            srcdir = os.path.join(opts.srcdir,curdir)
+        if len(os.listdir(srcdir)) == 0:
+            if not srcdir.lower() in keep_folder_lower:
+                os.rmdir(srcdir)
+                if opts.debug and not os.path.exists(srcdir):
+                    sys.stderr.write('Removed {}\n'.format(srcdir))
+                    sys.stderr.flush()
