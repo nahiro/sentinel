@@ -258,8 +258,9 @@ def upload_file(fnam,gnam):
         elif transfered_size != previous_size:
             t2 = datetime.now()
             dt = (t2-t1).total_seconds()
+            ts = transfered_size/total_size
             if previous_size < 0:
-                ds = transfered_size/total_size
+                ds = ts
             else:
                 ds = (transfered_size-previous_size)/total_size
             if ds > 0.99e-2:
@@ -267,14 +268,20 @@ def upload_file(fnam,gnam):
                 remaining_size = bit_size*(total_size-transfered_size)/total_size
                 rate = ds/dt
                 t3 = t2+timedelta(seconds=remaining_size/rate)
-                sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploaded {:6.2f} % @ {:8.3f} Mbps, Expected completion at {:%Y-%m-%dT%H:%M:%S}\n'.format(t2,100.0*transfered_size/total_size,rate*1.0e-6,t3))
-                sys.stderr.flush()
+                if previous_size > 0:
+                    sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload {:6.2f} % @ {:8.3f} Mbps, Expected completion at {:%Y-%m-%dT%H:%M:%S}\n'.format(t2,100.0*ts,rate*1.0e-6,t3))
+                    sys.stderr.flush()
                 previous_size = transfered_size
                 t1 = t2
         time.sleep(1)
     if opts.verbose:
         tend = datetime.now()
-        sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload completed in {:.2f} seconds >>> {}\n'.format(tend,(tend-tstr).total_seconds(),fnam))
+        dt = (tend-tstr).total_seconds()
+        if transfered_size == 0.0:
+            rate = bit_size/dt
+            sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload completed in {:.2f} seconds ({:8.3f} Mbps) >>> {}\n'.format(tend,dt,rate*1.0e-6,fnam))
+        else:
+            sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload stopped in {:.2f} seconds >>> {}\n'.format(tend,dt,fnam))
         sys.stderr.flush()
     # Check uploaded file
     ds,fs = list_file(parent)
