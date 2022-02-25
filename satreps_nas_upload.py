@@ -252,7 +252,7 @@ def upload_file(fnam,gnam):
             if previous_size > 0 and previous_size != total_size:
                 sys.stderr.write('Warning, transfered_size={}\n'.format(transfered_size))
                 sys.stderr.flush()
-                time.sleep(1)
+                time.sleep(10)
                 continue
             # for debug
             break
