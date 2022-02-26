@@ -4,6 +4,8 @@ import sys
 import re
 import shutil
 import hashlib
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import atexit
 import time
 from datetime import datetime,timedelta
@@ -84,32 +86,7 @@ def clean_up():
     os.chdir(topdir)
 atexit.register(clean_up)
 
-def get_size(s):
-    m = re.search('(\S+)\s+(\S+)',s)
-    if m:
-        size_unit = m.group(2).upper()
-        if size_unit == 'B':
-            size = int(m.group(1))
-            size_error = 0
-        elif size_unit == 'KB':
-            size = float(m.group(1))*KB
-            size_error = KB//10
-        elif size_unit == 'MB':
-            size = float(m.group(1))*MB
-            size_error = MB//10
-        elif size_unit == 'GB':
-            size = float(m.group(1))*GB
-            size_error = GB//10
-        elif size_unit == 'TB':
-            size = float(m.group(1))*TB
-            size_error = TB//10
-        else:
-            raise ValueError('Error in size unit >>> '+s)
-    else:
-        raise ValueError('Error in size >>> '+s)
-    return size,size_error
-
-def get_size_string(fnam):
+def get_size(fnam):
     s = 'None'
     if os.path.exists(fnam):
         size = os.path.getsize(fnam)
@@ -134,41 +111,74 @@ def get_time(s):
         raise ValueError('Error in time >>> '+s)
     return t
 
-def list_file(path=None):
-    ds = {}
-    fs = {}
-    if path is None or path == '.':
-        pass
-    else:
-        if len(path) < 1:
-            url = 'https://{}/files/'.format(server)
-        elif path[0] == '/':
-            url = 'https://{}/files{}'.format(server,path)
+def get_url(path,root='files'):
+    if path is None or path == '.' or len(path) < 1: # current folder
+        m = re.search('https://'+server+'/files(\S+)',driver.current_url)
+        if m:
+            path = m.group(1)
         else:
-            url = 'https://{}/files/{}'.format(server,path)
-        if driver.current_url != url:
-            driver.get(url)
-        time.sleep(1)
-        if re.search('This location can\'t be reached',driver.page_source):
-            return None,None
-    items = driver.find_elements_by_class_name('item')
+            path = '/'
+    if path[0] != '/': # relative path
+        m = re.search('https://'+server+'/files(\S+)',driver.current_url)
+        if m:
+            parent = m.group(1)
+        else:
+            parent = '/'
+        if parent[-1] != '/':
+            parent += '/'
+        path = parent+path
+    if root == 'files':
+        url = 'https://{}/files{}'.format(server,path)
+    elif root == 'resources':
+        url = 'https://{}/api/resources{}'.format(server,path)
+    else:
+        raise ValueError('Error, in root >>> '+root)
+    return url
+
+def change_folder(path):
+    url = get_url(path)
+    if driver.current_url != url:
+        driver.get(url)
+    time.sleep(1)
+    if re.search('This location can\'t be reached',driver.page_source):
+        return -1
+    return 0
+
+def list_file(path=None):
+    ds = []
+    fs = {}
+    url = get_url(path,root='resources')
+    try:
+        resp = session.get(url,verify=False)
+    except Exception:
+        return None,None
+    params = resp.json()
+    items = params['items']
     for item in items:
-        lines = item.text.splitlines()
-        nline = len(lines)
-        if nline == 4:
-            if lines[0] == 'folder':
-                ds.update({lines[1]:item})
-            elif lines[0] == 'insert_drive_file':
-                size,size_error = get_size(lines[2])
-                t = get_time(item.find_element_by_tag_name('time').get_attribute('datetime'))
-                fs.update({lines[1]:{'element':item,'size':size,'size_error':size_error,'mtime':t}})
-            else:
-                raise ValueError('Error, lines[0]={}'.format(lines[0]))
-        elif nline == 3 and lines[1] != 'Size':
-            size,size_error = get_size(lines[1])
-            t = get_time(item.find_element_by_tag_name('time').get_attribute('datetime'))
-            fs.update({lines[0]:{'element':item,'size':size,'size_error':size_error,'mtime':t}})
+        if item['isDir']:
+            ds.append(item['name'])
+        else:
+            fs.update({item['name']:{'size':item['size'],'mtime':get_time(item['modified'])}})
     return ds,fs
+
+def query_file(path):
+    fs = {}
+    url = get_url(path,root='resources')+'?checksum=md5'
+    try:
+        resp = session.get(url,verify=False)
+    except Exception:
+        return None
+    item = resp.json()
+    return item['name'],item['size'],get_time(item['modified']),item['checksums']['md5']
+
+def delete_file(path):
+    fs = {}
+    url = get_url(path,root='resources')
+    try:
+        resp = session.delete(url,verify=False)
+    except Exception:
+        return -1
+    return 0
 
 folders = []
 
@@ -184,31 +194,15 @@ def make_folder(path):
     if target in ds:
         folders.append(path)
         return 0
-    else:
-        action_new_folder = None
-        actions = driver.find_elements_by_class_name('action')
-        for action in actions:
-            if action.get_attribute('title') == 'New folder':
-                action_new_folder = action
-                break
-        if action_new_folder is None:
-            raise ValueError('Error in finding New folder.')
-        action_new_folder.click()
-        time.sleep(1)
-        inputs = driver.find_elements_by_class_name('input')
-        if len(inputs) != 1:
-            raise ValueError('Error, len(inputs)={}'.format(len(inputs)))
-        inputs[0].send_keys(target)
-        buttons = driver.find_elements_by_class_name('button')
-        if len(buttons) != 2:
-            raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
-        if buttons[1].text != 'CREATE':
-            raise ValueError('Error, buttons[1].text={}'.format(buttons[1].text))
-        buttons[1].click()
-        time.sleep(1)
-        folders.append(path)
-        return 0
-    return -1
+    url = get_url(path,root='resources')
+    if url[-1] != '/':
+        url += '/'
+    try:
+        resp = session.post(url,verify=False)
+    except Exception:
+        return -1
+    folders.append(path)
+    return 0
 
 def upload_file(fnam,gnam):
     parent = os.path.dirname(gnam)
@@ -223,158 +217,43 @@ def upload_file(fnam,gnam):
             if opts.verbose:
                 sys.stderr.write('File exists, delete >>> '+target+'\n')
                 sys.stderr.flush()
-            fs[target]['element'].click()
-            time.sleep(1)
-            action_delete = None
-            actions = driver.find_elements_by_class_name('action')
-            for action in actions:
-                if action.get_attribute('title') == 'Delete':
-                    action_delete = action
-                    break
-            if action_delete is None:
-                raise ValueError('Error in finding Delete.')
-            action_delete.click()
-            time.sleep(1)
-            buttons = driver.find_elements_by_class_name('button')
-            if len(buttons) != 2:
-                raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
-            if buttons[1].text != 'DELETE':
-                raise ValueError('Error, buttons[1].text={}'.format(buttons[1].text))
-            buttons[1].click()
-            time.sleep(1)
+            if delete_file(gnam) < 0:
+                raise IOError('Error in deleting file >>> '+target)
         else:
             if opts.verbose:
                 sys.stderr.write('File exists, skip >>> '+target+'\n')
                 sys.stderr.flush()
-            return fs[target]
+            return query_file(gnam)
     # Upload file
     if opts.verbose:
         tstr = datetime.now()
-        sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file ({}) >>> {}\n'.format(tstr,get_size_string(fnam),fnam))
+        sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file ({}) >>> {}\n'.format(tstr,get_size(fnam),fnam))
         sys.stderr.flush()
-    sender = driver.find_element_by_id('upload-input')
-    sender.send_keys(fnam)
-    time.sleep(1)
-    bit_size = os.path.getsize(fnam)*8
-    progress = driver.find_element_by_id('progress')
-    bar = progress.find_element_by_xpath('div')
-    previous_size = -1
-    t1 = tstr
-    while True:
-        total_size = float(progress.value_of_css_property('width').replace('px',''))
-        transfered_size = float(bar.value_of_css_property('width').replace('px',''))
-        if transfered_size == 0.0:
-            ## for debug
-            #if previous_size > 0 and previous_size != total_size:
-            #    sys.stderr.write('Warning, transfered_size={}\n'.format(transfered_size))
-            #    sys.stderr.flush()
-            #    time.sleep(10)
-            #    continue
-            ## for debug
-            break
-        elif transfered_size != previous_size:
-            t2 = datetime.now()
-            dt = (t2-t1).total_seconds()
-            ts = transfered_size/total_size
-            if previous_size < 0:
-                ds = ts
-            else:
-                ds = (transfered_size-previous_size)/total_size
-            if ds > 0.99e-2:
-                ds *= bit_size
-                remaining_size = bit_size*(total_size-transfered_size)/total_size
-                rate = ds/dt
-                t3 = t2+timedelta(seconds=remaining_size/rate)
-                if previous_size > 0:
-                    sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload {:6.2f} % @ {:8.3f} Mbps, Expected completion at {:%Y-%m-%dT%H:%M:%S}\n'.format(t2,100.0*ts,rate*1.0e-6,t3))
-                    sys.stderr.flush()
-                previous_size = transfered_size
-                t1 = t2
-        time.sleep(1)
+    url = get_url(gnam,root='resources')
+    with open(fnam,'rb') as fp:
+        content = fp.read()
+    session.post(url,content,verify=False)
     if opts.verbose:
         tend = datetime.now()
         dt = (tend-tstr).total_seconds()
-        if transfered_size == 0.0:
-            rate = bit_size/dt
-            sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload completed in {:.2f} seconds ({:8.3f} Mbps) >>> {}\n'.format(tend,dt,rate*1.0e-6,fnam))
-        else:
-            sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload stopped in {:.2f} seconds >>> {}\n'.format(tend,dt,fnam))
+        bit_size = os.path.getsize(fnam)*8
+        rate = bit_size/dt
+        sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload completed in {:.2f} seconds ({:8.3f} Mbps) >>> {}\n'.format(tend,dt,rate*1.0e-6,fnam))
         sys.stderr.flush()
     # Check uploaded file
-    ds,fs = list_file(parent)
-    if target in fs:
-        return fs[target]
-    else:
+    result = query_file(gnam)
+    if result is None:
         sys.stderr.write('Warning, faild in uploading file >>> {}\n'.format(gnam))
         sys.stderr.flush()
-        return None
+        return '',-1,'',''
+    else:
+        return result
 
 def upload_and_check_file(fnam,gnam):
     title = os.path.basename(gnam)
     size = os.path.getsize(fnam)
-    f = upload_file(fnam,gnam)
-    if f is not None and (abs(size-f['size']) <= f['size_error']):
-        itry = 0
-        while f['element'].get_attribute('aria-selected') != 'true':
-            itry += 1
-            try:
-                f['element'].click()
-            except Exception:
-                pass
-            if itry%10 == 0:
-                driver.refresh()
-            if opts.verbose:
-                # for debug
-                sys.stderr.write('current_url={}\n'.format(driver.current_url))
-                sys.stderr.write('is_displayed={}\n'.format(f['element'].is_displayed()))
-                sys.stderr.write('is_enabled={}\n'.format(f['element'].is_enabled()))
-                sys.stderr.write('is_selected={}\n'.format(f['element'].is_selected()))
-                # for debug
-                if itry > 1:
-                    sys.stderr.write('Wating for button to be ready >>> {}\n'.format(gnam))
-                    sys.stderr.flush()
-            time.sleep(1)
-        action_info = None
-        dropdown = driver.find_element_by_id('dropdown')
-        actions = dropdown.find_elements_by_class_name('action')
-        for action in actions:
-            if action.get_attribute('title') == 'Info':
-                action_info = action
-                break
-        if action_info is None:
-            raise ValueError('Error in finding Info.')
-        action_info.click()
-        time.sleep(1)
-        card_contents = driver.find_elements_by_class_name('card-content')
-        if len(card_contents) != 1:
-            raise ValueError('Error, len(card_contents)={}'.format(len(card_contents)))
-        p_md5 = None
-        ps = card_contents[0].find_elements_by_tag_name('p')
-        for p in ps:
-            if re.search('MD5',p.text):
-                p_md5 = p
-                break
-        if p_md5 is None:
-            raise ValueError('Error in finding MD5.')
-        aa = p_md5.find_elements_by_tag_name('a')
-        if len(aa) != 1:
-            raise ValueError('Error, len(aa)={}'.format(len(aa)))
-        itry = 0
-        while aa[0].text == 'Show':
-            itry += 1
-            aa[0].click()
-            if opts.verbose and itry > 1:
-                sys.stderr.write('Waiting for MD5 to be ready >>> {}\n'.format(gnam))
-                sys.stderr.flush()
-            time.sleep(1)
-        md5_dst = aa[0].text
-        buttons = driver.find_elements_by_class_name('button')
-        if len(buttons) != 1:
-            raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
-        if buttons[0].text != 'OK':
-            raise ValueError('Error, buttons[0].text={}'.format(buttons[0].text))
-        buttons[0].click()
-        time.sleep(1)
+    title_dst,size_dst,mdate_dst,md5_dst = upload_file(fnam,gnam)
+    if (title_dst.lower() == title.lower()) and (size_dst == size):
         with open(fnam,'rb') as fp:
             md5 = hashlib.md5(fp.read()).hexdigest()
         if (md5_dst.lower() == md5.lower()):
@@ -384,17 +263,12 @@ def upload_and_check_file(fnam,gnam):
             return 0
         else:
             if opts.verbose:
-                sys.stderr.write('Warning, size={}, size_error={} ({}), md5={} ({}) >>> {}\n'.format(f['size'],f['size_error'],size,md5_dst,md5,gnam))
+                sys.stderr.write('Warning, title={} ({}), size={} ({}), md5={} ({})\n'.format(title_dst,title,size_dst,size,md5_dst,md5))
                 sys.stderr.flush()
             return -1
-    elif f is None:
-        if opts.verbose:
-            sys.stderr.write('Warning, failed in checking file >>> {}\n'.format(gnam))
-            sys.stderr.flush()
-        return -1
     else:
         if opts.verbose:
-            sys.stderr.write('Warning, size={}, size_error={} ({}) >>> {}\n'.format(f['size'],f['size_error'],size,gnam))
+            sys.stderr.write('Warning, title={} ({}), size={} ({})\n'.format(title_dst,title,size_dst,size))
             sys.stderr.flush()
         return -1
 
@@ -460,6 +334,12 @@ if not opts.skip_login:
         raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
     buttons[0].click()
     time.sleep(1)
+# Create a requests session
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+session = requests.sessions.Session()
+for cookie in driver.get_cookies():
+    c = {cookie['name']:cookie['value']}
+    session.cookies.update(c)
 # Upload file
 for subdir in opts.subdir:
     make_folder(os.path.join(opts.dstdir,subdir))
