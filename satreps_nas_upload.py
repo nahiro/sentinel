@@ -204,6 +204,13 @@ def make_folder(path):
     folders.append(path)
     return 0
 
+def read_in_chunks(file_object,chunk_size=GB):
+    while True:
+        data = file_object.read(chunk_size)
+        if not data:
+            break
+        yield data
+
 def upload_file(fnam,gnam):
     parent = os.path.dirname(gnam)
     target = os.path.basename(gnam)
@@ -231,8 +238,7 @@ def upload_file(fnam,gnam):
         sys.stderr.flush()
     url = get_url(gnam,root='resources')
     with open(fnam,'rb') as fp:
-        content = fp.read()
-    session.post(url,content,verify=False)
+        session.post(url,data=read_in_chunks(fp),verify=False)
     if opts.verbose:
         tend = datetime.now()
         dt = (tend-tstr).total_seconds()
