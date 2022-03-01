@@ -108,7 +108,10 @@ def get_time(s):
     if m:
         t = datetime.strptime(m.group(1)+'Z','%Y-%m-%dT%H:%M%z')+timedelta(seconds=float(m.group(2)))
     else:
-        raise ValueError('Error in time >>> '+s)
+        try:
+            t = datetime.strptime(s,'%Y-%m-%dT%H:%M:%S%z')
+        except Exception:
+            raise ValueError('Error in time >>> '+s)
     return t
 
 def get_url(path,root='files'):
@@ -166,9 +169,9 @@ def query_file(path):
     url = get_url(path,root='resources')+'?checksum=md5'
     try:
         resp = session.get(url,verify=False)
+        item = resp.json()
     except Exception:
         return None
-    item = resp.json()
     return item['name'],item['size'],get_time(item['modified']),item['checksums']['md5']
 
 def delete_file(path):
@@ -211,7 +214,7 @@ def read_in_chunks(file_object,chunk_size=GB):
             break
         yield data
 
-def upload_file(fnam,gnam):
+def upload_file(fnam,gnam,chunk_size=GB):
     parent = os.path.dirname(gnam)
     target = os.path.basename(gnam)
     if parent == '':
@@ -237,8 +240,12 @@ def upload_file(fnam,gnam):
         sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file ({}) >>> {}\n'.format(tstr,get_size(fnam),fnam))
         sys.stderr.flush()
     url = get_url(gnam,root='resources')
-    with open(fnam,'rb') as fp:
-        session.post(url,data=read_in_chunks(fp),verify=False)
+    try:
+        with open(fnam,'rb') as fp:
+            session.post(url,data=read_in_chunks(fp,chunk_size),verify=False)
+    except Exception as e:
+        sys.stderr.write(str(e)+'\n')
+        sys.stderr.flush()
     if opts.verbose:
         tend = datetime.now()
         dt = (tend-tstr).total_seconds()
@@ -255,10 +262,10 @@ def upload_file(fnam,gnam):
     else:
         return result
 
-def upload_and_check_file(fnam,gnam):
+def upload_and_check_file(fnam,gnam,chunk_size=GB):
     title = os.path.basename(gnam)
     size = os.path.getsize(fnam)
-    title_dst,size_dst,mdate_dst,md5_dst = upload_file(fnam,gnam)
+    title_dst,size_dst,mdate_dst,md5_dst = upload_file(fnam,gnam,chunk_size)
     if (title_dst.lower() == title.lower()) and (size_dst == size):
         with open(fnam,'rb') as fp:
             md5 = hashlib.md5(fp.read()).hexdigest()
