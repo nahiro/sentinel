@@ -153,15 +153,15 @@ def list_file(path=None):
     url = get_url(path,root='resources')
     try:
         resp = session.get(url,verify=False)
+        params = resp.json()
+        items = params['items']
+        for item in items:
+            if item['isDir']:
+                ds.append(item['name'])
+            else:
+                fs.update({item['name']:{'size':item['size'],'mtime':get_time(item['modified'])}})
     except Exception:
         return None,None
-    params = resp.json()
-    items = params['items']
-    for item in items:
-        if item['isDir']:
-            ds.append(item['name'])
-        else:
-            fs.update({item['name']:{'size':item['size'],'mtime':get_time(item['modified'])}})
     return ds,fs
 
 def query_file(path):
