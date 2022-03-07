@@ -28,6 +28,7 @@ if HOME is None:
 RCDIR = HOME
 PORT = 443
 MAX_ITEM = 10000
+CHUNK_SIZE = GB
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -41,6 +42,7 @@ parser.add_option('-I','--ignore_file',default=None,action='append',help='File t
 parser.add_option('-N','--server',default=None,help='Name of the server (%default)')
 parser.add_option('-P','--port',default=PORT,type='int',help='Port# of the server (%default)')
 parser.add_option('-M','--max_item',default=MAX_ITEM,type='int',help='Max# of items for listing (%default)')
+parser.add_option('-C','--chunk_size',default=CHUNK_SIZE,type='int',help='Chunk size in byte (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
@@ -120,7 +122,7 @@ def list_file(path=None):
                 if item['isfolder'] == 1:
                     ds.append(item['filename'])
                 else:
-                    fs.update({item['filename']:{'size':item['filesize'],'mtime':get_time(item['epochmt'])}})
+                    fs.update({item['filename']:{'size':int(item['filesize']),'mtime':get_time(item['epochmt'])}})
         else:
             status = params['status']
             raise ValueError('Error, status={}'.format(status))
@@ -145,7 +147,7 @@ def query_file(path):
         sys.stderr.write('Error in querying file >>> {}\n'.format(path))
         sys.stderr.flush()
         return None
-    return item['filename'],item['filesize'],get_time(item['epochmt'])
+    return item['filename'],int(item['filesize']),get_time(item['epochmt'])
 
 def delete_file(path):
     parent = os.path.dirname(path)
@@ -217,21 +219,36 @@ def upload_file(fnam,gnam,chunk_size=GB):
                 sys.stderr.flush()
             return query_file(gnam)
     # Upload file
+    byte_size = os.path.getsize(fnam)
     if opts.verbose:
         tstr = datetime.now()
         sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file ({}) >>> {}\n'.format(tstr,get_size(fnam),fnam))
         sys.stderr.flush()
     try:
-        with open(fnam,'rb') as fp:
-            session.post(common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0)),
-            files={'file':(gnam,read_in_chunks(fp,chunk_size),'application/octet-stream')},verify=False)
+        if byte_size > chunk_size:
+            resp = session.get(common_url+'&func=start_chunked_upload&upload_root_dir={}'.format(parent),verify=False)
+            upload_id = resp.json()['upload_id']
+            with open(fnam,'rb') as fp:
+                offset = 0
+                for chunk in read_in_chunks(fp,chunk_size):
+                    if opts.verbose:
+                        sys.stderr.write('Uploading: upload_id={}, offset={}, size={}\n'.format(upload_id,offset,len(chunk)))
+                        sys.stderr.flush()
+                    session.post(common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&offset={}&overwrite={}'.format(upload_id,parent,gnam,offset,(1 if opts.overwrite else 0)),
+                    data=chunk,verify=False)
+                    #files={'file':(gnam,fp.read(),'application/octet-stream')},verify=False)
+                    offset += len(chunk)
+        else:
+            with open(fnam,'rb') as fp:
+                session.post(common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0)),
+                files={'file':(gnam,fp.read(),'application/octet-stream')},verify=False)
     except Exception as e:
         sys.stderr.write(str(e)+'\n')
         sys.stderr.flush()
     if opts.verbose:
         tend = datetime.now()
         dt = (tend-tstr).total_seconds()
-        bit_size = os.path.getsize(fnam)*8
+        bit_size = byte_size*8
         rate = bit_size/dt
         sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload completed in {:.2f} seconds ({:8.3f} Mbps) >>> {}\n'.format(tend,dt,rate*1.0e-6,fnam))
         sys.stderr.flush()
@@ -240,7 +257,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
     if result is None:
         sys.stderr.write('Warning, faild in uploading file >>> {}\n'.format(gnam))
         sys.stderr.flush()
-        return '',-1,'',''
+        return '',-1,''
     else:
         return result
 
@@ -288,7 +305,7 @@ with open(fnam,'r') as fp:
             continue
 if server is None or username is None or password is None:
     raise ValueError('Error, server={}, username={}, password={}'.format(server,username,password))
-encode_string = b64encode(password).decode()
+encode_string = b64encode(password.encode()).decode()
 
 # Create a requests session
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -339,7 +356,7 @@ for subdir in opts.subdir:
             lnam = os.path.join(locdir,f)
             if fnam.lower() in ignore_file_lower:
                 continue
-            if upload_and_check_file(fnam,gnam) == 0:
+            if upload_and_check_file(fnam,gnam,opts.chunk_size) == 0:
                 shutil.move(fnam,lnam)
                 if opts.debug and not os.path.exists(fnam) and os.path.exists(lnam):
                     sys.stderr.write('Moved {} to {}\n'.format(fnam,lnam))
