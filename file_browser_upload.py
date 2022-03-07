@@ -165,7 +165,6 @@ def list_file(path=None):
     return ds,fs
 
 def query_file(path):
-    fs = {}
     url = get_url(path,root='resources')+'?checksum=md5'
     try:
         resp = session.get(url,verify=False)
@@ -175,7 +174,6 @@ def query_file(path):
     return item['name'],item['size'],get_time(item['modified']),item['checksums']['md5']
 
 def delete_file(path):
-    fs = {}
     url = get_url(path,root='resources')
     try:
         resp = session.delete(url,verify=False)
