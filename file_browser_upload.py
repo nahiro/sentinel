@@ -40,7 +40,8 @@ parser.add_option('--drvdir',default=DRVDIR,help='Directory where chromedriver e
 parser.add_option('--rcdir',default=RCDIR,help='Directory where .netrc exists (%default)')
 parser.add_option('-K','--keep_folder',default=None,action='append',help='Directory to keep (%default)')
 parser.add_option('-I','--ignore_file',default=None,action='append',help='File to ignore (%default)')
-parser.add_option('-p','--port',default=None,type='int',help='Port# of Chrome to use (%default)')
+parser.add_option('-N','--server',default=None,help='Name of the server (%default)')
+parser.add_option('-P','--port',default=None,type='int',help='Port# of Chrome to use (%default)')
 parser.add_option('--skip_login',default=False,action='store_true',help='Skip login procedure (%default)')
 parser.add_option('-H','--headless',default=False,action='store_true',help='Headless mode (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
@@ -294,7 +295,7 @@ with open(fnam,'r') as fp:
     for line in fp:
         m = re.search('machine\s+(\S+)',line)
         if m:
-            if re.search('satreps',m.group(1)):
+            if re.search(opts.server,m.group(1)):
                 flag = True
                 server = m.group(1)
             else:

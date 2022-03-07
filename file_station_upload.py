@@ -12,9 +12,6 @@ from datetime import datetime,timedelta
 import pytz
 from glob import glob
 from pathlib import Path
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.keys import Keys
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Constants
@@ -43,8 +40,8 @@ parser.add_option('--drvdir',default=DRVDIR,help='Directory where chromedriver e
 parser.add_option('--rcdir',default=RCDIR,help='Directory where .netrc exists (%default)')
 parser.add_option('-K','--keep_folder',default=None,action='append',help='Directory to keep (%default)')
 parser.add_option('-I','--ignore_file',default=None,action='append',help='File to ignore (%default)')
-parser.add_option('-s','--server',default=None,help='Name the server (%default)')
-parser.add_option('-p','--port',default=PORT,type='int',help='Port# of the server (%default)')
+parser.add_option('-N','--server',default=None,help='Name of the server (%default)')
+parser.add_option('-P','--port',default=PORT,type='int',help='Port# of the server (%default)')
 parser.add_option('-M','--max_item',default=MAX_ITEM,type='int',help='Max# of items for listing (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
@@ -230,7 +227,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
     try:
         with open(fnam,'rb') as fp:
             session.post(common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0)),
-            data=read_in_chunks(fp,chunk_size),verify=False)
+            files={'file':(gnam,read_in_chunks(fp,chunk_size),'application/octet-stream')},verify=False)
     except Exception as e:
         sys.stderr.write(str(e)+'\n')
         sys.stderr.flush()
