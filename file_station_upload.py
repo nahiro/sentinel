@@ -3,12 +3,13 @@ import os
 import sys
 import re
 import shutil
-import hashlib
+from base64 import b64encode
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import atexit
 import time
 from datetime import datetime,timedelta
+import pytz
 from glob import glob
 from pathlib import Path
 from selenium import webdriver
@@ -29,6 +30,8 @@ if HOME is None:
     HOME = os.environ.get('HOMEPATH')
 RCDIR = HOME
 DRVDIR = os.path.join(HOME,'local','bin')
+PORT = 443
+MAX_ITEM = 10000
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
@@ -40,13 +43,15 @@ parser.add_option('--drvdir',default=DRVDIR,help='Directory where chromedriver e
 parser.add_option('--rcdir',default=RCDIR,help='Directory where .netrc exists (%default)')
 parser.add_option('-K','--keep_folder',default=None,action='append',help='Directory to keep (%default)')
 parser.add_option('-I','--ignore_file',default=None,action='append',help='File to ignore (%default)')
-parser.add_option('-p','--port',default=None,type='int',help='Port# of Chrome to use (%default)')
-parser.add_option('--skip_login',default=False,action='store_true',help='Skip login procedure (%default)')
-parser.add_option('-H','--headless',default=False,action='store_true',help='Headless mode (%default)')
+parser.add_option('-s','--server',default=None,help='Name the server (%default)')
+parser.add_option('-p','--port',default=PORT,type='int',help='Port# of the server (%default)')
+parser.add_option('-M','--max_item',default=MAX_ITEM,type='int',help='Max# of items for listing (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
 (opts,args) = parser.parse_args()
+if opts.server is None:
+    raise ValueError('Error, server={}'.format(opts.server))
 if opts.srcdir is None or opts.subdir is None or opts.dstdir is None or opts.locdir is None:
     raise ValueError('Error, srcdir={}, subdir={}, dstdir={}, locdir={}'.format(opts.srcdir,opts.subdir,opts.dstdir,opts.locdir))
 keep_folder = []
@@ -103,83 +108,63 @@ def get_size(fnam):
     return s
 
 def get_time(s):
-    # '2021-11-26T09:24:23.01891815Z'
-    m = re.search('(\d\d\d\d-\d\d-\d\dT\d\d:\d\d):(\d\d\.\d+)Z',s)
-    if m:
-        t = datetime.strptime(m.group(1)+'Z','%Y-%m-%dT%H:%M%z')+timedelta(seconds=float(m.group(2)))
-    else:
-        try:
-            t = datetime.strptime(s,'%Y-%m-%dT%H:%M:%S%z')
-        except Exception:
-            raise ValueError('Error in time >>> '+s)
+    try:
+        t = datetime.utcfromtimestamp(s).replace(tzinfo=pytz.UTC)
+    except Exception:
+        raise ValueError('Error in time >>> '+s)
     return t
-
-def get_url(path,root='files'):
-    if path is None or path == '.' or len(path) < 1: # current folder
-        m = re.search('https://'+server+'/files(\S+)',driver.current_url)
-        if m:
-            path = m.group(1)
-        else:
-            path = '/'
-    if path[0] != '/': # relative path
-        m = re.search('https://'+server+'/files(\S+)',driver.current_url)
-        if m:
-            parent = m.group(1)
-        else:
-            parent = '/'
-        if parent[-1] != '/':
-            parent += '/'
-        path = parent+path
-    if root == 'files':
-        url = 'https://{}/files{}'.format(server,path)
-    elif root == 'resources':
-        url = 'https://{}/api/resources{}'.format(server,path)
-    else:
-        raise ValueError('Error, in root >>> '+root)
-    return url
-
-def change_folder(path):
-    url = get_url(path)
-    if driver.current_url != url:
-        driver.get(url)
-    time.sleep(1)
-    if re.search('This location can\'t be reached',driver.page_source):
-        return -1
-    return 0
 
 def list_file(path=None):
     ds = []
     fs = {}
-    url = get_url(path,root='resources')
     try:
-        resp = session.get(url,verify=False)
+        resp = session.get(common_url+'&func=get_list&path={}&limit={}'.format(path,opts.max_item),verify=False)
         params = resp.json()
-        items = params['items']
-        for item in items:
-            if item['isDir']:
-                ds.append(item['name'])
-            else:
-                fs.update({item['name']:{'size':item['size'],'mtime':get_time(item['modified'])}})
-    except Exception:
+        if 'datas' in params:
+            items = params['datas']
+            for item in items:
+                if item['isfolder'] == 1:
+                    ds.append(item['filename'])
+                else:
+                    fs.update({item['filename']:{'size':item['filesize'],'mtime':get_time(item['epochmt'])}})
+        else:
+            status = params['status']
+            raise ValueError('Error, status={}'.format(status))
+    except Exception as e:
+        sys.stderr.write(str(e)+'\n')
+        sys.stderr.write('Error in listing file >>> {}\n'.format(path))
+        sys.stderr.flush()
         return None,None
     return ds,fs
 
 def query_file(path):
-    fs = {}
-    url = get_url(path,root='resources')+'?checksum=md5'
     try:
-        resp = session.get(url,verify=False)
-        item = resp.json()
-    except Exception:
+        resp = session.get(common_url+'&func=stat&path={}'.format(path),verify=False)
+        params = resp.json()
+        if 'datas' in params:
+            item = params['datas'][0]
+        else:
+            status = params['status']
+            raise ValueError('Error, status={}'.format(status))
+    except Exception as e:
+        sys.stderr.write(str(e)+'\n')
+        sys.stderr.write('Error in querying file >>> {}\n'.format(path))
+        sys.stderr.flush()
         return None
-    return item['name'],item['size'],get_time(item['modified']),item['checksums']['md5']
+    return item['filename'],item['filesize'],get_time(item['epochmt'])
 
 def delete_file(path):
-    fs = {}
-    url = get_url(path,root='resources')
+    parent = os.path.dirname(path)
+    target = os.path.basename(path)
     try:
-        resp = session.delete(url,verify=False)
-    except Exception:
+        resp = session.get(common_url+'&func=delete&file_total=1&path={}&file_name={}'.format(parent,target),verify=False)
+        status = resp.json()['status']
+        if status != 1:
+            raise ValueError('Error, status={}'.format(status))
+    except Exception as e:
+        sys.stderr.write(str(e)+'\n')
+        sys.stderr.write('Error in deleting folder >>> {}\n'.format(path))
+        sys.stderr.flush()
         return -1
     return 0
 
@@ -197,12 +182,15 @@ def make_folder(path):
     if target in ds:
         folders.append(path)
         return 0
-    url = get_url(path,root='resources')
-    if url[-1] != '/':
-        url += '/'
     try:
-        resp = session.post(url,verify=False)
-    except Exception:
+        resp = session.get(common_url+'&func=createdir&dest_path={}&dest_folder={}'.format(parent,target),verify=False)
+        status = resp.json()['status']
+        if status != 1:
+            raise ValueError('Error, status={}'.format(status))
+    except Exception as e:
+        sys.stderr.write(str(e)+'\n')
+        sys.stderr.write('Error in making folder >>> {}\n'.format(path))
+        sys.stderr.flush()
         return -1
     folders.append(path)
     return 0
@@ -239,10 +227,10 @@ def upload_file(fnam,gnam,chunk_size=GB):
         tstr = datetime.now()
         sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file ({}) >>> {}\n'.format(tstr,get_size(fnam),fnam))
         sys.stderr.flush()
-    url = get_url(gnam,root='resources')
     try:
         with open(fnam,'rb') as fp:
-            session.post(url,data=read_in_chunks(fp,chunk_size),verify=False)
+            session.post(common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0)),
+            data=read_in_chunks(fp,chunk_size),verify=False)
     except Exception as e:
         sys.stderr.write(str(e)+'\n')
         sys.stderr.flush()
@@ -265,20 +253,12 @@ def upload_file(fnam,gnam,chunk_size=GB):
 def upload_and_check_file(fnam,gnam,chunk_size=GB):
     title = os.path.basename(gnam)
     size = os.path.getsize(fnam)
-    title_dst,size_dst,mdate_dst,md5_dst = upload_file(fnam,gnam,chunk_size)
+    title_dst,size_dst,mdate_dst = upload_file(fnam,gnam,chunk_size)
     if (title_dst.lower() == title.lower()) and (size_dst == size):
-        with open(fnam,'rb') as fp:
-            md5 = hashlib.md5(fp.read()).hexdigest()
-        if (md5_dst.lower() == md5.lower()):
-            if opts.verbose:
-                sys.stderr.write('Successfully uploaded >>> {}\n'.format(fnam))
-                sys.stderr.flush()
-            return 0
-        else:
-            if opts.verbose:
-                sys.stderr.write('Warning, title={} ({}), size={} ({}), md5={} ({})\n'.format(title_dst,title,size_dst,size,md5_dst,md5))
-                sys.stderr.flush()
-            return -1
+        if opts.verbose:
+            sys.stderr.write('Successfully uploaded >>> {}\n'.format(fnam))
+            sys.stderr.flush()
+        return 0
     else:
         if opts.verbose:
             sys.stderr.write('Warning, title={} ({}), size={} ({})\n'.format(title_dst,title,size_dst,size))
@@ -296,7 +276,7 @@ with open(fnam,'r') as fp:
     for line in fp:
         m = re.search('machine\s+(\S+)',line)
         if m:
-            if re.search('satreps',m.group(1)):
+            if re.search(opts.server,m.group(1)):
                 flag = True
                 server = m.group(1)
             else:
@@ -314,45 +294,22 @@ with open(fnam,'r') as fp:
             continue
 if server is None or username is None or password is None:
     raise ValueError('Error, server={}, username={}, password={}'.format(server,username,password))
+encode_string = b64encode(password).decode()
 
-if opts.port is not None or opts.headless:
-    options = Options()
-    if opts.port:
-        options.add_experimental_option('debuggerAddress','localhost:{}'.format(opts.port))
-    if opts.headless:
-        options.add_argument('--headless')
-        options.add_argument('--disable-gpu')
-        options.add_argument('--window-size=1920,1080')
-    driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'),options=options)
-else:
-    driver = webdriver.Chrome(os.path.join(opts.drvdir,'chromedriver'))
-
-# Login to the NAS server
-if not opts.skip_login:
-    driver.get('https://{}/login'.format(server))
-    time.sleep(1)
-    inputs = driver.find_elements_by_class_name('input')
-    if len(inputs) != 2:
-        raise ValueError('Error, len(inputs)={}'.format(len(inputs)))
-    inputs[0].send_keys((Keys.CONTROL+'a'))
-    inputs[0].send_keys(Keys.DELETE)
-    inputs[0].send_keys(username)
-    time.sleep(1)
-    inputs[1].send_keys((Keys.CONTROL+'a'))
-    inputs[1].send_keys(Keys.DELETE)
-    inputs[1].send_keys(password)
-    time.sleep(1)
-    buttons = driver.find_elements_by_class_name('button')
-    if len(buttons) != 1:
-        raise ValueError('Error, len(buttons)={}'.format(len(buttons)))
-    buttons[0].click()
-    time.sleep(1)
 # Create a requests session
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 session = requests.sessions.Session()
-for cookie in driver.get_cookies():
-    c = {cookie['name']:cookie['value']}
-    session.cookies.update(c)
+# Get session ID
+url = 'https://{}:{}/cgi-bin/authLogin.cgi?user={}&pwd={}'.format(server,opts.port,username,encode_string)
+try:
+    resp = session.get(url,verify=False)
+    m = re.search('<authSid><!\[CDATA\[(\S+)\]\]><\/authSid>',resp.text)
+    sid = m.group(1)
+except Exception as e:
+    sys.stderr.write('Login failed >>> '+str(e)+'\n')
+    sys.stderr.flush()
+    sys.exit()
+common_url = 'https://{}:{}/cgi-bin/filemanager/utilRequest.cgi?sid={}'.format(server,opts.port,sid)
 # Upload file
 for subdir in opts.subdir:
     make_folder(os.path.join(opts.dstdir,subdir))
