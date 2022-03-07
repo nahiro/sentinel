@@ -26,7 +26,6 @@ HOME = os.environ.get('HOME')
 if HOME is None:
     HOME = os.environ.get('HOMEPATH')
 RCDIR = HOME
-DRVDIR = os.path.join(HOME,'local','bin')
 PORT = 443
 MAX_ITEM = 10000
 
@@ -36,7 +35,6 @@ parser.add_option('-S','--srcdir',default=None,help='Source directory (%default)
 parser.add_option('-s','--subdir',default=None,action='append',help='Sub directory (%default)')
 parser.add_option('-D','--dstdir',default=None,help='Destination directory (%default)')
 parser.add_option('-L','--locdir',default=None,help='Local destination directory (%default)')
-parser.add_option('--drvdir',default=DRVDIR,help='Directory where chromedriver exists (%default)')
 parser.add_option('--rcdir',default=RCDIR,help='Directory where .netrc exists (%default)')
 parser.add_option('-K','--keep_folder',default=None,action='append',help='Directory to keep (%default)')
 parser.add_option('-I','--ignore_file',default=None,action='append',help='File to ignore (%default)')
@@ -81,12 +79,11 @@ if opts.verbose:
 
 opts.srcdir = os.path.abspath(opts.srcdir)
 topdir = os.getcwd()
-#os.chdir(opts.drvdir)
 def clean_up():
     sys.stderr.write('clean_up called.\n\n')
     sys.stderr.flush()
     os.chdir(topdir)
-atexit.register(clean_up)
+#atexit.register(clean_up)
 
 def get_size(fnam):
     s = 'None'

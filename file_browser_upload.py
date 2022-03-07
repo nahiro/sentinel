@@ -85,7 +85,7 @@ def clean_up():
     sys.stderr.write('clean_up called.\n\n')
     sys.stderr.flush()
     os.chdir(topdir)
-atexit.register(clean_up)
+#atexit.register(clean_up)
 
 def get_size(fnam):
     s = 'None'
