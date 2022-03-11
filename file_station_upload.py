@@ -46,6 +46,7 @@ parser.add_option('-N','--server',default=None,help='Name of the server (%defaul
 parser.add_option('-P','--port',default=PORT,type='int',help='Port# of the server (%default)')
 parser.add_option('-M','--max_item',default=MAX_ITEM,type='int',help='Max# of items for listing (%default)')
 parser.add_option('-C','--chunk_size',default=CHUNK_SIZE,type='int',help='Chunk size in byte (%default)')
+parser.add_option('-l','--logging',default=False,action='store_true',help='Logging mode (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 parser.add_option('--overwrite',default=False,action='store_true',help='Overwrite mode (%default)')
@@ -349,7 +350,7 @@ except Exception as e:
     sys.stderr.flush()
     sys.exit()
 common_url = 'https://{}:{}/cgi-bin/filemanager/utilRequest.cgi?sid={}'.format(server,opts.port,sid)
-if opts.debug:
+if opts.logging:
     log = logging.getLogger('urllib3')
     log.setLevel(logging.DEBUG)
     stream = logging.StreamHandler()
