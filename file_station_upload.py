@@ -7,6 +7,8 @@ from base64 import b64encode
 import requests
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+import logging
+from http.client import HTTPConnection
 import atexit
 import time
 from datetime import datetime,timedelta
@@ -227,7 +229,8 @@ def upload_file(fnam,gnam,chunk_size=GB):
         sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file ({}) >>> {}\n'.format(tstr,get_size(fnam),fnam))
         sys.stderr.flush()
     try:
-        if byte_size > chunk_size:
+        #if byte_size > chunk_size:
+        if True:
             resp = session.get(common_url+'&func=start_chunked_upload&upload_root_dir={}'.format(parent),verify=False)
             #resp = session.get(common_url+'&func=start_chunked_upload&upload_root_dir=/SATREP',verify=False)
             #resp = session.post(common_url+'&func=start_chunked_upload&upload_root_dir=/SATREP',
@@ -243,55 +246,25 @@ def upload_file(fnam,gnam,chunk_size=GB):
             with open(fnam,'rb') as fp:
                 t1 = datetime.now()
                 offset = 0
-                inum = 0
                 for chunk in read_in_chunks(fp,chunk_size):
                     data_size = len(chunk)
-                    #if opts.verbose:
-                    #    sys.stderr.write('Uploading: upload_id={}, offset={}, size={}\n'.format(upload_id,offset,len(chunk)))
-                    #    sys.stderr.flush()
-                    #resp = session.post(common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&filesize={}&offset={}&overwrite={}'.format(upload_id,parent,parent,byte_size,offset,(1 if opts.overwrite else 0)),
-                    #resp = session.post(common_url+'&func=chunked_upload&upload_id={}&upload_root_dir=/SATREP&dest_path={}&filesize={}&offset={}&overwrite={}'.format(upload_id,parent,byte_size,offset,(1 if opts.overwrite else 0)),
-                    #if inum == -1:
-                    #    command = common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0))
-                    #    sys.stderr.write('inum={}\n'.format(inum))
-                    #    sys.stderr.write(command+'\n')
-                    #    resp = session.post(common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0)),
-                    #    files={'file':(target,chunk,'application/octet-stream',{'Transfer-Encoding':'chunked'})},verify=False)
-                    #if inum == 0:
-                    if inum == -1:
-                        resp = session.post(common_url+'&func=start_chunked_upload&upload_root_dir={}'.format(parent),
-                        data=chunk,verify=False)
-                        #files={'file':(target,chunk,'application/octet-stream',{'Transfer-Encoding':'chunked','Content-Range':'bytes {}-{}/{}'.format(offset,offset+data_size-1,byte_size)})},verify=False)
-                        status = resp.json()['status']
-                        if status != 0:
-                            raise ValueError('Error, status={}'.format(status))
-                        upload_id = resp.json()['upload_id']
-                    else:
-                        # for debug
-                        command = common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&filesize={}&offset={}&overwrite={}'.format(upload_id,parent,parent,byte_size,offset,(1 if opts.overwrite else 0))
-                        sys.stderr.write('inum={}\n'.format(inum))
-                        sys.stderr.write(command+'\n')
-                        sys.stderr.flush()
-                        # for debug
-                        #resp = session.post(common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&filesize={}&offset={}&overwrite={}'.format(upload_id,parent,parent,byte_size,offset,(1 if opts.overwrite else 0)),
-                        m = MultipartEncoder(fields=(('fileName',target),('file',chunk)))
-                        #m = MultipartEncoder(fields={'fileName':gnam,'file':chunk})
-                        resp = session.post(common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&upload_name={}&filesize={}&offset={}&overwrite={}&multipart=1'.format(upload_id,parent,parent,target,byte_size,offset,(1 if opts.overwrite else 0)),
-                        data=m,headers={'Content-Type':m.content_type},verify=False)
-                        sys.stderr.write('content_type={}\n'.format(m.content_type))
-                        #data=m,headers={'Content-Type':m.content_type},verify=False)
-                        #data=chunk,headers={'Content-Type':'multipart/form-data'},verify=False)
-                        #data=chunk,headers={'Content-Disposition':'form-data;filename={}'.format(target)},verify=False)
-                        #data=chunk,verify=False)
-                        #data=chunk,headers={'Content-Type':'multipart/form-data'},verify=False)
-                        #files={'file':(target,chunk,'application/octet-stream',{'Transfer-Encoding':'chunked','Content-Range':'bytes {}-{}/{}'.format(offset,offset+data_size-1,byte_size)})},verify=False)
-                        #files={'file':(target,chunk,'application/octet-stream')},verify=False)
-                        sys.stderr.write('chunked_upload: resp={}\n'.format(resp.json()))
-                        sys.stderr.flush()
-                        status = resp.json()['status']
-                        if status != 1:
-                            raise ValueError('Error, status={}'.format(status))
+                    #m = MultipartEncoder(fields=(('fileName',target),('file',chunk)))
+                    url = common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&upload_name={}&filesize={}&offset={}&overwrite={}'.format(upload_id,parent,parent,target,byte_size,offset,(1 if opts.overwrite else 0))
                     offset += data_size
+                    if offset < byte_size:
+                        url += '&multipart=1'
+                    resp = session.post(url,files=(('fileName',(None,target)),('file',('blob',chunk,'application/octet-stream'))),verify=False)
+                    #data=chunk,headers={'Content-Type':'multipart/form-data'},verify=False)
+                    #data=chunk,headers={'Content-Disposition':'form-data;filename={}'.format(target)},verify=False)
+                    #data=chunk,verify=False)
+                    #data=chunk,headers={'Content-Type':'multipart/form-data'},verify=False)
+                    #files={'file':(target,chunk,'application/octet-stream',{'Transfer-Encoding':'chunked','Content-Range':'bytes {}-{}/{}'.format(offset,offset+data_size-1,byte_size)})},verify=False)
+                    #files={'file':(target,chunk,'application/octet-stream')},verify=False)
+                    sys.stderr.write('chunked_upload: resp={}\n'.format(resp.json()))
+                    sys.stderr.flush()
+                    status = resp.json()['status']
+                    if status != 1:
+                        raise ValueError('Error, status={}'.format(status))
                     if offset < byte_size:
                         t2 = datetime.now()
                         dt = (t2-t1).total_seconds()
@@ -300,7 +273,6 @@ def upload_file(fnam,gnam,chunk_size=GB):
                         sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload {:6.2f} % @ {:8.3f} Mbps, Expected completion at {:%Y-%m-%dT%H:%M:%S}\n'.format(t2,100.0*offset/byte_size,rate*8.0e-6,t3))
                         sys.stderr.flush()
                         t1 = t2
-                    inum += 1
         else:
             with open(fnam,'rb') as fp:
                 #session.post(common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0)),
@@ -389,6 +361,12 @@ except Exception as e:
     sys.stderr.flush()
     sys.exit()
 common_url = 'https://{}:{}/cgi-bin/filemanager/utilRequest.cgi?sid={}'.format(server,opts.port,sid)
+log = logging.getLogger('urllib3')
+log.setLevel(logging.DEBUG)
+stream = logging.StreamHandler()
+stream.setLevel(logging.DEBUG)
+log.addHandler(stream)
+HTTPConnection.debuglevel = 1
 # Upload file
 for subdir in opts.subdir:
     make_folder(os.path.join(opts.dstdir,subdir))
