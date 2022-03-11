@@ -5,6 +5,7 @@ import re
 import shutil
 from base64 import b64encode
 import requests
+from requests_toolbelt.multipart.encoder import MultipartEncoder
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import atexit
 import time
@@ -219,6 +220,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
                 sys.stderr.flush()
             return query_file(gnam)
     # Upload file
+    flag = False
     byte_size = os.path.getsize(fnam)
     if opts.verbose:
         tstr = datetime.now()
@@ -227,30 +229,96 @@ def upload_file(fnam,gnam,chunk_size=GB):
     try:
         if byte_size > chunk_size:
             resp = session.get(common_url+'&func=start_chunked_upload&upload_root_dir={}'.format(parent),verify=False)
+            #resp = session.get(common_url+'&func=start_chunked_upload&upload_root_dir=/SATREP',verify=False)
+            #resp = session.post(common_url+'&func=start_chunked_upload&upload_root_dir=/SATREP',
+            #files={'file':(target,chunk,'application/octet-stream',{'Transfer-Encoding':'chunked'})},verify=False)
+            # for debug
+            sys.stderr.write('start_chunked_upload: resp={}\n'.format(resp.json()))
+            sys.stderr.flush()
+            # for debug
+            status = resp.json()['status']
+            if status != 0:
+                raise ValueError('Error, status={}'.format(status))
             upload_id = resp.json()['upload_id']
             with open(fnam,'rb') as fp:
+                t1 = datetime.now()
                 offset = 0
+                inum = 0
                 for chunk in read_in_chunks(fp,chunk_size):
-                    if opts.verbose:
-                        sys.stderr.write('Uploading: upload_id={}, offset={}, size={}\n'.format(upload_id,offset,len(chunk)))
+                    data_size = len(chunk)
+                    #if opts.verbose:
+                    #    sys.stderr.write('Uploading: upload_id={}, offset={}, size={}\n'.format(upload_id,offset,len(chunk)))
+                    #    sys.stderr.flush()
+                    #resp = session.post(common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&filesize={}&offset={}&overwrite={}'.format(upload_id,parent,parent,byte_size,offset,(1 if opts.overwrite else 0)),
+                    #resp = session.post(common_url+'&func=chunked_upload&upload_id={}&upload_root_dir=/SATREP&dest_path={}&filesize={}&offset={}&overwrite={}'.format(upload_id,parent,byte_size,offset,(1 if opts.overwrite else 0)),
+                    #if inum == -1:
+                    #    command = common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0))
+                    #    sys.stderr.write('inum={}\n'.format(inum))
+                    #    sys.stderr.write(command+'\n')
+                    #    resp = session.post(common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0)),
+                    #    files={'file':(target,chunk,'application/octet-stream',{'Transfer-Encoding':'chunked'})},verify=False)
+                    #if inum == 0:
+                    if inum == -1:
+                        resp = session.post(common_url+'&func=start_chunked_upload&upload_root_dir={}'.format(parent),
+                        data=chunk,verify=False)
+                        #files={'file':(target,chunk,'application/octet-stream',{'Transfer-Encoding':'chunked','Content-Range':'bytes {}-{}/{}'.format(offset,offset+data_size-1,byte_size)})},verify=False)
+                        status = resp.json()['status']
+                        if status != 0:
+                            raise ValueError('Error, status={}'.format(status))
+                        upload_id = resp.json()['upload_id']
+                    else:
+                        # for debug
+                        command = common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&filesize={}&offset={}&overwrite={}'.format(upload_id,parent,parent,byte_size,offset,(1 if opts.overwrite else 0))
+                        sys.stderr.write('inum={}\n'.format(inum))
+                        sys.stderr.write(command+'\n')
                         sys.stderr.flush()
-                    session.post(common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&offset={}&overwrite={}'.format(upload_id,parent,gnam,offset,(1 if opts.overwrite else 0)),
-                    data=chunk,verify=False)
-                    #files={'file':(gnam,fp.read(),'application/octet-stream')},verify=False)
-                    offset += len(chunk)
+                        # for debug
+                        #resp = session.post(common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&filesize={}&offset={}&overwrite={}'.format(upload_id,parent,parent,byte_size,offset,(1 if opts.overwrite else 0)),
+                        m = MultipartEncoder(fields=(('fileName',target),('file',chunk)))
+                        #m = MultipartEncoder(fields={'fileName':gnam,'file':chunk})
+                        resp = session.post(common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&upload_name={}&filesize={}&offset={}&overwrite={}&multipart=1'.format(upload_id,parent,parent,target,byte_size,offset,(1 if opts.overwrite else 0)),
+                        data=m,headers={'Content-Type':m.content_type},verify=False)
+                        sys.stderr.write('content_type={}\n'.format(m.content_type))
+                        #data=m,headers={'Content-Type':m.content_type},verify=False)
+                        #data=chunk,headers={'Content-Type':'multipart/form-data'},verify=False)
+                        #data=chunk,headers={'Content-Disposition':'form-data;filename={}'.format(target)},verify=False)
+                        #data=chunk,verify=False)
+                        #data=chunk,headers={'Content-Type':'multipart/form-data'},verify=False)
+                        #files={'file':(target,chunk,'application/octet-stream',{'Transfer-Encoding':'chunked','Content-Range':'bytes {}-{}/{}'.format(offset,offset+data_size-1,byte_size)})},verify=False)
+                        #files={'file':(target,chunk,'application/octet-stream')},verify=False)
+                        sys.stderr.write('chunked_upload: resp={}\n'.format(resp.json()))
+                        sys.stderr.flush()
+                        status = resp.json()['status']
+                        if status != 1:
+                            raise ValueError('Error, status={}'.format(status))
+                    offset += data_size
+                    if offset < byte_size:
+                        t2 = datetime.now()
+                        dt = (t2-t1).total_seconds()
+                        rate = data_size/dt
+                        t3 = t2+timedelta(seconds=(byte_size-offset)/rate)
+                        sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload {:6.2f} % @ {:8.3f} Mbps, Expected completion at {:%Y-%m-%dT%H:%M:%S}\n'.format(t2,100.0*offset/byte_size,rate*8.0e-6,t3))
+                        sys.stderr.flush()
+                        t1 = t2
+                    inum += 1
         else:
             with open(fnam,'rb') as fp:
-                session.post(common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0)),
-                files={'file':(gnam,fp.read(),'application/octet-stream')},verify=False)
+                #session.post(common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0)),
+                session.post(common_url+'&func=upload&type=standard&dest_path={}&progress={}&overwrite={}&settime=1&mtime=1551868245'.format(parent,gnam.replace('/','-'),(1 if opts.overwrite else 0)),
+                files={'file':(target,fp.read(),'application/octet-stream')},verify=False)
+        flag = True
     except Exception as e:
         sys.stderr.write(str(e)+'\n')
+        sys.stderr.write('Error in uploading file >>> {}\n'.format(fnam))
         sys.stderr.flush()
     if opts.verbose:
         tend = datetime.now()
         dt = (tend-tstr).total_seconds()
-        bit_size = byte_size*8
-        rate = bit_size/dt
-        sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload completed in {:.2f} seconds ({:8.3f} Mbps) >>> {}\n'.format(tend,dt,rate*1.0e-6,fnam))
+        rate = byte_size/dt
+        if flag:
+            sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload completed in {:.2f} seconds ({:8.3f} Mbps) >>> {}\n'.format(tend,dt,rate*8.0e-6,fnam))
+        else:
+            sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Upload stopped in {:.2f} seconds >>> {}\n'.format(tend,dt,fnam))
         sys.stderr.flush()
     # Check uploaded file
     result = query_file(gnam)
