@@ -151,7 +151,7 @@ def query_file(path):
         sys.stderr.write('Error in querying file >>> {}\n'.format(path))
         sys.stderr.flush()
         return None
-    return item['filename'],int(item['filesize']),get_time(item['epochmt'],item['checksum'])
+    return item['filename'],int(item['filesize']),get_time(item['mt'],item['checksum'])
 
 def delete_file(path):
     parent = os.path.dirname(path)
