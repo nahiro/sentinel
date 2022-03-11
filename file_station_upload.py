@@ -221,13 +221,13 @@ def upload_file(fnam,gnam,chunk_size=GB):
                 sys.stderr.flush()
             return query_file(gnam)
     # Upload file
-    flag = False
     byte_size = os.path.getsize(fnam)
     ftim = int(os.path.getmtime(fnam)+0.5)
     if opts.verbose:
         tstr = datetime.now()
         sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file ({}) >>> {}\n'.format(tstr,get_size(fnam),fnam))
         sys.stderr.flush()
+    flag = False
     try:
         resp = session.get(common_url+'&func=start_chunked_upload&upload_root_dir={}'.format(parent),verify=False)
         status = resp.json()['status']
@@ -338,12 +338,13 @@ except Exception as e:
     sys.stderr.flush()
     sys.exit()
 common_url = 'https://{}:{}/cgi-bin/filemanager/utilRequest.cgi?sid={}'.format(server,opts.port,sid)
-log = logging.getLogger('urllib3')
-log.setLevel(logging.DEBUG)
-stream = logging.StreamHandler()
-stream.setLevel(logging.DEBUG)
-log.addHandler(stream)
-HTTPConnection.debuglevel = 1
+if opts.debug:
+    log = logging.getLogger('urllib3')
+    log.setLevel(logging.DEBUG)
+    stream = logging.StreamHandler()
+    stream.setLevel(logging.DEBUG)
+    log.addHandler(stream)
+    HTTPConnection.debuglevel = 1
 # Upload file
 for subdir in opts.subdir:
     make_folder(os.path.join(opts.dstdir,subdir))
