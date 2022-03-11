@@ -136,8 +136,10 @@ def list_file(path=None):
     return ds,fs
 
 def query_file(path):
+    parent = os.path.dirname(path)
+    target = os.path.basename(path)
     try:
-        resp = session.get(common_url+'&func=stat&path={}'.format(path),verify=False)
+        resp = session.get(common_url+'&func=checksum&file_total=1&path={}&file_name={}'.format(parent,target),verify=False)
         params = resp.json()
         if 'datas' in params:
             item = params['datas'][0]
@@ -149,7 +151,7 @@ def query_file(path):
         sys.stderr.write('Error in querying file >>> {}\n'.format(path))
         sys.stderr.flush()
         return None
-    return item['filename'],int(item['filesize']),get_time(item['epochmt'])
+    return item['filename'],int(item['filesize']),get_time(item['epochmt'],item['checksum'])
 
 def delete_file(path):
     parent = os.path.dirname(path)
@@ -274,19 +276,27 @@ def upload_file(fnam,gnam,chunk_size=GB):
     if result is None:
         sys.stderr.write('Warning, faild in uploading file >>> {}\n'.format(gnam))
         sys.stderr.flush()
-        return '',-1,''
+        return '',-1,'',''
     else:
         return result
 
 def upload_and_check_file(fnam,gnam,chunk_size=GB):
     title = os.path.basename(gnam)
     size = os.path.getsize(fnam)
-    title_dst,size_dst,mdate_dst = upload_file(fnam,gnam,chunk_size)
+    title_dst,size_dst,mdate_dst,md5_dst = upload_file(fnam,gnam,chunk_size)
     if (title_dst.lower() == title.lower()) and (size_dst == size):
-        if opts.verbose:
-            sys.stderr.write('Successfully uploaded >>> {}\n'.format(fnam))
-            sys.stderr.flush()
-        return 0
+        with open(fnam,'rb') as fp:
+            md5 = hashlib.md5(fp.read()).hexdigest()
+        if (md5_dst.lower() == md5.lower()):
+            if opts.verbose:
+                sys.stderr.write('Successfully uploaded >>> {}\n'.format(fnam))
+                sys.stderr.flush()
+            return 0
+        else:
+            if opts.verbose:
+                sys.stderr.write('Warning, title={} ({}), size={} ({}), md5={} ({})\n'.format(title_dst,title,size_dst,size,md5_dst,md5))
+                sys.stderr.flush()
+            return -1
     else:
         if opts.verbose:
             sys.stderr.write('Warning, title={} ({}), size={} ({})\n'.format(title_dst,title,size_dst,size))
