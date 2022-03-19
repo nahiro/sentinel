@@ -168,8 +168,9 @@ gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
 
 # Upload file
+make_folders(opts.dstdir)
 for subdir in opts.subdir:
-    make_folders(os.path.join(opts.dstdir,subdir))
+    make_folder(os.path.join(opts.dstdir,subdir))
     for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir)):
         curdir = os.path.relpath(root,opts.srcdir)
         if opts.verbose:

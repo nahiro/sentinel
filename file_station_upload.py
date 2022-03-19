@@ -197,6 +197,14 @@ def make_folder(path):
     folders.append(path)
     return 0
 
+def make_folders(path):
+    normalized_path = os.path.normpath(path)
+    path_components = normalized_path.split(os.sep)
+    dnam = ''
+    for p in path_components:
+        dnam = os.path.join(dnam,p)
+        make_folder(dnam)
+
 def read_in_chunks(file_object,chunk_size=GB):
     while True:
         data = file_object.read(chunk_size)
@@ -358,6 +366,7 @@ if opts.logging:
     log.addHandler(stream)
     HTTPConnection.debuglevel = 1
 # Upload file
+make_folders(opts.dstdir)
 for subdir in opts.subdir:
     make_folder(os.path.join(opts.dstdir,subdir))
     for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir)):

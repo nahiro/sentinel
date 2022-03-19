@@ -17,6 +17,7 @@ DRVDIR = os.path.join(HOME,'Work','SATREPS','IPB_Satreps')
 
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
+parser.set_usage('Usage: %prog list_of_input_file [options]')
 parser.add_option('-D','--dstdir',default=None,help='Destination directory (%default)')
 parser.add_option('--drvdir',default=DRVDIR,help='GoogleDrive directory (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
