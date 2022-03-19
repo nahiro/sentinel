@@ -35,13 +35,8 @@ CHUNK_SIZE = GB
 # Read options
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.set_usage('Usage: %prog list_of_input_file [options]')
-parser.add_option('-S','--srcdir',default=None,help='Source directory (%default)')
-parser.add_option('-s','--subdir',default=None,action='append',help='Sub directory (%default)')
 parser.add_option('-D','--dstdir',default=None,help='Destination directory (%default)')
-parser.add_option('-L','--locdir',default=None,help='Local destination directory (%default)')
 parser.add_option('--rcdir',default=RCDIR,help='Directory where .netrc exists (%default)')
-parser.add_option('-K','--keep_folder',default=None,action='append',help='Directory to keep (%default)')
-parser.add_option('-I','--ignore_file',default=None,action='append',help='File to ignore (%default)')
 parser.add_option('-N','--server',default=None,help='Name of the server (%default)')
 parser.add_option('-P','--port',default=PORT,type='int',help='Port# of the server (%default)')
 parser.add_option('-M','--max_item',default=MAX_ITEM,type='int',help='Max# of items for listing (%default)')
