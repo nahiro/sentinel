@@ -71,7 +71,7 @@ def make_folder(path):
     global folders
     parent = os.path.dirname(path)
     target = os.path.basename(path)
-    if parent == '':
+    if (parent == '') or (parent == os.sep):
         l = drive.ListFile({'q': '"root" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title = "{}"'.format(target)}).GetList()
         n_list = len(l)
         if n_list != 1:
@@ -98,8 +98,13 @@ def make_folder(path):
 def make_folders(path):
     normalized_path = os.path.normpath(path)
     path_components = normalized_path.split(os.sep)
-    dnam = ''
+    if path[0] == os.sep:
+        dnam = os.sep
+    else:
+        dnam = ''
     for p in path_components:
+        if not p:
+            continue
         dnam = os.path.join(dnam,p)
         make_folder(dnam)
 

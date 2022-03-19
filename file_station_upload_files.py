@@ -167,8 +167,13 @@ def make_folder(path):
 def make_folders(path):
     normalized_path = os.path.normpath(path)
     path_components = normalized_path.split(os.sep)
-    dnam = ''
+    if path[0] == os.sep:
+        dnam = os.sep
+    else:
+        dnam = ''
     for p in path_components:
+        if not p:
+            continue
         dnam = os.path.join(dnam,p)
         make_folder(dnam)
 
