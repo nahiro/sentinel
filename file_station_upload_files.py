@@ -80,7 +80,7 @@ def list_file(path=None):
     ds = []
     fs = {}
     try:
-        resp = session.get(common_url+'&func=get_list&path={}&limit={}'.format(path,opts.max_item),verify=False)
+        resp = session.get(common_url+'&func=get_list&path={}&limit={}'.format(path,opts.max_item))
         params = resp.json()
         if 'datas' in params:
             items = params['datas']
@@ -103,7 +103,7 @@ def query_file(path):
     parent = os.path.dirname(path)
     target = os.path.basename(path)
     try:
-        resp = session.get(common_url+'&func=checksum&file_total=1&path={}&file_name={}'.format(parent,target),verify=False)
+        resp = session.get(common_url+'&func=checksum&file_total=1&path={}&file_name={}'.format(parent,target))
         params = resp.json()
         if 'datas' in params:
             item = params['datas'][0]
@@ -121,7 +121,7 @@ def delete_file(path):
     parent = os.path.dirname(path)
     target = os.path.basename(path)
     try:
-        resp = session.get(common_url+'&func=delete&file_total=1&path={}&file_name={}'.format(parent,target),verify=False)
+        resp = session.get(common_url+'&func=delete&file_total=1&path={}&file_name={}'.format(parent,target))
         status = resp.json()['status']
         if status != 1:
             raise ValueError('Error, status={}'.format(status))
@@ -140,14 +140,26 @@ def make_folder(path):
         return 0
     parent = os.path.dirname(path)
     target = os.path.basename(path)
-    ds,fs = list_file(parent)
-    if ds is None or fs is None:
-        raise IOError('Error, no such folder >>> '+parent)
-    if target in ds:
-        folders.append(path)
-        return 0
+    flag = False
     try:
-        resp = session.get(common_url+'&func=createdir&dest_path={}&dest_folder={}'.format(parent,target),verify=False)
+        resp = session.get(common_url+'&func=stat&file_total=1&path={}&file_name={}'.format(parent,target))
+        params = resp.json()
+        if 'datas' in params:
+            flag = True
+            item = params['datas'][0]
+            if item['isfolder'] == 1:
+                folders.append(path)
+                return 0
+            elif item['owner'] != '':
+                raise ValueError('Error, file exists >>> {}'.format(path))
+    except Exception as e:
+        if flag:
+            sys.stderr.write(str(e)+'\n')
+            sys.stderr.write('Error in making folder >>> {}\n'.format(path))
+            sys.stderr.flush()
+            return -1
+    try:
+        resp = session.get(common_url+'&func=createdir&dest_path={}&dest_folder={}'.format(parent,target))
         status = resp.json()['status']
         if status != 1:
             raise ValueError('Error, status={}'.format(status))
@@ -208,7 +220,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
         sys.stderr.flush()
     flag = False
     try:
-        resp = session.get(common_url+'&func=start_chunked_upload&upload_root_dir={}'.format(parent),verify=False)
+        resp = session.get(common_url+'&func=start_chunked_upload&upload_root_dir={}'.format(parent))
         status = resp.json()['status']
         if status != 0:
             raise ValueError('Error, status={}'.format(status))
@@ -222,7 +234,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
                 offset += data_size
                 if offset < byte_size:
                     url += '&multipart=1'
-                resp = session.post(url,files=(('fileName',(None,target)),('file',('blob',chunk,'application/octet-stream'))),verify=False)
+                resp = session.post(url,files=(('fileName',(None,target)),('file',('blob',chunk,'application/octet-stream'))))
                 status = resp.json()['status']
                 if status != 1:
                     raise ValueError('Error, status={}'.format(status))
@@ -314,10 +326,11 @@ encode_string = b64encode(password.encode()).decode()
 # Create a requests session
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 session = requests.sessions.Session()
+session.verify = False
 # Get session ID
 url = 'https://{}:{}/cgi-bin/authLogin.cgi?user={}&pwd={}'.format(server,opts.port,username,encode_string)
 try:
-    resp = session.get(url,verify=False)
+    resp = session.get(url)
     m = re.search('<authSid><!\[CDATA\[(\S+)\]\]><\/authSid>',resp.text)
     sid = m.group(1)
 except Exception as e:
