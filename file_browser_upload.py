@@ -153,7 +153,7 @@ def list_file(path=None):
     fs = {}
     url = get_url(path,root='resources')
     try:
-        resp = session.get(url,verify=False)
+        resp = session.get(url)
         params = resp.json()
         items = params['items']
         for item in items:
@@ -168,7 +168,7 @@ def list_file(path=None):
 def query_file(path):
     url = get_url(path,root='resources')+'?checksum=md5'
     try:
-        resp = session.get(url,verify=False)
+        resp = session.get(url)
         item = resp.json()
     except Exception:
         return None
@@ -177,7 +177,7 @@ def query_file(path):
 def delete_file(path):
     url = get_url(path,root='resources')
     try:
-        resp = session.delete(url,verify=False)
+        resp = session.delete(url)
     except Exception:
         return -1
     return 0
@@ -190,17 +190,28 @@ def make_folder(path):
         return 0
     parent = os.path.dirname(path)
     target = os.path.basename(path)
-    ds,fs = list_file(parent)
-    if ds is None or fs is None:
-        raise IOError('Error, no such folder >>> '+parent)
-    if target in ds:
-        folders.append(path)
-        return 0
     url = get_url(path,root='resources')
+    flag = False
+    try:
+        resp = session.get(url)
+        item = resp.json()
+        if 'isDir' in item:
+            flag = True
+            if item['isDir']:
+                folders.append(path)
+                return 0
+            else:
+                raise ValueError('Error, file exists >>> {}'.format(path))
+    except Exception as e:
+        if flag:
+            sys.stderr.write(str(e)+'\n')
+            sys.stderr.write('Error in making folder >>> {}\n'.format(path))
+            sys.stderr.flush()
+            return -1
     if url[-1] != '/':
         url += '/'
     try:
-        resp = session.post(url,verify=False)
+        resp = session.post(url)
     except Exception:
         return -1
     folders.append(path)
@@ -254,7 +265,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
     url = get_url(gnam,root='resources')
     try:
         with open(fnam,'rb') as fp:
-            session.post(url,data=read_in_chunks(fp,chunk_size),verify=False)
+            session.post(url,data=read_in_chunks(fp,chunk_size))
     except Exception as e:
         sys.stderr.write(str(e)+'\n')
         sys.stderr.flush()
@@ -362,6 +373,7 @@ if not opts.skip_login:
 # Create a requests session
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 session = requests.sessions.Session()
+session.verify = False
 for cookie in driver.get_cookies():
     c = {cookie['name']:cookie['value']}
     session.cookies.update(c)
