@@ -167,6 +167,7 @@ gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
 
+# Upload file
 for subdir in opts.subdir:
     make_folders(os.path.join(opts.dstdir,subdir))
     for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir)):
@@ -208,7 +209,31 @@ for subdir in opts.subdir:
                     sys.stderr.flush()
         if len(os.listdir(srcdir)) == 0:
             if not srcdir.lower() in keep_folder_lower:
-                os.rmdir(srcdir)
-                if opts.debug and not os.path.exists(srcdir):
-                    sys.stderr.write('Removed {}\n'.format(srcdir))
+                if os.path.isdir(locdir):
+                    os.rmdir(srcdir)
+                    if opts.debug and not os.path.exists(srcdir):
+                        sys.stderr.write('Removed {}\n'.format(srcdir))
+                        sys.stderr.flush()
+                else:
+                    sys.stderr.write('Warning, no such directory >>> {}\n'.format(locdir))
+                    sys.stderr.flush()
+# Remove empty directories
+for subdir in opts.subdir:
+    for root,ds,fs in os.walk(os.path.join(opts.srcdir,subdir),topdown=False):
+        curdir = os.path.relpath(root,opts.srcdir)
+        if curdir == os.curdir:
+            srcdir = opts.srcdir
+            locdir = opts.locdir
+        else:
+            srcdir = os.path.join(opts.srcdir,curdir)
+            locdir = os.path.join(opts.locdir,curdir)
+        if len(os.listdir(srcdir)) == 0:
+            if not srcdir.lower() in keep_folder_lower:
+                if os.path.isdir(locdir):
+                    os.rmdir(srcdir)
+                    if opts.debug and not os.path.exists(srcdir):
+                        sys.stderr.write('Removed {}\n'.format(srcdir))
+                        sys.stderr.flush()
+                else:
+                    sys.stderr.write('Warning, no such directory >>> {}\n'.format(locdir))
                     sys.stderr.flush()
