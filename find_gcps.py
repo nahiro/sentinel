@@ -16,6 +16,7 @@ SHIFT_WIDTH = 3 # pixel
 SHIFT_HEIGHT = 3 # pixel
 MARGIN_WIDTH = 5 # pixel
 MARGIN_HEIGHT = 5 # pixel
+SCAN_STEP = 1 # pixel
 REF_BAND = 6
 TRG_BAND = 7
 FEPS = 0.01
@@ -42,6 +43,8 @@ parser.add_option('--shift_width',default=SHIFT_WIDTH,type='int',help='Max shift
 parser.add_option('--shift_height',default=SHIFT_HEIGHT,type='int',help='Max shift height in target pixel (%default)')
 parser.add_option('--margin_width',default=MARGIN_WIDTH,type='int',help='Margin width in target pixel (%default)')
 parser.add_option('--margin_height',default=MARGIN_HEIGHT,type='int',help='Margin height in target pixel (%default)')
+parser.add_option('--scan_indx_step',default=SCAN_STEP,type='int',help='Scan step x index (%default)')
+parser.add_option('--scan_indy_step',default=SCAN_STEP,type='int',help='Scan step y index (%default)')
 parser.add_option('--ref_data_min',default=None,type='float',help='Minimum reference data value (%default)')
 parser.add_option('--ref_data_max',default=None,type='float',help='Maximum reference data value (%default)')
 parser.add_option('--trg_data_min',default=None,type='float',help='Minimum target data value (%default)')
@@ -50,6 +53,7 @@ parser.add_option('-r','--rthr',default=RTHR,type='float',help='Threshold of cor
 parser.add_option('-E','--feps',default=FEPS,type='float',help='Step length for curve_fit (%default)')
 parser.add_option('--img_fnam',default=None,help='Image file name (%default)')
 parser.add_option('-e','--exp',default=False,action='store_true',help='Output in exp format (%default)')
+parser.add_option('--long',default=False,action='store_true',help='Output in long format (%default)')
 parser.add_option('-u','--use_edge',default=False,action='store_true',help='Use GCPs near the edge of the correction range (%default)')
 parser.add_option('-v','--verbose',default=False,action='store_true',help='Verbose mode (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
@@ -68,9 +72,12 @@ def interp_img(p,refx,refy,refz,trgx,trgy,trgz):
 def residuals(p,refx,refy,refz,trgx,trgy,trgz,pmax):
     if opts.debug:
         sys.stderr.write('{}\n'.format(p))
-    pabs = np.abs(p).max()
-    if pabs > pmax:
-        return np.full(3,2.0+pabs-pmax) # length = len(p)+1
+    if np.any(np.isnan(p)):
+        return np.full(3,2.0) # length = len(p)+1
+    elif np.any(np.abs(p) > pmax):
+        pdif = np.abs(p)-pmax
+        cnd = (pdif > 0.0)
+        return np.full(3,2.0+pdif[cnd].sum()) # length = len(p)+1
     f = interp2d(trgx+p[0],trgy+p[1],trgz,kind='linear')
     intz = f(refx,refy)[::-1]
     r = np.corrcoef(intz.flatten(),refz.flatten())[0,1]
@@ -217,19 +224,21 @@ for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_
             continue
         if opts.ref_data_max is not None and ref_subset_data.max() > opts.ref_data_max:
             continue
+        trg_pmax = np.array([np.abs(trg_xp_stp*(opts.shift_width+0.5)),np.abs(trg_yp_stp*(opts.shift_height+0.5))])
+        scan_indx = np.arange(-opts.shift_width,opts.shift_width+1,opts.scan_indx_step)
+        scan_indy = np.arange(-opts.shift_height,opts.shift_height+1,opts.scan_indy_step)
         p1 = np.array([0.0,0.0])
         rmax = -1.0e10
-        for i in range(-opts.shift_height,opts.shift_height+1):
-            for j in range(-opts.shift_width,opts.shift_width+1):
+        for i in scan_indy:
+            for j in scan_indx:
                 p2 = np.array([np.abs(trg_xp_stp)*j,np.abs(trg_yp_stp)*i])
                 r = 1.0-residuals(p2,ref_subset_xp0,ref_subset_yp0,ref_subset_data,
-                                  trg_subset_xp0,trg_subset_yp0,trg_subset_data,1.0e10)[0]
+                                  trg_subset_xp0,trg_subset_yp0,trg_subset_data,trg_pmax)[0]
                 if r > rmax:
                     rmax = r
                     p1 = p2.copy()
         result = leastsq(residuals,p1,args=(ref_subset_xp0,ref_subset_yp0,ref_subset_data,
-                                            trg_subset_xp0,trg_subset_yp0,trg_subset_data,
-                                            min(np.abs(trg_xp_stp*opts.shift_width),np.abs(trg_yp_stp*opts.shift_height))),
+                                            trg_subset_xp0,trg_subset_yp0,trg_subset_data,trg_pmax),
                                             epsfcn=opts.feps,full_output=True)
         p2 = result[0]
         if not opts.use_edge:
@@ -241,6 +250,8 @@ for trg_indyc in np.arange(opts.trg_indy_start,opts.trg_indy_stop,opts.trg_indy_
         if r > opts.rthr:
             if opts.exp:
                 line = '{:8.1f} {:8.1f} {:15.8e} {:15.8e} {:15.8e} {:15.8e} {:8.3f}\n'.format(trg_indxc+0.5,trg_indyc+0.5,trg_xp0[trg_indxc]+p2[0],trg_yp0[trg_indyc]+p2[1],p2[0],p2[1],r)
+            elif opts.long:
+                line = '{:8.1f} {:8.1f} {:12.6f} {:12.6f} {:10.6f} {:10.6f} {:10.5f}\n'.format(trg_indxc+0.5,trg_indyc+0.5,trg_xp0[trg_indxc]+p2[0],trg_yp0[trg_indyc]+p2[1],p2[0],p2[1],r)
             else:
                 line = '{:8.1f} {:8.1f} {:8.2f} {:8.2f} {:6.2f} {:6.2f} {:8.3f}\n'.format(trg_indxc+0.5,trg_indyc+0.5,trg_xp0[trg_indxc]+p2[0],trg_yp0[trg_indyc]+p2[1],p2[0],p2[1],r)
             sys.stdout.write(line)
