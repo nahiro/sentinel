@@ -46,6 +46,8 @@ parser.add_option('--shift_width',default=None,type='int',help='Max shift width 
 parser.add_option('--shift_height',default=None,type='int',help='Max shift height in target pixel (%default)')
 parser.add_option('--margin_width',default=None,type='int',help='Margin width in target pixel (%default)')
 parser.add_option('--margin_height',default=None,type='int',help='Margin height in target pixel (%default)')
+parser.add_option('--scan_indx_step',default=None,type='int',help='Scan step x index (%default)')
+parser.add_option('--scan_indy_step',default=None,type='int',help='Scan step y index (%default)')
 parser.add_option('--ref_data_min',default=REF_DATA_MIN,type='float',help='Minimum reference data value (%default)')
 parser.add_option('--ref_data_max',default=None,type='float',help='Maximum reference data value (%default)')
 parser.add_option('--trg_data_min',default=None,type='float',help='Minimum target data value (%default)')
@@ -70,6 +72,7 @@ parser.add_option('--refine_number',default=REFINE_NUMBER,type='int',help='Minim
 parser.add_option('--tr',default=None,type='float',help='Output resolution in output georeferenced units (%default)')
 parser.add_option('--tps',default=False,action='store_true',help='Use thin plate spline transformer (%default)')
 parser.add_option('--exp',default=False,action='store_true',help='Output in exp format (%default)')
+parser.add_option('--long',default=False,action='store_true',help='Output in long format (%default)')
 parser.add_option('-u','--use_edge',default=False,action='store_true',help='Use GCPs near the edge of the correction range (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
@@ -92,6 +95,7 @@ else: # No trg image
 if trg_fnam is not None:
     trg_bnam = os.path.splitext(os.path.basename(trg_fnam))[0]
     tmp_fnam = trg_bnam+'_tmp.tif'
+    tmp_xnam = tmp_fnam+'.aux.xml'
     if opts.out_fnam is None:
         out_fnam = trg_bnam+'_geocor.tif'
     else:
@@ -151,6 +155,10 @@ else:
         command += ' --margin_width {}'.format(opts.margin_width)
     if opts.margin_height is not None:
         command += ' --margin_height {}'.format(opts.margin_height)
+    if opts.scan_indx_step is not None:
+        command += ' --scan_indx_step {}'.format(opts.scan_indx_step)
+    if opts.scan_indy_step is not None:
+        command += ' --scan_indy_step {}'.format(opts.scan_indy_step)
     if opts.ref_data_min is not None:
         command += ' --ref_data_min {}'.format(opts.ref_data_min)
     if opts.ref_data_max is not None:
@@ -167,6 +175,8 @@ else:
         command += ' --img_fnam {}'.format(opts.img_fnam)
     if opts.exp:
         command += ' --exp'
+    if opts.long:
+        command += ' --long'
     if opts.use_edge:
         command += ' --use_edge'
     if opts.debug:
@@ -177,7 +187,7 @@ else:
         with open(opts.save_gcps,'w') as fp:
             fp.write(out)
 try:
-    xi,yi,xp,yp,dx,dy,r = np.loadtxt(fnam,unpack=True)
+    xi,yi,xp,yp,dx,dy,r = np.loadtxt(fnam,usecols=(0,1,2,3,4,5,6),unpack=True)
     if xi.size < opts.minimum_number:
         raise ValueError('Error, not enough GCP points.')
 except Exception:
@@ -210,6 +220,7 @@ if trg_fnam is not None:
         command += ' -refine_gcps {} {}'.format(opts.refine_gcps,opts.minimum_gcps)
     if opts.resampling2_band is not None:
         tmp2_fnam = trg_bnam+'_tmp2.tif'
+        tmp2_xnam = tmp2_fnam+'.aux.xml'
         out1_fnam = trg_bnam+'_geocor1.tif'
         out2_fnam = trg_bnam+'_geocor2.tif'
         command1 = command + ' -r {}'.format(opts.resampling)
@@ -239,6 +250,8 @@ if trg_fnam is not None:
         ds2 = None
         if os.path.exists(tmp2_fnam):
             os.remove(tmp2_fnam)
+        if os.path.exists(tmp2_xnam):
+            os.remove(tmp2_xnam)
         if os.path.exists(out1_fnam):
             os.remove(out1_fnam)
         if os.path.exists(out2_fnam):
@@ -250,6 +263,8 @@ if trg_fnam is not None:
         call(command,shell=True)
     if os.path.exists(tmp_fnam):
         os.remove(tmp_fnam)
+    if os.path.exists(tmp_xnam):
+        os.remove(tmp_xnam)
 
 if opts.trg_shapefile is not None:
     if opts.out_fnam is None:
