@@ -11,6 +11,8 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.add_option('-i','--src_fnam',default=None,help='Source file name (%default)')
 parser.add_option('-o','--dst_fnam',default=None,help='Destination file name (%default)')
 parser.add_option('-I','--src_geotiff',default=None,help='Source GeoTIFF name (%default)')
+parser.add_option('-e','--exp',default=False,action='store_true',help='Output in exp format (%default)')
+parser.add_option('--long',default=False,action='store_true',help='Output in long format (%default)')
 (opts,args) = parser.parse_args()
 
 ds = gdal.Open(opts.src_geotiff)
@@ -43,4 +45,9 @@ dst_xi = src_xmin+src_xstp*src_xi
 dst_yi = src_ymax+src_ystp*src_yi
 with open(opts.dst_fnam,'w') as fp:
     for xi,yi,line in zip(dst_xi,dst_yi,src_line):
-        fp.write('{:11.4f} {:11.4f} {}\n'.format(xi,yi,line))
+        if opts.exp:
+            fp.write('{:15.8e} {:15.8e} {}\n'.format(xi,yi,line))
+        elif opts.long:
+            fp.write('{:12.6f} {:12.6f} {}\n'.format(xi,yi,line))
+        else:
+            fp.write('{:8.2f} {:8.2f} {}\n'.format(xi,yi,line))
