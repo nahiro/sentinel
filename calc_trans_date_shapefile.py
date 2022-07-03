@@ -4,8 +4,14 @@ import sys
 import re
 from glob import glob
 from datetime import datetime
-import gdal
-import osr
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
+try:
+    import osr
+except Exception:
+    from osgeo import osr
 import numpy as np
 from matplotlib.dates import date2num,num2date
 from csaps import UnivariateCubicSmoothingSpline

@@ -6,8 +6,6 @@ import re
 import warnings
 from glob import glob
 from datetime import datetime
-import gdal
-import osr
 import json
 import shapefile
 import numpy as np

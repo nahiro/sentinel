@@ -2,8 +2,14 @@
 import os
 import sys
 import numpy as np
-import gdal
-import osr
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
+try:
+    import osr
+except Exception:
+    from osgeo import osr
 try:
     from io import StringIO
 except Exception:

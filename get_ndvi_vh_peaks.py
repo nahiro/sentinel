@@ -4,8 +4,10 @@ import sys
 import shutil
 import re
 from datetime import datetime,timedelta
-import gdal
-import osr
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
 import shapefile
 import numpy as np
 from scipy.signal import find_peaks

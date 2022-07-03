@@ -4,8 +4,14 @@ import sys
 import shutil
 from datetime import datetime,timedelta
 import numpy as np
-import gdal
-import osr
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
+try:
+    import osr
+except Exception:
+    from osgeo import osr
 from matplotlib.dates import date2num
 
 outnam = os.path.join('.','transplanting_date.tif')

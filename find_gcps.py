@@ -2,8 +2,14 @@
 import os
 import sys
 import re
-import gdal
-import osr
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
+try:
+    import osr
+except Exception:
+    from osgeo import osr
 import numpy as np
 from scipy.interpolate import interp2d
 from scipy.optimize import leastsq

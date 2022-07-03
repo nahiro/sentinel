@@ -5,7 +5,10 @@ import sys
 import warnings
 from datetime import datetime
 import numpy as np
-import osr
+try:
+    import osr
+except Exception:
+    from osgeo import osr
 import shapefile
 import shapely
 import cartopy.crs as ccrs

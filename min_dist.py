@@ -3,8 +3,14 @@ import os
 import sys
 import re
 import numpy as np
-import gdal
-import osr
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
+try:
+    import osr
+except Exception:
+    from osgeo import osr
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Default values

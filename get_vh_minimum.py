@@ -8,8 +8,14 @@ import tifffile
 import xml.etree.ElementTree as ET
 from scipy.interpolate import splrep,splev
 from csaps import UnivariateCubicSmoothingSpline
-import gdal
-import osr
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
+try:
+    import osr
+except Exception:
+    from osgeo import osr
 import shapefile
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num

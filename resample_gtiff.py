@@ -1,6 +1,8 @@
 #!/usr/bin/env python
-import gdal
-import osr
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
 import numpy as np
 from scipy.interpolate import griddata
 from optparse import OptionParser,IndentedHelpFormatter

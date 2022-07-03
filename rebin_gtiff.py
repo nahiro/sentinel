@@ -1,6 +1,8 @@
 #!/usr/bin/env python
-import gdal
-import osr
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
 import numpy as np
 import warnings
 from optparse import OptionParser,IndentedHelpFormatter

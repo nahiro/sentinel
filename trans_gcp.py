@@ -2,7 +2,10 @@
 import os
 import sys
 import re
-import gdal
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
 import numpy as np
 from optparse import OptionParser,IndentedHelpFormatter
 

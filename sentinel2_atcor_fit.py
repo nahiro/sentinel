@@ -3,7 +3,10 @@ import os
 import sys
 import re
 import warnings
-import gdal
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
 from datetime import datetime
 import numpy as np
 #import matplotlib

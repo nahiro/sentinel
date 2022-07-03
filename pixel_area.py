@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 import sys
-import gdal
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
 import numpy as np
 import shapefile
 from shapely.geometry import Point,Polygon
