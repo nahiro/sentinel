@@ -26,7 +26,7 @@ TB = GB*1024
 # Default values
 HOME = os.environ.get('HOME')
 if HOME is None:
-    HOME = os.environ.get('HOMEPATH')
+    HOME = os.environ.get('USERPROFILE')
 RCDIR = HOME
 DRVDIR = os.path.join(HOME,'local','bin')
 

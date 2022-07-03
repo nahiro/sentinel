@@ -23,7 +23,7 @@ XMGN = 100.0
 YMGN = 100.0
 HOME = os.environ.get('HOME')
 if HOME is None:
-    HOME = os.environ.get('HOMEPATH')
+    HOME = os.environ.get('USERPROFILE')
 SHP_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','Bojongsoang','Bojongsoang')
 OUTPUT_FNAM = 'output.pdf'
 COORDS_COLOR = '#aaaaaa'

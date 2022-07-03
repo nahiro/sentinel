@@ -9,7 +9,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 HOME = os.environ.get('HOME')
 if HOME is None:
-    HOME = os.environ.get('HOMEPATH')
+    HOME = os.environ.get('USERPROFILE')
 DATDIR = os.path.join(HOME,'Work','Sentinel-1')
 
 # Read options

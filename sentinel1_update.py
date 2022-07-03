@@ -11,7 +11,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Default values
 HOME = os.environ.get('HOME')
 if HOME is None:
-    HOME = os.environ.get('HOMEPATH')
+    HOME = os.environ.get('USERPROFILE')
 SCRDIR = os.path.join(HOME,'Script')
 DATDIR = os.path.join(HOME,'Work','Sentinel-1')
 DRVDIR = os.path.join(HOME,'Work','SATREPS','IPB_Satreps')

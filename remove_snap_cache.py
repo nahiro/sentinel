@@ -10,7 +10,7 @@ from optparse import OptionParser,IndentedHelpFormatter
 # Constants
 HOME = os.environ.get('HOME')
 if HOME is None:
-    HOME = os.environ.get('HOMEPATH')
+    HOME = os.environ.get('USERPROFILE')
 
 # Default values
 DT_MAX = 300 # 5 minutes

@@ -43,7 +43,7 @@ Y_PROFILE = 'y_profile.npy'
 AREA_FNAM = 'pixel_area_block.dat'
 HOME = os.environ.get('HOME')
 if HOME is None:
-    HOME = os.environ.get('HOMEPATH')
+    HOME = os.environ.get('USERPROFILE')
 SHP_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','Bojongsoang','Bojongsoang')
 JSON_FNAM = 'output.json'
 OUT_FNAM = os.path.join('.','transplanting_date')

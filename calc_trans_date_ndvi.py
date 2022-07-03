@@ -30,7 +30,7 @@ NDVI2_DISTANCE = 1.0
 NDVI2_PROMINENCE = 0.001
 HOME = os.environ.get('HOME')
 if HOME is None:
-    HOME = os.environ.get('HOMEPATH')
+    HOME = os.environ.get('USERPROFILE')
 DATDIR = os.path.join(HOME,'Work','Sentinel-2','L2A','Bojongsoang','atcor')
 CFLAG_DNAM = os.path.join(HOME,'Work','Sentinel-2','L2A','Bojongsoang','cflag')
 SHP_FNAM = os.path.join(HOME,'Work','SATREPS','Shapefile','field_GIS','Bojongsoang','Bojongsoang')
