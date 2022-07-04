@@ -203,7 +203,7 @@ fig.clear()
 ax1 = plt.subplot(121,projection=prj)
 ax2 = plt.subplot(122,projection=prj)
 
-im1 = ax1.imshow(data[0],extent=(xmin,xmax,ymax,ymin),vmin=tmin,vmax=tmax,cmap=mymap2,interpolation='none')
+im1 = ax1.imshow(data[0],extent=(xmin,xmax,ymin,ymax),origin='upper',vmin=tmin,vmax=tmax,cmap=mymap2,interpolation='none')
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))
 ax12.xaxis.set_major_formatter(plt.FixedFormatter(labels))
@@ -215,7 +215,7 @@ ax12.set_xlabel('Estimated transplanting date (MM/DD)')
 ax12.xaxis.set_label_coords(0.5,-2.8)
 ax1.add_geometries(block_shp,prj,edgecolor='k',facecolor='none')
 
-im2 = ax2.imshow(data[1],extent=(xmin,xmax,ymax,ymin),vmin=smin,vmax=smax,cmap=cm.jet,interpolation='none')
+im2 = ax2.imshow(data[1],extent=(xmin,xmax,ymin,ymax),origin='upper',vmin=smin,vmax=smax,cmap=cm.jet,interpolation='none')
 ax22 = plt.colorbar(im2,ax=ax2,orientation='horizontal',shrink=1.0,pad=0.01).ax
 #ax22.xaxis.set_major_locator(plt.FixedLocator(values))
 #ax22.xaxis.set_major_formatter(plt.FixedFormatter(labels))
