@@ -124,8 +124,8 @@ for shp,rec in zip(shapes,records):
     t = rec.attributes['trans_date']+utc_offset
     p = rec.attributes['peak_value']
     if t > 1000.0:
-        ax1.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((t-tmin)/tdif))
-        ax2.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
+        ax1.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((t-tmin)/tdif))
+        ax2.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=cm.jet)
 ax12 = plt.colorbar(im1,ax=ax1).ax
 ax12.yaxis.set_major_locator(plt.FixedLocator(values))

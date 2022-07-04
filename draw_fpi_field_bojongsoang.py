@@ -110,7 +110,7 @@ else:
 for shp,rec in zip(shapes,records):
     f = rec.attributes[fpi]
     if not np.isnan(f):
-        ax1.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((f-fmin)/fdif))
+        ax1.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((f-fmin)/fdif))
 
 im4 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=fmin,vmax=fmax,cmap=cm.jet)
 ax12 = plt.colorbar(im4,ax=ax1,orientation='horizontal',shrink=1.0,pad=0.01).ax

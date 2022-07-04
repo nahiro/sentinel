@@ -231,7 +231,7 @@ ax1 = plt.subplot(111,projection=prj)
 for i,shp in enumerate(shapes):
     z = data[i]
     if not np.isnan(z):
-        ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mycmap((z-zmin)/zdif))
+        ax1.add_geometries([shp],prj,edgecolor='none',facecolor=mycmap((z-zmin)/zdif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=zmin,vmax=zmax,cmap=mycmap)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.00,pad=0.01).ax
 if field_type == 'T':

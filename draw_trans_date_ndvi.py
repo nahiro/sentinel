@@ -293,17 +293,17 @@ for i,(shp,rec) in enumerate(zip(shapes,records)):
     m = rec.attributes['ndat5_{:d}'.format(opts.ncan)]
     n = rec.attributes['ndat15_{:d}'.format(opts.ncan)]
     if not np.isnan(t):
-        ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
+        ax1.add_geometries([shp],prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
     if not np.isnan(p):
-        ax2.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
+        ax2.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
     if not np.isnan(q):
-        ax3.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((q-qmin)/qdif))
+        ax3.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((q-qmin)/qdif))
     if not np.isnan(s):
-        ax4.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((s-smin)/sdif))
+        ax4.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((s-smin)/sdif))
     if not np.isnan(t):
-        ax5.add_geometries(shp,prj,edgecolor='none',facecolor=cmap5((m-mmin)/mdif))
+        ax5.add_geometries([shp],prj,edgecolor='none',facecolor=cmap5((m-mmin)/mdif))
     if not np.isnan(t):
-        ax6.add_geometries(shp,prj,edgecolor='none',facecolor=cmap15((n-nmin)/ndif))
+        ax6.add_geometries([shp],prj,edgecolor='none',facecolor=cmap15((n-nmin)/ndif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=mymap2)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.00,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))

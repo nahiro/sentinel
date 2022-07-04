@@ -223,13 +223,13 @@ for shp,rec in zip(shapes,records):
     p = rec.attributes['post_s{:d}'.format(opts.ncan)]
     f = rec.attributes['fpi_{:d}'.format(opts.ncan)]
     if not np.isnan(t):
-        ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
+        ax1.add_geometries([shp],prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
     if not np.isnan(b):
-        ax2.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((b-bmin)/bdif))
+        ax2.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((b-bmin)/bdif))
     if not np.isnan(p):
-        ax3.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
+        ax3.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
     if not np.isnan(f):
-        ax4.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((f-fmin)/fdif))
+        ax4.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((f-fmin)/fdif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=mymap2)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.00,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))

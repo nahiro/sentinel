@@ -218,9 +218,9 @@ for shp,rec in zip(shapes,records):
     t = rec.attributes['trans_d']#-9.0#+date2num(np.datetime64('0000-12-31')) # offset corrected
     p = rec.attributes['trans_s']
     if not np.isnan(t):
-        ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
+        ax1.add_geometries([shp],prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
     if not np.isnan(p):
-        ax2.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
+        ax2.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((p-pmin)/pdif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=mymap2)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))

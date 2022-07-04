@@ -267,13 +267,13 @@ for iobj,(shp,rec) in enumerate(zip(shapes,records)):
     a = rec.attributes['post_avg']
     s = rec.attributes['trans_s']
     if not np.isnan(t):
-        ax1.add_geometries(shp,prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
+        ax1.add_geometries([shp],prj,edgecolor='none',facecolor=mymap2((t-tmin)/tdif))
     if not np.isnan(b):
-        ax2.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((b-bmin)/bdif))
+        ax2.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((b-bmin)/bdif))
     if not np.isnan(a):
-        ax3.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((a-amin)/adif))
+        ax3.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((a-amin)/adif))
     if not np.isnan(s):
-        ax4.add_geometries(shp,prj,edgecolor='none',facecolor=cm.jet((s-smin)/sdif))
+        ax4.add_geometries([shp],prj,edgecolor='none',facecolor=cm.jet((s-smin)/sdif))
 im1 = ax1.imshow(np.arange(4).reshape(2,2),extent=(-2,-1,-2,-1),vmin=tmin,vmax=tmax,cmap=mymap2)
 ax12 = plt.colorbar(im1,ax=ax1,orientation='horizontal',shrink=1.0,pad=0.01).ax
 ax12.xaxis.set_major_locator(plt.FixedLocator(values))
