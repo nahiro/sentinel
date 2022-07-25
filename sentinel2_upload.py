@@ -30,21 +30,21 @@ l = drive.ListFile({'q': '"root" in parents and trashed = false and mimeType = "
 if len(l) != 1:
     raise ValueError('Error in finding Spatial-Information folder')
 folder_spatial_information = l[0]
-# Get SENTINEL-1 folder
+# Get SENTINEL-2 folder
 l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "SENTINEL-2"'.format(folder_spatial_information['id'])}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding SENTINEL-2 folder')
-folder_sentinel_1 = l[0]
-# Get L2A folder
-l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "L2A"'.format(folder_sentinel_1['id'])}).GetList()
-if len(l) != 1:
-    raise ValueError('Error in finding L2A folder')
-folder_grd = l[0]
+folder_sentinel_2 = l[0]
 # Get SITE folder
-l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_grd['id'],opts.site)}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_sentinel_2['id'],opts.site)}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding {} folder'.format(opts.site))
 folder_site = l[0]
+# Get L2A folder
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "L2A"'.format(folder_site['id'])}).GetList()
+if len(l) != 1:
+    raise ValueError('Error in finding L2A folder')
+folder_l2a = l[0]
 
 for input_fnam in fnams:
     # S2A_MSIL2A_20210104T030121_N0214_R032_T48MYT_20210104T062157.zip
@@ -71,9 +71,9 @@ for input_fnam in fnams:
     upload_fnam = bnam+enam.lower()
     dstr_year = d1.strftime('%Y')
     # Get Year folder
-    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_site['id'],dstr_year)}).GetList()
+    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_l2a['id'],dstr_year)}).GetList()
     if len(l) != 1:
-        folder_year = drive.CreateFile({'parents':[{'id':folder_site['id']}],'mimeType':'application/vnd.google-apps.folder','title':dstr_year})
+        folder_year = drive.CreateFile({'parents':[{'id':folder_l2a['id']}],'mimeType':'application/vnd.google-apps.folder','title':dstr_year})
         folder_year.Upload()
     else:
         folder_year = l[0]
