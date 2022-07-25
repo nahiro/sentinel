@@ -7,7 +7,7 @@ from datetime import datetime
 from optparse import OptionParser,IndentedHelpFormatter
 
 # Defaults
-TOPDIR = '/mnt/hlab/Data/Sentinel-2/L2A'
+TOPDIR = '/mnt/hlab/Data/Sentinel-2'
 SITE = 'Bojongsoang'
 
 # Read options
@@ -51,7 +51,7 @@ for input_fnam in fnams:
     else:
         copy_fnam = bnam+enam.lower()
     dstr_year = d1.strftime('%Y')
-    dstdir = os.path.join(opts.topdir,opts.site,dstr_year) # Destination directory
+    dstdir = os.path.join(opts.topdir,opts.site,'L2A',dstr_year) # Destination directory
     if not os.path.exists(dstdir):
         os.makedirs(dstdir)
     if not os.path.isdir(dstdir):
