@@ -35,16 +35,16 @@ l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "ap
 if len(l) != 1:
     raise ValueError('Error in finding SENTINEL-1 folder')
 folder_sentinel_1 = l[0]
-# Get GRD folder
-l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "GRD"'.format(folder_sentinel_1['id'])}).GetList()
-if len(l) != 1:
-    raise ValueError('Error in finding GRD folder')
-folder_grd = l[0]
 # Get SITE folder
-l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_grd['id'],opts.site)}).GetList()
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_sentinel_1['id'],opts.site)}).GetList()
 if len(l) != 1:
     raise ValueError('Error in finding {} folder'.format(opts.site))
 folder_site = l[0]
+# Get GRD folder
+l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "GRD"'.format(folder_site['id'])}).GetList()
+if len(l) != 1:
+    raise ValueError('Error in finding GRD folder')
+folder_grd = l[0]
 
 for input_fnam in fnams:
     # S1A_IW_GRDH_1SDV_20200102T111446_20200102T111515_030620_038227_6964.zip
@@ -71,9 +71,9 @@ for input_fnam in fnams:
     upload_fnam = bnam+enam.lower()
     dstr_year = d1.strftime('%Y')
     # Get Year folder
-    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_site['id'],dstr_year)}).GetList()
+    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_grd['id'],dstr_year)}).GetList()
     if len(l) != 1:
-        folder_year = drive.CreateFile({'parents':[{'id':folder_site['id']}],'mimeType':'application/vnd.google-apps.folder','title':dstr_year})
+        folder_year = drive.CreateFile({'parents':[{'id':folder_grd['id']}],'mimeType':'application/vnd.google-apps.folder','title':dstr_year})
         folder_year.Upload()
     else:
         folder_year = l[0]
