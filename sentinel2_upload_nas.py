@@ -396,7 +396,6 @@ for input_fnam in fnams:
         sys.stderr.flush()
     dstr_year = d1.strftime('%Y')
     dnam = srcdir+'/{}'.format(dstr_year)
-    if query_folder(dnam) is None:
-        make_folder(dnam)
+    make_folder(dnam)
     gnam = dnam+'/{}'.format(fnam)
     upload_and_check_file(input_fnam,gnam,args.chunk_size)
