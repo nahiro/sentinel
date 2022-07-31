@@ -30,7 +30,7 @@ CHUNK_SIZE = GB
 parser = ArgumentParser(usage='%(prog)s list_of_input_file [options]\n',formatter_class=lambda prog:RawTextHelpFormatter(prog,max_help_position=200,width=200))
 parser.add_argument('-D','--srcdir',default=SRCDIR,help='NAS source directory (%(default)s)')
 parser.add_argument('--rcdir',default=RCDIR,help='Directory where .netrc exists (%(default)s)')
-parser.add_argument('-s','--server',default=None,help='Name of the server (%(default)s)')
+parser.add_argument('-s','--server',default=SERVER,help='Name of the server (%(default)s)')
 parser.add_argument('-P','--port',default=PORT,type=int,help='Port# of the server (%(default)s)')
 parser.add_argument('-M','--max_item',default=MAX_ITEM,type=int,help='Max# of items for listing (%(default)s)')
 parser.add_argument('-l','--logging',default=False,action='store_true',help='Logging mode (%(default)s)')
