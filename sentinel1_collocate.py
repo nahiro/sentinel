@@ -13,7 +13,10 @@ from snappy import ProductData
 from snappy import ProductUtils
 from snappy import HashMap
 import numpy as np
-from osgeo import gdal
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
 
 # Collocation ------------------------------------------------------------------------#
 def collocate(input_img1, input_img2, write_product=False, write_fnam=None):

@@ -4,7 +4,10 @@ import sys
 import re
 import warnings
 import numpy as np
-import gdal
+try:
+    import gdal
+except Exception:
+    from osgeo import gdal
 from statsmodels.stats.weightstats import DescrStatsW
 from optparse import OptionParser,IndentedHelpFormatter
 
