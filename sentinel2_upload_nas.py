@@ -2,9 +2,16 @@
 import os
 import sys
 import re
-from datetime import datetime
-from pydrive2.auth import GoogleAuth
-from pydrive2.drive import GoogleDrive
+import shutil
+import hashlib
+from base64 import b64encode
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+import logging
+from http.client import HTTPConnection
+from datetime import datetime,timedelta
+from dateutil.parser import parse
+import pytz
 from argparse import ArgumentParser,RawTextHelpFormatter
 
 # Constants
@@ -36,6 +43,7 @@ parser.add_argument('-M','--max_item',default=MAX_ITEM,type=int,help='Max# of it
 parser.add_argument('-l','--logging',default=False,action='store_true',help='Logging mode (%(default)s)')
 parser.add_argument('-S','--site',default=SITE,help='Target sites (%(default)s)')
 parser.add_argument('-C','--chunk_size',default=CHUNK_SIZE,type=int,help='Chunk size in byte (%(default)s)')
+parser.add_argument('-v','--verbose',default=False,action='store_true',help='Verbose mode (%(default)s)')
 parser.add_argument('--overwrite',default=False,action='store_true',help='Overwrite mode (%(default)s)')
 (args,rest) = parser.parse_known_args()
 if len(rest) < 1:
@@ -213,21 +221,21 @@ def upload_file(fnam,gnam,chunk_size=GB):
         raise IOError('Error, no such folder >>> '+parent)
     ds,fs = list_file(parent)
     if target in fs:
-        if opts.overwrite:
-            if opts.verbose:
+        if args.overwrite:
+            if args.verbose:
                 sys.stderr.write('File exists, delete >>> '+target+'\n')
                 sys.stderr.flush()
             if delete_file(gnam) < 0:
                 raise IOError('Error in deleting file >>> '+target)
         else:
-            if opts.verbose:
+            if args.verbose:
                 sys.stderr.write('File exists, skip >>> '+target+'\n')
                 sys.stderr.flush()
             return query_file(gnam)
     # Upload file
     byte_size = os.path.getsize(fnam)
     ftim = int(os.path.getmtime(fnam)+0.5)
-    if opts.verbose:
+    if args.verbose:
         tstr = datetime.now()
         sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file ({}) >>> {}\n'.format(tstr,get_size(fnam),fnam))
         sys.stderr.flush()
@@ -243,7 +251,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
             offset = 0
             for chunk in read_in_chunks(fp,chunk_size):
                 data_size = len(chunk)
-                url = common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&upload_name={}&filesize={}&offset={}&overwrite={}&settime=1&mtime={}'.format(upload_id,parent,parent,target,byte_size,offset,(1 if opts.overwrite else 0),ftim)
+                url = common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&upload_name={}&filesize={}&offset={}&overwrite={}&settime=1&mtime={}'.format(upload_id,parent,parent,target,byte_size,offset,(1 if args.overwrite else 0),ftim)
                 offset += data_size
                 if offset < byte_size:
                     url += '&multipart=1'
@@ -264,7 +272,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
         sys.stderr.write(str(e)+'\n')
         sys.stderr.write('Error in uploading file >>> {}\n'.format(fnam))
         sys.stderr.flush()
-    if opts.verbose:
+    if args.verbose:
         tend = datetime.now()
         dt = (tend-tstr).total_seconds()
         rate = byte_size/dt
@@ -290,17 +298,17 @@ def upload_and_check_file(fnam,gnam,chunk_size=GB):
         with open(fnam,'rb') as fp:
             md5 = hashlib.md5(fp.read()).hexdigest()
         if (md5_dst.lower() == md5.lower()):
-            if opts.verbose:
+            if args.verbose:
                 sys.stderr.write('Successfully uploaded >>> {}\n'.format(fnam))
                 sys.stderr.flush()
             return 0
         else:
-            if opts.verbose:
+            if args.verbose:
                 sys.stderr.write('Warning, title={} ({}), size={} ({}), md5={} ({})\n'.format(title_dst,title,size_dst,size,md5_dst,md5))
                 sys.stderr.flush()
             return -1
     else:
-        if opts.verbose:
+        if args.verbose:
             sys.stderr.write('Warning, title={} ({}), size={} ({})\n'.format(title_dst,title,size_dst,size))
             sys.stderr.flush()
         return -1
@@ -362,6 +370,8 @@ if args.logging:
 srcdir = args.srcdir+'/{}/L2A'.format(args.site)
 if query_folder(srcdir) is None:
     sys.exit()
+else:
+    folders.append(srcdir)
 
 for input_fnam in fnams:
     # S2A_MSIL2A_20210104T030121_N0214_R032_T48MYT_20210104T062157.zip
@@ -384,10 +394,9 @@ for input_fnam in fnams:
     if d1.date() != d2.date():
         sys.stderr.write('Warning, d1={}, d2={} >>> {}\n'.format(m.group(3),m.group(7),fnam))
         sys.stderr.flush()
-    upload_fnam = bnam+enam.lower()
     dstr_year = d1.strftime('%Y')
     dnam = srcdir+'/{}'.format(dstr_year)
     if query_folder(dnam) is None:
         make_folder(dnam)
-    gnam = srcdir+'/{}'.format(fnam)
-    upload_and_check_file(fnam,gnam,opts.chunk_size)
+    gnam = dnam+'/{}'.format(fnam)
+    upload_and_check_file(input_fnam,gnam,args.chunk_size)
