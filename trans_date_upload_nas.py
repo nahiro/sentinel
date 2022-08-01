@@ -373,7 +373,7 @@ if args.logging:
     log.addHandler(stream)
     HTTPConnection.debuglevel = 1
 
-srcdir = args.srcdir+'/{}/{}'.format(args.site,args,level)
+srcdir = args.srcdir+'/{}/{}'.format(args.site,args.level)
 if query_folder(srcdir) is None:
     sys.exit()
 else:
