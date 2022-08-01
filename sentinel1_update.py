@@ -112,7 +112,7 @@ if not opts.skip_upload:
     for site in opts.sites:
         for gnam in gnams[site]:
             command = 'python'
-            command += ' '+os.path.join(opts.scrdir,'sentinel1_upload.py')
+            command += ' '+os.path.join(opts.scrdir,'sentinel1_upload_nas.py')
             command += ' --site '+site
             command += ' '+gnam
             call(command,shell=True)
