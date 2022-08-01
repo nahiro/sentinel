@@ -255,7 +255,7 @@ for site in opts.sites:
                 raise ValueError('Error, unknown site >>> '+site)
             if len(file_list) > 0:
                 command = 'python'
-                command += ' '+os.path.join(opts.scrdir,'trans_date_upload.py')
+                command += ' '+os.path.join(opts.scrdir,'trans_date_upload_nas.py')
                 command += ' --site '+site
                 command += ' --date '+dstr
                 if opts.test:
