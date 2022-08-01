@@ -12,8 +12,7 @@ from http.client import HTTPConnection
 import time
 from datetime import datetime,timedelta
 import pytz
-from glob import glob
-from pathlib import Path
+from argparse import ArgumentParser,RawTextHelpFormatter
 
 # Constants
 B = 1
@@ -23,10 +22,12 @@ GB = MB*1024
 TB = GB*1024
 
 # Default values
+SRCDIR = '/SATREPS/ipb/User/1_Spatial-information/Sentinel-1'
 HOME = os.environ.get('HOME')
 if HOME is None:
     HOME = os.environ.get('USERPROFILE')
 RCDIR = HOME
+SERVER = 'satreps-nas'
 PORT = 443
 MAX_ITEM = 10000
 CHUNK_SIZE = GB
@@ -34,13 +35,15 @@ SITE = 'Cihea'
 
 # Read options
 parser = ArgumentParser(usage='%(prog)s list_of_input_file [options]',formatter_class=lambda prog:RawTextHelpFormatter(prog,max_help_position=200,width=200))
+parser.add_argument('-D','--srcdir',default=SRCDIR,help='NAS source directory (%(default)s)')
 parser.add_argument('--rcdir',default=RCDIR,help='Directory where .netrc exists (%(default)s)')
-parser.add_argument('-N','--server',default=None,help='Name of the server (%(default)s)')
+parser.add_argument('-s','--server',default=SERVER,help='Name of the server (%(default)s)')
 parser.add_argument('-P','--port',default=PORT,type=int,help='Port# of the server (%(default)s)')
 parser.add_argument('-M','--max_item',default=MAX_ITEM,type=int,help='Max# of items for listing (%(default)s)')
 parser.add_argument('-C','--chunk_size',default=CHUNK_SIZE,type=int,help='Chunk size in byte (%(default)s)')
 parser.add_argument('-S','--site',default=SITE,help='Target sites (%(default)s)')
 parser.add_argument('-l','--logging',default=False,action='store_true',help='Logging mode (%(default)s)')
+parser.add_argument('-v','--verbose',default=False,action='store_true',help='Verbose mode (%(default)s)')
 parser.add_argument('--overwrite',default=False,action='store_true',help='Overwrite mode (%(default)s)')
 (args,rest) = parser.parse_known_args()
 if len(rest) < 1:
@@ -75,7 +78,7 @@ def list_file(path=None):
     ds = []
     fs = {}
     try:
-        resp = session.get(common_url+'&func=get_list&path={}&limit={}'.format(path,opts.max_item))
+        resp = session.get(common_url+'&func=get_list&path={}&limit={}'.format(path,args.max_item))
         params = resp.json()
         if 'datas' in params:
             items = params['datas']
@@ -111,6 +114,29 @@ def query_file(path):
         sys.stderr.flush()
         return None
     return item['filename'],int(item['filesize']),get_time(item['mt']),item['checksum']
+
+def query_folder(path):
+    parent = os.path.dirname(path)
+    target = os.path.basename(path)
+    try:
+        resp = session.get(common_url+'&func=stat&file_total=1&path={}&file_name={}'.format(parent,target))
+        params = resp.json()
+        if 'datas' in params:
+            item = params['datas'][0]
+        else:
+            status = params['status']
+            raise ValueError('Error, status={}'.format(status))
+    except Exception as e:
+        sys.stderr.write(str(e)+'\n')
+        sys.stderr.write('Error in querying folder >>> {}\n'.format(path))
+        sys.stderr.flush()
+        return None
+    if item['isfolder'] != 1:
+        sys.stderr.write('Error, not a folder >>> {}\n'.format(path))
+        sys.stderr.flush()
+        return None
+    else:
+        return item['filename'],int(item['filesize']),get_time(item['epochmt'])
 
 def delete_file(path):
     parent = os.path.dirname(path)
@@ -195,21 +221,21 @@ def upload_file(fnam,gnam,chunk_size=GB):
         raise IOError('Error, no such folder >>> '+parent)
     ds,fs = list_file(parent)
     if target in fs:
-        if opts.overwrite:
-            if opts.verbose:
+        if args.overwrite:
+            if args.verbose:
                 sys.stderr.write('File exists, delete >>> '+target+'\n')
                 sys.stderr.flush()
             if delete_file(gnam) < 0:
                 raise IOError('Error in deleting file >>> '+target)
         else:
-            if opts.verbose:
+            if args.verbose:
                 sys.stderr.write('File exists, skip >>> '+target+'\n')
                 sys.stderr.flush()
             return query_file(gnam)
     # Upload file
     byte_size = os.path.getsize(fnam)
     ftim = int(os.path.getmtime(fnam)+0.5)
-    if opts.verbose:
+    if args.verbose:
         tstr = datetime.now()
         sys.stderr.write('{:%Y-%m-%dT%H:%M:%S} Uploading file ({}) >>> {}\n'.format(tstr,get_size(fnam),fnam))
         sys.stderr.flush()
@@ -225,7 +251,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
             offset = 0
             for chunk in read_in_chunks(fp,chunk_size):
                 data_size = len(chunk)
-                url = common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&upload_name={}&filesize={}&offset={}&overwrite={}&settime=1&mtime={}'.format(upload_id,parent,parent,target,byte_size,offset,(1 if opts.overwrite else 0),ftim)
+                url = common_url+'&func=chunked_upload&upload_id={}&upload_root_dir={}&dest_path={}&upload_name={}&filesize={}&offset={}&overwrite={}&settime=1&mtime={}'.format(upload_id,parent,parent,target,byte_size,offset,(1 if args.overwrite else 0),ftim)
                 offset += data_size
                 if offset < byte_size:
                     url += '&multipart=1'
@@ -246,7 +272,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
         sys.stderr.write(str(e)+'\n')
         sys.stderr.write('Error in uploading file >>> {}\n'.format(fnam))
         sys.stderr.flush()
-    if opts.verbose:
+    if args.verbose:
         tend = datetime.now()
         dt = (tend-tstr).total_seconds()
         rate = byte_size/dt
@@ -272,22 +298,22 @@ def upload_and_check_file(fnam,gnam,chunk_size=GB):
         with open(fnam,'rb') as fp:
             md5 = hashlib.md5(fp.read()).hexdigest()
         if (md5_dst.lower() == md5.lower()):
-            if opts.verbose:
+            if args.verbose:
                 sys.stderr.write('Successfully uploaded >>> {}\n'.format(fnam))
                 sys.stderr.flush()
             return 0
         else:
-            if opts.verbose:
+            if args.verbose:
                 sys.stderr.write('Warning, title={} ({}), size={} ({}), md5={} ({})\n'.format(title_dst,title,size_dst,size,md5_dst,md5))
                 sys.stderr.flush()
             return -1
     else:
-        if opts.verbose:
+        if args.verbose:
             sys.stderr.write('Warning, title={} ({}), size={} ({})\n'.format(title_dst,title,size_dst,size))
             sys.stderr.flush()
         return -1
 
-fnam = os.path.join(opts.rcdir,'.netrc')
+fnam = os.path.join(args.rcdir,'.netrc')
 if not os.path.exists(fnam):
     raise IOError('Error, no such file >>> '+fnam)
 server = None
@@ -298,7 +324,7 @@ with open(fnam,'r') as fp:
     for line in fp:
         m = re.search('machine\s+(\S+)',line)
         if m:
-            if re.search(opts.server,m.group(1)):
+            if re.search(args.server,m.group(1)):
                 flag = True
                 server = m.group(1)
             else:
@@ -323,7 +349,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 session = requests.sessions.Session()
 session.verify = False
 # Get session ID
-url = 'https://{}:{}/cgi-bin/authLogin.cgi?user={}&pwd={}'.format(server,opts.port,username,encode_string)
+url = 'https://{}:{}/cgi-bin/authLogin.cgi?user={}&pwd={}'.format(server,args.port,username,encode_string)
 try:
     resp = session.get(url)
     m = re.search('<authSid><!\[CDATA\[(\S+)\]\]><\/authSid>',resp.text)
@@ -332,8 +358,8 @@ except Exception as e:
     sys.stderr.write('Login failed >>> '+str(e)+'\n')
     sys.stderr.flush()
     sys.exit()
-common_url = 'https://{}:{}/cgi-bin/filemanager/utilRequest.cgi?sid={}'.format(server,opts.port,sid)
-if opts.logging:
+common_url = 'https://{}:{}/cgi-bin/filemanager/utilRequest.cgi?sid={}'.format(server,args.port,sid)
+if args.logging:
     log = logging.getLogger('urllib3')
     log.setLevel(logging.DEBUG)
     stream = logging.StreamHandler()
@@ -341,31 +367,11 @@ if opts.logging:
     log.addHandler(stream)
     HTTPConnection.debuglevel = 1
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+srcdir = args.srcdir+'/{}/GRD'.format(args.site)
+if query_folder(srcdir) is None:
+    sys.exit()
+else:
+    folders.append(srcdir)
 
 for input_fnam in fnams:
     # S1A_IW_GRDH_1SDV_20200102T111446_20200102T111515_030620_038227_6964.zip
@@ -374,7 +380,7 @@ for input_fnam in fnams:
     bnam,enam = os.path.splitext(unam)
     if enam != '.ZIP':
         continue
-    m = re.search('([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_',unam)
+    m = re.search('([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_',bnam)
     if not m:
         continue
     if m.group(1) != 'S1A' and m.group(1) != 'S1B':
@@ -388,36 +394,8 @@ for input_fnam in fnams:
     if d1.date() != d2.date():
         sys.stderr.write('Warning, d1={}, d2={} >>> {}\n'.format(m.group(5),m.group(6),fnam))
         sys.stderr.flush()
-    search_key = m.group(1)+'_'+m.group(2)+'_'+m.group(3)+'_'+m.group(4)+'_'+d1.strftime('%Y%m%d')
-    upload_fnam = bnam+enam.lower()
     dstr_year = d1.strftime('%Y')
-    # Get Year folder
-    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType = "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_grd['id'],dstr_year)}).GetList()
-    if len(l) != 1:
-        folder_year = drive.CreateFile({'parents':[{'id':folder_grd['id']}],'mimeType':'application/vnd.google-apps.folder','title':dstr_year})
-        folder_year.Upload()
-    else:
-        folder_year = l[0]
-    l = drive.ListFile({'q': '"{}" in parents and trashed = false and mimeType != "application/vnd.google-apps.folder" and title contains "{}"'.format(folder_year['id'],search_key)}).GetList()
-    flag = True
-    for f in l:
-        if f['title'].upper() == unam:
-            if opts.overwrite:
-                sys.stderr.write('File exists, delete   >>> '+f['title']+'\n')
-                sys.stderr.flush()
-                f.Delete()
-            else:
-                sys.stderr.write('File exists, skip     >>> '+f['title']+'\n')
-                sys.stderr.flush()
-                flag = False # no need to upload
-                break
-        else:
-            sys.stderr.write('Warning, different file for the same date >>> '+f['title']+'\n')
-            sys.stderr.flush()
-    if flag: # upload file
-        f = drive.CreateFile({'parents':[{'id':folder_year['id']}]})
-        f.SetContentFile(input_fnam)
-        f['title'] = upload_fnam
-        f.Upload()
-        sys.stderr.write('Successfully uploaded >>> '+fnam+'\n')
-        sys.stderr.flush()
+    dnam = '{}/{}'.format(srcdir,dstr_year)
+    make_folder(dnam)
+    gnam = '{}/{}'.format(dnam,fnam)
+    upload_and_check_file(input_fnam,gnam,chunk_size=args.chunk_size)

@@ -10,7 +10,6 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import logging
 from http.client import HTTPConnection
 from datetime import datetime,timedelta
-from dateutil.parser import parse
 import pytz
 from argparse import ArgumentParser,RawTextHelpFormatter
 
@@ -34,7 +33,7 @@ CHUNK_SIZE = GB
 SITE = 'Bojongsoang'
 
 # Read options
-parser = ArgumentParser(usage='%(prog)s list_of_input_file [options]\n',formatter_class=lambda prog:RawTextHelpFormatter(prog,max_help_position=200,width=200))
+parser = ArgumentParser(usage='%(prog)s list_of_input_file [options]',formatter_class=lambda prog:RawTextHelpFormatter(prog,max_help_position=200,width=200))
 parser.add_argument('-D','--srcdir',default=SRCDIR,help='NAS source directory (%(default)s)')
 parser.add_argument('--rcdir',default=RCDIR,help='Directory where .netrc exists (%(default)s)')
 parser.add_argument('-s','--server',default=SERVER,help='Name of the server (%(default)s)')
@@ -128,7 +127,7 @@ def query_folder(path):
             raise ValueError('Error, status={}'.format(status))
     except Exception as e:
         sys.stderr.write(str(e)+'\n')
-        sys.stderr.write('Error in querying file >>> {}\n'.format(path))
+        sys.stderr.write('Error in querying folder >>> {}\n'.format(path))
         sys.stderr.flush()
         return None
     if item['isfolder'] != 1:
@@ -395,7 +394,7 @@ for input_fnam in fnams:
         sys.stderr.write('Warning, d1={}, d2={} >>> {}\n'.format(m.group(3),m.group(7),fnam))
         sys.stderr.flush()
     dstr_year = d1.strftime('%Y')
-    dnam = srcdir+'/{}'.format(dstr_year)
+    dnam = '{}/{}'.format(srcdir,dstr_year)
     make_folder(dnam)
-    gnam = dnam+'/{}'.format(fnam)
-    upload_and_check_file(input_fnam,gnam,args.chunk_size)
+    gnam = '{}/{}'.format(dnam,fnam)
+    upload_and_check_file(input_fnam,gnam,chunk_size=args.chunk_size)
