@@ -137,7 +137,11 @@ def query_folder(path):
         sys.stderr.write('Error in querying folder >>> {}\n'.format(path))
         sys.stderr.flush()
         return None
-    if item['isfolder'] != 1:
+    if item['exist'] != 1:
+        sys.stderr.write('No such folder >>> {}\n'.format(path))
+        sys.stderr.flush()
+        return None
+    elif item['isfolder'] != 1:
         sys.stderr.write('Error, not a folder >>> {}\n'.format(path))
         sys.stderr.flush()
         return None
