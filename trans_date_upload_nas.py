@@ -398,8 +398,8 @@ make_folder(dnam)
 for input_fnam in fnams:
     upload_fnam = os.path.basename(input_fnam)
     gnam = '{}/{}'.format(dnam,upload_fnam)
-    for ntry in range(opts.max_retry): # loop to upload 1 file
+    for ntry in range(args.max_retry): # loop to upload 1 file
         ret = upload_and_check_file(input_fnam,gnam,chunk_size=args.chunk_size)
         if ret == 0:
             break
-        time.sleep(opts.wait_time)
+        time.sleep(args.wait_time)
