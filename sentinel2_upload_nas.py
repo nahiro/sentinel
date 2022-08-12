@@ -9,6 +9,7 @@ import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import logging
 from http.client import HTTPConnection
+import time
 from datetime import datetime,timedelta
 import pytz
 from argparse import ArgumentParser,RawTextHelpFormatter
@@ -29,6 +30,8 @@ RCDIR = HOME
 SERVER = 'satreps-nas'
 PORT = 443
 MAX_ITEM = 10000
+MAX_RETRY = 10
+WAIT_TIME = 300 # sec
 CHUNK_SIZE = GB
 SITE = 'Bojongsoang'
 
@@ -38,7 +41,9 @@ parser.add_argument('-D','--srcdir',default=SRCDIR,help='NAS source directory (%
 parser.add_argument('--rcdir',default=RCDIR,help='Directory where .netrc exists (%(default)s)')
 parser.add_argument('-s','--server',default=SERVER,help='Name of the server (%(default)s)')
 parser.add_argument('-P','--port',default=PORT,type=int,help='Port# of the server (%(default)s)')
-parser.add_argument('-M','--max_item',default=MAX_ITEM,type=int,help='Max# of items for listing (%(default)s)')
+parser.add_argument('-m','--max_item',default=MAX_ITEM,type=int,help='Max# of items for listing (%(default)s)')
+parser.add_argument('-M','--max_retry',default=MAX_RETRY,type=int,help='Maximum number of retries to upload data (%(default)s)')
+parser.add_argument('-W','--wait_time',default=WAIT_TIME,type=int,help='Wait time to upload data in sec (%(default)s)')
 parser.add_argument('-C','--chunk_size',default=CHUNK_SIZE,type=int,help='Chunk size in byte (%(default)s)')
 parser.add_argument('-S','--site',default=SITE,help='Target sites (%(default)s)')
 parser.add_argument('-l','--logging',default=False,action='store_true',help='Logging mode (%(default)s)')
@@ -401,4 +406,8 @@ for input_fnam in fnams:
     dnam = '{}/{}'.format(srcdir,dstr_year)
     make_folder(dnam)
     gnam = '{}/{}'.format(dnam,fnam)
-    upload_and_check_file(input_fnam,gnam,chunk_size=args.chunk_size)
+    for ntry in range(opts.max_retry): # loop to upload 1 file
+        ret = upload_and_check_file(input_fnam,gnam,chunk_size=args.chunk_size)
+        if ret == 0:
+            break
+        time.sleep(opts.wait_time)
