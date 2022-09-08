@@ -34,6 +34,8 @@ parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,widt
 parser.add_option('-u','--user',default=None,help='Username (or environment variable DHUS_USER is set)')
 parser.add_option('-p','--password',default=None,help='Password (or environment variable DHUS_PASSWORD is set)')
 parser.add_option('-U','--url',default=URL,help='API URL (or environment variable DHUS_URL is set)')
+parser.add_option('-n','--netrc',default=None,help='Netrc file name (%default)')
+parser.add_option('-S','--server',default=None,help='Server name (%default)')
 parser.add_option('-s','--start',default=None,help='Start date of the query in the format YYYYMMDD.')
 parser.add_option('-e','--end',default=None,help='End date of the query in the format YYYYMMDD.')
 parser.add_option('-g','--geometry',default=None,help='Search area geometry as GeoJSON file.')
@@ -63,6 +65,35 @@ parser.add_option('-f','--footprints',default=False,action='store_true',help='Cr
 parser.add_option('-v','--version',default=False,action='store_true',help='Show the version and exit. (%default)')
 parser.add_option('-Q','--quiet',default=False,action='store_true',help='Quiet mode (%default)')
 (opts,args) = parser.parse_args()
+if opts.netrc is not None:
+    server = None
+    username = None
+    password = None
+    flag = False
+    with open(fnam,'r') as fp:
+        for line in fp:
+            m = re.search('machine\s+(\S+)',line)
+            if m:
+                if re.search(opts.server,m.group(1)):
+                    flag = True
+                    server = m.group(1)
+                else:
+                    flag = False
+                continue
+            m = re.search('login\s+(\S+)',line)
+            if m:
+                if flag:
+                    username = m.group(1)
+                continue
+            m = re.search('password\s+(\S+)',line)
+            if m:
+                if flag:
+                    password = m.group(1)
+                continue
+    if server is None or username is None or password is None:
+        raise ValueError('Error, server={}, username={}, password={}'.format(server,username,password))
+    args.user = username
+    args.password = password
 
 def clean_up():
     if not np.all(np.array([len(fnams),len(sizes),len(md5s),len(size_values),len(size_errors)]) == len(uuids)):
