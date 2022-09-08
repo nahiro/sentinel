@@ -31,6 +31,7 @@ parser.add_option('--date_final',default=DATE_FINAL,type='int',help='Date to cal
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('--skip_upload',default=False,action='store_true',help='Skip upload (%default)')
 parser.add_option('--skip_copy',default=False,action='store_true',help='Skip copy (%default)')
+parser.add_option('--skip_s2_update',default=False,action='store_true',help='Skip Sentinel-2 update (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if opts.sites is None:
@@ -131,25 +132,26 @@ if dcur.day == opts.date_final:
         command += ' --sites '+site
         call(command,shell=True)
 
-for site in ['Bojongsoang']:
-    datdir = os.path.join(opts.datdir,site)
-    command = 'python'
-    command += ' '+os.path.join(opts.scrdir,'sentinel2_update.py')
-    command += ' --scrdir '+opts.scrdir
-    command += ' --datdir '+opts.l2adir
-    if opts.str is not None:
-        command += ' --str '+opts.str
-    else:
-        command += ' --str {:%Y%m%d}'.format(dcur+timedelta(days=-60))
-    if opts.end is not None:
-        command += ' --end '+opts.end
-    else:
-        command += ' --end {:%Y%m%d}'.format(dcur)
-    if opts.skip_upload:
-        command += ' --skip_upload'
-    if opts.skip_copy:
-        command += ' --skip_copy'
-    command += ' --sites '+site
-    command += ' --max_retry {}'.format(opts.max_retry)
-    #sys.stderr.write(command+'\n')
-    call(command,shell=True)
+if not opts.skip_s2_update:
+    for site in ['Bojongsoang']:
+        datdir = os.path.join(opts.datdir,site)
+        command = 'python'
+        command += ' '+os.path.join(opts.scrdir,'sentinel2_update.py')
+        command += ' --scrdir '+opts.scrdir
+        command += ' --datdir '+opts.l2adir
+        if opts.str is not None:
+            command += ' --str '+opts.str
+        else:
+            command += ' --str {:%Y%m%d}'.format(dcur+timedelta(days=-60))
+        if opts.end is not None:
+            command += ' --end '+opts.end
+        else:
+            command += ' --end {:%Y%m%d}'.format(dcur)
+        if opts.skip_upload:
+            command += ' --skip_upload'
+        if opts.skip_copy:
+            command += ' --skip_copy'
+        command += ' --sites '+site
+        command += ' --max_retry {}'.format(opts.max_retry)
+        #sys.stderr.write(command+'\n')
+        call(command,shell=True)
