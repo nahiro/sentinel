@@ -13,8 +13,7 @@ HOME = os.environ.get('HOME')
 if HOME is None:
     HOME = os.environ.get('USERPROFILE')
 SCRDIR = os.path.join(HOME,'Script')
-DATDIR = os.path.join(HOME,'Work','Sentinel-2','L2A')
-DRVDIR = os.path.join(HOME,'Work','SATREPS','IPB_Satreps')
+DATDIR = os.path.join(HOME,'Work','Sentinel-2_Data')
 END = datetime.now().strftime('%Y%m%d')
 SITES = ['Cihea','Bojongsoang']
 
@@ -22,7 +21,6 @@ SITES = ['Cihea','Bojongsoang']
 parser = OptionParser(formatter=IndentedHelpFormatter(max_help_position=200,width=200))
 parser.add_option('--scrdir',default=SCRDIR,help='Script directory (%default)')
 parser.add_option('--datdir',default=DATDIR,help='Data directory (%default)')
-parser.add_option('--drvdir',default=DRVDIR,help='GoogleDrive directory (%default)')
 parser.add_option('-s','--str',default=None,help='Start date of download in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=END,help='End date of download in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
@@ -42,7 +40,7 @@ if opts.str is not None:
         dmaxs.append(opts.str)
 else:
     for site in opts.sites:
-        datdir = os.path.join(opts.datdir,site)
+        datdir = os.path.join(opts.datdir,site,'L2A')
         dmax = '0'*8
         for d in sorted(os.listdir(datdir)):
             if not re.search('^\d\d\d\d$',d):
@@ -70,8 +68,8 @@ topdir = os.getcwd()
 gnams = {}
 for site,start in zip(opts.sites,dmaxs):
     site_low = site.lower()
-    datdir = os.path.join(opts.datdir,site)
-    fnam = os.path.join(datdir,site_low+'.json')
+    datdir = os.path.join(opts.datdir,site,'L2A')
+    fnam = os.path.join(opts.datdir,site,site_low+'.json')
     if not os.path.exists(fnam):
         raise IOError('No such file >>> '+fnam)
     gnams.update({site:[]})
@@ -114,7 +112,6 @@ for site,start in zip(opts.sites,dmaxs):
 
 # Upload data
 if not opts.skip_upload:
-    os.chdir(opts.drvdir)
     for site in opts.sites:
         for gnam in gnams[site]:
             command = 'python'
@@ -122,7 +119,6 @@ if not opts.skip_upload:
             command += ' --site '+site
             command += ' '+gnam
             call(command,shell=True)
-    os.chdir(topdir)
 
 # Copy data
 if not opts.skip_copy:
