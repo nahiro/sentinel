@@ -24,6 +24,7 @@ parser.add_option('--datdir',default=DATDIR,help='Data directory (%default)')
 parser.add_option('-s','--str',default=None,help='Start date of download in the format YYYYMMDD (%default)')
 parser.add_option('-e','--end',default=END,help='End date of download in the format YYYYMMDD (%default)')
 parser.add_option('-S','--sites',default=None,action='append',help='Target sites ({})'.format(SITES))
+parser.add_option('-M','--max_retry',default=None,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('--skip_download',default=False,action='store_true',help='Skip download (%default)')
 parser.add_option('--skip_upload',default=False,action='store_true',help='Skip upload (%default)')
 parser.add_option('--skip_copy',default=False,action='store_true',help='Skip copy (%default)')
@@ -72,8 +73,9 @@ if len(dmaxs) != len(opts.sites):
 topdir = os.getcwd()
 gnams = {}
 for site,start in zip(opts.sites,dmaxs):
+    site_low = site.lower()
     datdir = os.path.join(opts.datdir,site,'GRD')
-    fnam = os.path.join(opts.datdir,site,site.lower()+'.json')
+    fnam = os.path.join(opts.datdir,site,site_low+'.json')
     if not os.path.exists(fnam):
         raise IOError('No such file >>> '+fnam)
     gnams.update({site:[]})
@@ -83,13 +85,15 @@ for site,start in zip(opts.sites,dmaxs):
     command += ' --netrc "{}"'.format(os.path.join(HOME,'.netrc'))
     command += ' --machine scihub.copernicus.eu'
     command += ' --geometry '+fnam
-    command += ' --log '+os.path.join(datdir,site.lower()+'.log')
+    command += ' --log '+os.path.join(datdir,site_low+'.log')
     command += ' --producttyp GRD'
     command += ' --start '+start
     command += ' --end '+opts.end
     command += ' --path '+datdir
     command += ' --download'
     command += ' --sort_year'
+    if opts.max_retry is not None:
+        command += ' --max_retry {}'.format(opts.max_retry)
     if not opts.skip_download:
         sys.stderr.write(command+'\n')
         sys.stderr.flush()
