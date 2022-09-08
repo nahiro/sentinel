@@ -30,6 +30,7 @@ parser.add_option('--subdirs',default=None,action='append',help='Sub data direct
 parser.add_option('--date_final',default=DATE_FINAL,type='int',help='Date to calculate final estimation (%default)')
 parser.add_option('-M','--max_retry',default=MAX_RETRY,type='int',help='Maximum number of retries to download data (%default)')
 parser.add_option('--skip_upload',default=False,action='store_true',help='Skip upload (%default)')
+parser.add_option('--skip_copy',default=False,action='store_true',help='Skip copy (%default)')
 parser.add_option('-d','--debug',default=False,action='store_true',help='Debug mode (%default)')
 (opts,args) = parser.parse_args()
 if opts.sites is None:
@@ -57,6 +58,8 @@ for site in opts.sites:
         command += ' --end '+opts.end
     if opts.skip_upload:
         command += ' --skip_upload'
+    if opts.skip_copy:
+        command += ' --skip_copy'
     command += ' --sites '+site
     #sys.stderr.write(command+'\n')
     call(command,shell=True)
@@ -144,6 +147,8 @@ for site in ['Bojongsoang']:
         command += ' --end {:%Y%m%d}'.format(dcur)
     if opts.skip_upload:
         command += ' --skip_upload'
+    if opts.skip_copy:
+        command += ' --skip_copy'
     command += ' --sites '+site
     command += ' --max_retry {}'.format(opts.max_retry)
     #sys.stderr.write(command+'\n')
