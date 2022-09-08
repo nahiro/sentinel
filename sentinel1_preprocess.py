@@ -2,8 +2,14 @@
 import os
 import psutil
 mem_size = int(psutil.virtual_memory().available*0.8e-6)
-os.environ['_JAVA_OPTIONS'] = '-Xmx{}m'.format(mem_size)     # Set memory for JAVA
-os.system('export _JAVA_OPTIONS=-Xmx{}m'.format(mem_size))   # Set memory for JAVA
+topdir = os.getcwd()
+options = '-Xmx{}m'.format(mem_size) # Save memory for JAVA
+options += ' -Djava.io.tmpdir='+topdir # Temporary directory
+os.environ['_JAVA_OPTIONS'] = options
+if os.name == 'nt':
+    os.system('set _JAVA_OPTIONS="{}"'.format(options))
+else:
+    os.system('export _JAVA_OPTIONS="{}"'.format(options))
 import sys
 import re
 import numpy as np
