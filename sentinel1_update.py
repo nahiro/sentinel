@@ -13,7 +13,7 @@ HOME = os.environ.get('HOME')
 if HOME is None:
     HOME = os.environ.get('USERPROFILE')
 SCRDIR = os.path.join(HOME,'Script')
-DATDIR = os.path.join(HOME,'Work','Sentinel-1_Data')
+DATDIR = os.path.join(HOME,'Work','Sentinel-1')
 END = datetime.now().strftime('%Y%m%d')
 SITES = ['Cihea','Bojongsoang']
 
@@ -40,7 +40,7 @@ if opts.str is not None:
         dmaxs.append(opts.str)
 else:
     for site in opts.sites:
-        datdir = os.path.join(opts.datdir,site,'GRD')
+        datdir = os.path.join(opts.datdir,site)
         if not os.path.exists(datdir):
             os.makedirs(datdir)
         if not os.path.isdir(datdir):
@@ -74,8 +74,8 @@ topdir = os.getcwd()
 gnams = {}
 for site,start in zip(opts.sites,dmaxs):
     site_low = site.lower()
-    datdir = os.path.join(opts.datdir,site,'GRD')
-    fnam = os.path.join(opts.datdir,site,site_low+'.json')
+    datdir = os.path.join(opts.datdir,site)
+    fnam = os.path.join(datdir,site_low+'.json')
     if not os.path.exists(fnam):
         raise IOError('No such file >>> '+fnam)
     gnams.update({site:[]})
