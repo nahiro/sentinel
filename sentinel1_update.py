@@ -80,6 +80,8 @@ for site,start in zip(opts.sites,dmaxs):
     command = 'python'
     command += ' '+os.path.join(opts.scrdir,'sentinel_wget.py')
     command += ' -U https://scihub.copernicus.eu/dhus'
+    command += ' --netrc "{}"'.format(os.path.join(HOME,'.netrc'))
+    command += ' --machine scihub.copernicus.eu'
     command += ' --geometry '+fnam
     command += ' --log '+os.path.join(datdir,site.lower()+'.log')
     command += ' --producttyp GRD'

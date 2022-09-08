@@ -35,7 +35,7 @@ parser.add_option('-u','--user',default=None,help='Username (or environment vari
 parser.add_option('-p','--password',default=None,help='Password (or environment variable DHUS_PASSWORD is set)')
 parser.add_option('-U','--url',default=URL,help='API URL (or environment variable DHUS_URL is set)')
 parser.add_option('-n','--netrc',default=None,help='Netrc file name (%default)')
-parser.add_option('-S','--server',default=None,help='Server name (%default)')
+parser.add_option('-m','--machine',default=None,help='Machine name (%default)')
 parser.add_option('-s','--start',default=None,help='Start date of the query in the format YYYYMMDD.')
 parser.add_option('-e','--end',default=None,help='End date of the query in the format YYYYMMDD.')
 parser.add_option('-g','--geometry',default=None,help='Search area geometry as GeoJSON file.')
@@ -70,11 +70,11 @@ if opts.netrc is not None:
     username = None
     password = None
     flag = False
-    with open(fnam,'r') as fp:
+    with open(opts.netrc,'r') as fp:
         for line in fp:
             m = re.search('machine\s+(\S+)',line)
             if m:
-                if re.search(opts.server,m.group(1)):
+                if re.search(opts.machine,m.group(1)):
                     flag = True
                     server = m.group(1)
                 else:
@@ -92,8 +92,8 @@ if opts.netrc is not None:
                 continue
     if server is None or username is None or password is None:
         raise ValueError('Error, server={}, username={}, password={}'.format(server,username,password))
-    args.user = username
-    args.password = password
+    opts.user = username
+    opts.password = password
 
 def clean_up():
     if not np.all(np.array([len(fnams),len(sizes),len(md5s),len(size_values),len(size_errors)]) == len(uuids)):
