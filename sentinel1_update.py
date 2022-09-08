@@ -61,7 +61,9 @@ else:
                 if dstr > dmax:
                     dmax = dstr
         if dmax == '0'*8:
-            raise ValueError('Error in determining the start date of download >>> '+site)
+            sys.stderr.write('Warning, failed in determining the start date of download >>> {}\n'.format(site))
+            sys.stderr.flush()
+            dmax = (datetime.strptime(opts.end,'%Y%m%d')-timedelta(days=2)).strftime('%Y%m%d')
         dmaxs.append((datetime.strptime(dmax,'%Y%m%d')+timedelta(days=1)).strftime('%Y%m%d'))
 if len(dmaxs) != len(opts.sites):
     raise ValueError('Error, len(dmaxs)={}, len(opts.sites)={}'.format(len(dmaxs),len(opts.sites)))
@@ -95,6 +97,8 @@ for site,start in zip(opts.sites,dmaxs):
     for y in range(d1.year,d2.year+1):
         year = '{:04d}'.format(y)
         dnam = os.path.join(datdir,year)
+        if not os.path.isdir(dnam):
+            continue
         for f in sorted(os.listdir(dnam)):
             #S1A_IW_GRDH_1SDV_20171227T223338_20171227T223405_019894_021DC8_434F.zip
             #S1B_IW_GRDH_1SDV_20200116T223300_20200116T223336_019848_025883_2DEF.zip
