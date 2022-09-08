@@ -40,6 +40,10 @@ if opts.str is not None:
 else:
     for site in opts.sites:
         datdir = os.path.join(opts.datdir,site,'GRD')
+        if not os.path.exists(datdir):
+            os.makedirs(datdir)
+        if not os.path.isdir(datdir):
+            raise IOError('Error, no such folder >>> {}'.format(datdir))
         dmax = '0'*8
         for d in sorted(os.listdir(datdir)):
             if not re.search('^\d\d\d\d$',d):
