@@ -44,10 +44,8 @@ parser.add_argument('--s2_data',default=S2_DATA,help='Sentinel-2 data folder (%(
 parser.add_argument('--trans_path',default=TRANS_PATH,help='Transplanting data path on NAS (%(default)s)')
 parser.add_argument('--s1_path',default=S1_PATH,help='Sentinel-1 data path on NAS (%(default)s)')
 parser.add_argument('--s2_path',default=S2_PATH,help='Sentinel-2 data path on NAS (%(default)s)')
-parser.add_argument('-s','--start_date',default=None,help='Planting start date in the format YYYYMMDD (%(default)s)')
-parser.add_argument('-e','--end_date',default=END_DATE,help='Planting end date in the format YYYYMMDD (%(default)s)')
-parser.add_argument('--first_date',default=None,help='Data first date in the format YYYYMMDD (%(default)s)')
-parser.add_argument('--last_date',default=None,help='Data last date in the format YYYYMMDD (%(default)s)')
+parser.add_argument('--first_date',default=None,help='First date in the format YYYYMMDD (%(default)s)')
+parser.add_argument('--last_date',default=None,help='Last date in the format YYYYMMDD (%(default)s)')
 parser.add_argument('--overwrite',default=False,action='store_true',help='Overwrite mode (%(default)s)')
 args = parser.parse_args()
 if args.sites is None:
@@ -92,12 +90,8 @@ def print_message(message,print_time=True):
     return
 
 # Check files/folders
-start_dtim = datetime.strptime(args.start_date,'%Y%m%d')
-end_dtim = datetime.strptime(args.end_date,'%Y%m%d')
 first_dtim = datetime.strptime(args.first_date,'%Y%m%d')
 last_dtim = datetime.strptime(args.last_date,'%Y%m%d')
-d1 = start_dtim+timedelta(days=60)
-d2 = end_dtim+timedelta(days=240)
 if not os.path.exists(args.s2_data):
     os.makedirs(args.s2_data)
 if not os.path.isdir(args.s2_data):
@@ -167,75 +161,81 @@ for site in opts.sites:
 
     # Download Planting data
     if site_low in ['cihea','bojongsoang']:
-        if site_low in ['bojongsoang']:
-            enam_list = ['.json','.dbf','.prj','.shp','.shx']
-        else:
-            enam_list = ['.tif','.json']
-        data_years = np.arange(d1.year,d2.year+1,1)
-        for year in data_years:
-            ystr = '{}'.format(year)
-            # Make file list
-            tmp_fnam = mktemp(suffix='.csv')
-            command = args.python_path
-            command += ' {}'.format(os.path.join(args.scr_dir,'file_station_query.py'))
-            command += ' --server "{}"'.format(args.server)
-            command += ' --port "{}"'.format(args.port)
-            command += ' --rcdir "{}"'.format(args.rcdir)
-            command += ' --srcdir "{}"'.format('{}/{}/{}/{}'.format(args.trans_path,site,'planting',year))
-            command += ' --out_csv "{}"'.format(tmp_fnam)
-            command += ' --max_layer 1'
-            try:
-                run_command(command,message='<<< Make Planting data list ({}) >>>'.format(ystr))
-            except Exception:
+        for level in ['preliminary','final']:
+            if site_low in ['bojongsoang']:
+                enam_list = ['.json','.dbf','.prj','.shp','.shx']
+                version = 'v1.0'
+            else:
+                enam_list = ['.tif','.json']
+                if level in ['preliminary']:
+                    version = 'v1.2'
+                else:
+                    version = 'v1.4'
+            data_years = np.arange(first_dtim.year,last_dtim.year+1,1)
+            for year in data_years:
+                ystr = '{}'.format(year)
+                # Make file list
+                tmp_fnam = mktemp(suffix='.csv')
+                command = args.python_path
+                command += ' {}'.format(os.path.join(args.scr_dir,'file_station_query.py'))
+                command += ' --server "{}"'.format(args.server)
+                command += ' --port "{}"'.format(args.port)
+                command += ' --rcdir "{}"'.format(args.rcdir)
+                command += ' --srcdir "{}"'.format('{}/{}/{}/{}/{}'.format(args.trans_path,site,level,version,year))
+                command += ' --out_csv "{}"'.format(tmp_fnam)
+                command += ' --max_layer 1'
+                try:
+                    run_command(command,message='<<< Make Planting data list ({}, {}, {}) >>>'.format(site,level,ystr))
+                except Exception:
+                    if os.path.exists(tmp_fnam):
+                        os.remove(tmp_fnam)
+                    continue
+                df = pd.read_csv(tmp_fnam,comment='#')
                 if os.path.exists(tmp_fnam):
                     os.remove(tmp_fnam)
-                continue
-            df = pd.read_csv(tmp_fnam,comment='#')
-            if os.path.exists(tmp_fnam):
-                os.remove(tmp_fnam)
-            df.columns = df.columns.str.strip()
-            inds = []
-            for index,row in df.iterrows():
-                #fileName,nLayer,fileSize,modifiedDate,folderName,md5Checksum
-                items = row['fileName'].strip().split('/')
-                if len(items) != 2:
+                df.columns = df.columns.str.strip()
+                inds = []
+                for index,row in df.iterrows():
+                    #fileName,nLayer,fileSize,modifiedDate,folderName,md5Checksum
+                    items = row['fileName'].strip().split('/')
+                    if len(items) != 2:
+                        continue
+                    src_dnam = items[0]
+                    src_fnam = items[1]
+                    m = re.search('_('+'\d'*8+')_'+level+'(\.\S+)$',src_fnam)
+                    if not m:
+                        continue
+                    dstr = m.group(1)
+                    enam = m.group(2)
+                    if not enam in enam_list:
+                        continue
+                    d = datetime.strptime(dstr,'%Y%m%d')
+                    if d < first_dtim or d > last_dtim:
+                        continue
+                    src_pnam = row['folderName'].strip()
+                    df.loc[index,'fileName'] = src_fnam
+                    df.loc[index,'folderName'] = '{}/{}'.format(src_pnam,src_dnam)
+                    df.loc[index,'nLayer'] = 0
+                    inds.append(index)
+                if len(inds) < 1:
+                    print_message('No planting data for download ({}, {}, {})'.format(site,level,ystr),print_time=False)
                     continue
-                src_dnam = items[0]
-                src_fnam = items[1]
-                m = re.search('_('+'\d'*8+')_final(\.\S+)$',src_fnam)
-                if not m:
-                    continue
-                dstr = m.group(1)
-                enam = m.group(2)
-                if not enam in enam_list:
-                    continue
-                d = datetime.strptime(dstr,'%Y%m%d')
-                if d < d1 or d > d2:
-                    continue
-                src_pnam = row['folderName'].strip()
-                df.loc[index,'fileName'] = src_fnam
-                df.loc[index,'folderName'] = '{}/{}'.format(src_pnam,src_dnam)
-                df.loc[index,'nLayer'] = 0
-                inds.append(index)
-            if len(inds) < 1:
-                print_message('No planting data for download ({})'.format(ystr),print_time=False)
-                continue
-            tmp_fnam = mktemp(suffix='.csv')
-            df.loc[inds].to_csv(tmp_fnam,index=False)
-            # Download Data
-            command = args.python_path
-            command += ' {}'.format(os.path.join(args.scr_dir,'file_station_download_file.py'))
-            command += ' --server "{}"'.format(args.server)
-            command += ' --port "{}"'.format(args.port)
-            command += ' --rcdir "{}"'.format(args.rcdir)
-            command += ' --inp_list "{}"'.format(tmp_fnam)
-            command += ' --dstdir "{}"'.format(os.path.join(args.s1_data,site,'planting',ystr))
-            command += ' --verbose'
-            if args.overwrite:
-                command += ' --overwrite'
-            run_command(command,message='<<< Download planting data ({}) >>>'.format(ystr))
-            if os.path.exists(tmp_fnam):
-                os.remove(tmp_fnam)
+                tmp_fnam = mktemp(suffix='.csv')
+                df.loc[inds].to_csv(tmp_fnam,index=False)
+                # Download Data
+                command = args.python_path
+                command += ' {}'.format(os.path.join(args.scr_dir,'file_station_download_file.py'))
+                command += ' --server "{}"'.format(args.server)
+                command += ' --port "{}"'.format(args.port)
+                command += ' --rcdir "{}"'.format(args.rcdir)
+                command += ' --inp_list "{}"'.format(tmp_fnam)
+                command += ' --dstdir "{}"'.format(os.path.join(args.s1_data,site,'planting',ystr))
+                command += ' --verbose'
+                if args.overwrite:
+                    command += ' --overwrite'
+                run_command(command,message='<<< Download planting data ({}, {}, {}) >>>'.format(site,level,ystr))
+                if os.path.exists(tmp_fnam):
+                    os.remove(tmp_fnam)
 
     # Download Sentinel-2 L2A
     if site_low in ['bojongsoang']:
@@ -253,7 +253,7 @@ for site in opts.sites:
             command += ' --out_csv "{}"'.format(tmp_fnam)
             command += ' --max_layer 0'
             try:
-                run_command(command,message='<<< Make Sentinel-2 L2A list ({}) >>>'.format(ystr))
+                run_command(command,message='<<< Make Sentinel-2 L2A list ({}, {}) >>>'.format(site,ystr))
             except Exception:
                 if os.path.exists(tmp_fnam):
                     os.remove(tmp_fnam)
@@ -275,7 +275,7 @@ for site in opts.sites:
                     continue
                 inds.append(index)
             if len(inds) < 1:
-                print_message('No Sentinel-2 L2A data for download ({})'.format(ystr),print_time=False)
+                print_message('No Sentinel-2 L2A data for download ({}, {})'.format(site,ystr),print_time=False)
                 continue
             tmp_fnam = mktemp(suffix='.csv')
             df.loc[inds].to_csv(tmp_fnam,index=False)
@@ -290,7 +290,7 @@ for site in opts.sites:
             command += ' --verbose'
             if args.overwrite:
                 command += ' --overwrite'
-            run_command(command,message='<<< Download Sentinel-2 L2A ({}) >>>'.format(ystr))
+            run_command(command,message='<<< Download Sentinel-2 L2A ({}, {}) >>>'.format(site,ystr))
             if os.path.exists(tmp_fnam):
                 os.remove(tmp_fnam)
 
@@ -313,7 +313,7 @@ for site in opts.sites:
             command += ' --out_csv "{}"'.format(tmp_fnam)
             command += ' --max_layer 0'
             try:
-                run_command(command,message='<<< Make Sentinel-2 {} list ({}) >>>'.format(targ,ystr))
+                run_command(command,message='<<< Make Sentinel-2 {} list ({}, {}) >>>'.format(targ,site,ystr))
             except Exception:
                 if os.path.exists(tmp_fnam):
                     os.remove(tmp_fnam)
@@ -335,7 +335,7 @@ for site in opts.sites:
                     continue
                 inds.append(index)
             if len(inds) < 1:
-                print_message('No Sentinel-2 {} data for download ({})'.format(targ,ystr),print_time=False)
+                print_message('No Sentinel-2 {} data for download ({}, {})'.format(targ,site,ystr),print_time=False)
                 continue
             tmp_fnam = mktemp(suffix='.csv')
             df.loc[inds].to_csv(tmp_fnam,index=False)
@@ -350,6 +350,6 @@ for site in opts.sites:
             command += ' --verbose'
             if args.overwrite:
                 command += ' --overwrite'
-            run_command(command,message='<<< Download Sentinel-2 {} ({}) >>>'.format(targ,ystr))
+            run_command(command,message='<<< Download Sentinel-2 {} ({}, {}) >>>'.format(targ,site,ystr))
             if os.path.exists(tmp_fnam):
                 os.remove(tmp_fnam)
