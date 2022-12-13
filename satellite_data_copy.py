@@ -1,10 +1,50 @@
 import os
 import sys
 import re
+import tempfile
 from datetime import datetime,timedelta
 from glob import glob
 import numpy as np
 import pandas as pd
+from argparse import ArgumentParser,RawTextHelpFormatter
+
+# Constants
+HOME = os.environ.get('USERPROFILE')
+if HOME is None:
+    HOME = os.environ.get('HOME')
+TOPDIR = os.path.join(HOME,'Work')
+ITEMS = ['planting','L2A','geocor','indices','parcel','atcor','interp','tentative_interp']
+
+# Default values
+PROC_NAME = 'satellite_data_copy.py'
+SERVER = 'satreps-nas'
+PORT = 443
+PYTHON_PATH = os.path.join(HOME,'miniconda3','python')
+RCDIR = HOME
+SCRDIR = os.path.join(HOME,'SatelliteTool')
+END_DATE = datetime.now().strftime('%Y%m%d')
+S1_DATA = os.path.join(TOPDIR,'Sentinel-1_Data')
+S2_DATA = os.path.join(TOPDIR,'Sentinel-2_Data')
+TRANS_PATH = '/SATREPS/ipb/User/1_Spatial-information/Transplanting_date'
+S2_PATH = '/SATREPS/ipb/User/1_Spatial-information/Sentinel-2'
+
+# Read options
+parser = ArgumentParser(formatter_class=lambda prog:RawTextHelpFormatter(prog,max_help_position=200,width=200))
+parser.add_argument('--proc_name',default=PROC_NAME,help='Process name (%(default)s)')
+parser.add_argument('--server',default=SERVER,help='Name of the server (%(default)s)')
+parser.add_argument('-P','--port',default=PORT,type=int,help='Port# of the server (%(default)s)')
+parser.add_argument('--python_path',default=PYTHON_PATH,help='Path to the Python (%(default)s)')
+parser.add_argument('--rcdir',default=RCDIR,help='Directory where .netrc exists (%(default)s)')
+parser.add_argument('--scrdir',default=SCRDIR,help='Script folder (%(default)s)')
+parser.add_argument('-s','--start_date',default=None,help='Planting start date in the format YYYYMMDD (%(default)s)')
+parser.add_argument('-e','--end_date',default=END_DATE,help='Planting end date in the format YYYYMMDD (%(default)s)')
+parser.add_argument('--first_date',default=None,help='Data first date in the format YYYYMMDD (%(default)s)')
+parser.add_argument('--last_date',default=None,help='Data last date in the format YYYYMMDD (%(default)s)')
+parser.add_argument('--trans_path',default=TRANS_PATH,help='Transplanting data path on NAS (%(default)s)')
+parser.add_argument('--s2_path',default=S2_PATH,help='Sentinel-2 data path on NAS (%(default)s)')
+parser.add_argument('--dflag',default=None,action='append',help='Output parameter ({})'.format(PARAM))
+parser.add_argument('-b','--batch',default=False,action='store_true',help='Batch mode (%(default)s)')
+args = parser.parse_args()
 
 def mktemp(suffix='',prefix=''):
     dnam = tempfile.gettempdir()
@@ -45,23 +85,22 @@ def print_message(message,print_time=True):
     return
 
 # Check files/folders
-start_dtim = datetime.strptime(args.start_date,args.date_fmt)
-end_dtim = datetime.strptime(args.end_date,args.date_fmt)
-first_dtim = datetime.strptime(args.first_date,args.date_fmt)
-last_dtim = datetime.strptime(args.last_date,args.date_fmt)
+start_dtim = datetime.strptime(args.start_date,'%Y%m%d')
+end_dtim = datetime.strptime(args.end_date,'%Y%m%d')
+first_dtim = datetime.strptime(args.first_date,'%Y%m%d')
+last_dtim = datetime.strptime(args.last_date,'%Y%m%d')
 d1 = start_dtim+timedelta(days=60)
 d2 = end_dtim+timedelta(days=240)
 if not os.path.exists(args.s2_data):
     os.makedirs(args.s2_data)
 if not os.path.isdir(args.s2_data):
     raise ValueError('{}: error, no such folder >>> {}'.format(args.proc_name,args.s2_data))
-netrc_dir = os.path.dirname(args.netrc_fnam)
-if not os.path.isdir(netrc_dir):
-    raise ValueError('{}: error, no such folder >>> {}'.format(args.proc_name,netrc_dir))
+if not os.path.isdir(args.rcdir):
+    raise ValueError('{}: error, no such folder >>> {}'.format(args.proc_name,args.rcdir))
 
 # Download Planting data
-itarg = self.list_labels['dflag'].index('planting')
-iflag = self.list_labels['oflag'].index('planting')
+itarg = ITEMS.index('planting')
+iflag = ITEMS.index('planting')
 if args.dflag[itarg]:
     if 'bojongsoang' in args.trans_path.lower():
         enam_list = ['.json','.dbf','.prj','.shp','.shx']
@@ -76,7 +115,7 @@ if args.dflag[itarg]:
         command += ' {}'.format(os.path.join(args.scr_dir,'file_station_query.py'))
         command += ' --server "{}"'.format(args.server)
         command += ' --port "{}"'.format(args.port)
-        command += ' --rcdir "{}"'.format(netrc_dir)
+        command += ' --rcdir "{}"'.format(args.rcdir)
         command += ' --srcdir "{}"'.format('{}/{}'.format(args.trans_path,year))
         command += ' --out_csv "{}"'.format(tmp_fnam)
         command += ' --max_layer 1'
@@ -123,7 +162,7 @@ if args.dflag[itarg]:
         command += ' {}'.format(os.path.join(args.scr_dir,'file_station_download_file.py'))
         command += ' --server "{}"'.format(args.server)
         command += ' --port "{}"'.format(args.port)
-        command += ' --rcdir "{}"'.format(netrc_dir)
+        command += ' --rcdir "{}"'.format(args.rcdir)
         command += ' --inp_list "{}"'.format(tmp_fnam)
         command += ' --dstdir "{}"'.format(os.path.join(args.s1_data,'planting',ystr))
         command += ' --verbose'
@@ -134,8 +173,8 @@ if args.dflag[itarg]:
             os.remove(tmp_fnam)
 
 # Download Sentinel-2 L2A
-itarg = self.list_labels['dflag'].index('L2A')
-iflag = self.list_labels['oflag'].index('L2A')
+itarg = ITEMS.index('L2A')
+iflag = ITEMS.index('L2A')
 if args.dflag[itarg]:
     keys = []
     for key in [s.strip() for s in args.search_key.split(',')]:
@@ -152,7 +191,7 @@ if args.dflag[itarg]:
         command += ' {}'.format(os.path.join(args.scr_dir,'file_station_query.py'))
         command += ' --server "{}"'.format(args.server)
         command += ' --port "{}"'.format(args.port)
-        command += ' --rcdir "{}"'.format(netrc_dir)
+        command += ' --rcdir "{}"'.format(args.rcdir)
         command += ' --srcdir "{}"'.format('{}/{}'.format(args.l2a_path,year))
         command += ' --out_csv "{}"'.format(tmp_fnam)
         command += ' --max_layer 0'
@@ -196,7 +235,7 @@ if args.dflag[itarg]:
         command += ' {}'.format(os.path.join(args.scr_dir,'file_station_download_file.py'))
         command += ' --server "{}"'.format(args.server)
         command += ' --port "{}"'.format(args.port)
-        command += ' --rcdir "{}"'.format(netrc_dir)
+        command += ' --rcdir "{}"'.format(args.rcdir)
         command += ' --inp_list "{}"'.format(tmp_fnam)
         command += ' --dstdir "{}"'.format(os.path.join(args.s2_data,'L2A',ystr))
         command += ' --verbose'
@@ -210,8 +249,8 @@ if args.dflag[itarg]:
 for i,(targ,pnam,enam) in enumerate(zip(['geocor','indices','parcel','atcor','interp','tentative_interp'],
                                         ['geocor','indices','parcel','atcor','interp','tentative'],
                                         ['geocor\S*\.\S*','indices\S*\.\S*','parcel\S*\.\S*','\S*\.\S*','interp\S*\.\S*','interp\S*\.\S*'])):
-    itarg = self.list_labels['dflag'].index(targ)
-    iflag = self.list_labels['oflag'].index(targ)
+    itarg = ITEMS.index(targ)
+    iflag = ITEMS.index(targ)
     if args.dflag[itarg]:
         data_years = np.arange(first_dtim.year,last_dtim.year+1,1)
         for year in data_years:
@@ -222,7 +261,7 @@ for i,(targ,pnam,enam) in enumerate(zip(['geocor','indices','parcel','atcor','in
             command += ' {}'.format(os.path.join(args.scr_dir,'file_station_query.py'))
             command += ' --server "{}"'.format(args.server)
             command += ' --port "{}"'.format(args.port)
-            command += ' --rcdir "{}"'.format(netrc_dir)
+            command += ' --rcdir "{}"'.format(args.rcdir)
             command += ' --srcdir "{}"'.format('{}/{}'.format(getattr(args,'{}_path'.format(pnam)),year))
             command += ' --out_csv "{}"'.format(tmp_fnam)
             command += ' --max_layer 0'
@@ -258,7 +297,7 @@ for i,(targ,pnam,enam) in enumerate(zip(['geocor','indices','parcel','atcor','in
             command += ' {}'.format(os.path.join(args.scr_dir,'file_station_download_file.py'))
             command += ' --server "{}"'.format(args.server)
             command += ' --port "{}"'.format(args.port)
-            command += ' --rcdir "{}"'.format(netrc_dir)
+            command += ' --rcdir "{}"'.format(args.rcdir)
             command += ' --inp_list "{}"'.format(tmp_fnam)
             command += ' --dstdir "{}"'.format(os.path.join(args.s2_data,targ,ystr))
             command += ' --verbose'
