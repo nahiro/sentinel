@@ -23,12 +23,12 @@ PORT = 443
 PYTHON_PATH = os.path.join(HOME,'miniconda3','python')
 RCDIR = HOME
 SCRDIR = os.path.join(HOME,'SatelliteTool')
-END_DATE = datetime.now().strftime('%Y%m%d')
 S1_DATA = os.path.join(TOPDIR,'Sentinel-1_Data')
 S2_DATA = os.path.join(TOPDIR,'Sentinel-2_Data')
 TRANS_PATH = '/SATREPS/ipb/User/1_Spatial-information/Transplanting_date'
 S1_PATH = '/SATREPS/ipb/User/1_Spatial-information/Sentinel-1'
 S2_PATH = '/SATREPS/ipb/User/1_Spatial-information/Sentinel-2'
+END_DATE = datetime.now().strftime('%Y%m%d')
 
 # Read options
 parser = ArgumentParser(formatter_class=lambda prog:RawTextHelpFormatter(prog,max_help_position=200,width=200))
@@ -39,12 +39,15 @@ parser.add_argument('-P','--port',default=PORT,type=int,help='Port# of the serve
 parser.add_argument('--python_path',default=PYTHON_PATH,help='Path to the Python (%(default)s)')
 parser.add_argument('--rcdir',default=RCDIR,help='Directory where .netrc exists (%(default)s)')
 parser.add_argument('--scrdir',default=SCRDIR,help='Script folder (%(default)s)')
+parser.add_argument('--s1_data',default=S1_DATA,help='Sentinel-1 data folder (%(default)s)')
+parser.add_argument('--s2_data',default=S2_DATA,help='Sentinel-2 data folder (%(default)s)')
+parser.add_argument('--trans_path',default=TRANS_PATH,help='Transplanting data path on NAS (%(default)s)')
+parser.add_argument('--s1_path',default=S1_PATH,help='Sentinel-1 data path on NAS (%(default)s)')
+parser.add_argument('--s2_path',default=S2_PATH,help='Sentinel-2 data path on NAS (%(default)s)')
 parser.add_argument('-s','--start_date',default=None,help='Planting start date in the format YYYYMMDD (%(default)s)')
 parser.add_argument('-e','--end_date',default=END_DATE,help='Planting end date in the format YYYYMMDD (%(default)s)')
 parser.add_argument('--first_date',default=None,help='Data first date in the format YYYYMMDD (%(default)s)')
 parser.add_argument('--last_date',default=None,help='Data last date in the format YYYYMMDD (%(default)s)')
-parser.add_argument('--s1_path',default=TRANS_PATH,help='Transplanting data path on NAS (%(default)s)')
-parser.add_argument('--s2_path',default=S2_PATH,help='Sentinel-2 data path on NAS (%(default)s)')
 parser.add_argument('--overwrite',default=False,action='store_true',help='Overwrite mode (%(default)s)')
 args = parser.parse_args()
 if args.sites is None:
