@@ -8,6 +8,7 @@ from datetime import datetime,timedelta
 from glob import glob
 import numpy as np
 import pandas as pd
+from subprocess import call
 from argparse import ArgumentParser,RawTextHelpFormatter
 
 # Constants
@@ -219,10 +220,10 @@ for site in args.sites:
                     d = datetime.strptime(dstr,'%Y%m%d')
                     if d < first_dtim or d > last_dtim:
                         continue
-                    src_pnam = row['folderName'].strip()
-                    df.loc[index,'fileName'] = src_fnam
-                    df.loc[index,'folderName'] = '{}/{}'.format(src_pnam,src_dnam)
-                    df.loc[index,'nLayer'] = 0
+                    #src_pnam = row['folderName'].strip()
+                    #df.loc[index,'fileName'] = src_fnam
+                    #df.loc[index,'folderName'] = '{}/{}'.format(src_pnam,src_dnam)
+                    #df.loc[index,'nLayer'] = 0
                     inds.append(index)
                 if len(inds) < 1:
                     print_message('No planting data for download ({}, {}, {})'.format(site,level,ystr),print_time=False)
