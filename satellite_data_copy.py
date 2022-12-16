@@ -26,8 +26,9 @@ PORT = 443
 PYTHON_PATH = os.path.join(HOME,'miniconda3','python')
 RCDIR = HOME
 SCRDIR = os.path.join(HOME,'SatelliteTool')
-S1_DATA = os.path.join(TOPDIR,'Sentinel-1_Data')
-S2_DATA = os.path.join(TOPDIR,'Sentinel-2_Data')
+TRANS_DATA = os.path.join(TOPDIR,'Transplanting_date')
+S1_DATA = os.path.join(TOPDIR,'Sentinel-1')
+S2_DATA = os.path.join(TOPDIR,'Sentinel-2')
 TRANS_PATH = '/SATREPS/ipb/User/1_Spatial-information/Transplanting_date'
 S1_PATH = '/SATREPS/ipb/User/1_Spatial-information/Sentinel-1'
 S2_PATH = '/SATREPS/ipb/User/1_Spatial-information/Sentinel-2'
@@ -43,6 +44,7 @@ parser.add_argument('-P','--port',default=PORT,type=int,help='Port# of the serve
 parser.add_argument('--python_path',default=PYTHON_PATH,help='Path to the Python (%(default)s)')
 parser.add_argument('--rcdir',default=RCDIR,help='Directory where .netrc exists (%(default)s)')
 parser.add_argument('--scrdir',default=SCRDIR,help='Script folder (%(default)s)')
+parser.add_argument('--trans_data',default=S1_DATA,help='Transplanting-date data folder (%(default)s)')
 parser.add_argument('--s1_data',default=S1_DATA,help='Sentinel-1 data folder (%(default)s)')
 parser.add_argument('--s2_data',default=S2_DATA,help='Sentinel-2 data folder (%(default)s)')
 parser.add_argument('--trans_path',default=TRANS_PATH,help='Transplanting data path on NAS (%(default)s)')
@@ -237,7 +239,7 @@ for site in args.sites:
                 command += ' --port "{}"'.format(args.port)
                 command += ' --rcdir "{}"'.format(args.rcdir)
                 command += ' --inp_list "{}"'.format(tmp_fnam)
-                command += ' --dstdir "{}"'.format(os.path.join(args.s1_data,site,'planting',ystr))
+                command += ' --dstdir "{}"'.format(os.path.join(args.trans_data,site,level,version,ystr))
                 command += ' --verbose'
                 if args.overwrite:
                     command += ' --overwrite'
