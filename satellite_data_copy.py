@@ -2,6 +2,8 @@ import os
 import sys
 import re
 import tempfile
+import random
+import string
 from datetime import datetime,timedelta
 from glob import glob
 import numpy as np
@@ -28,7 +30,8 @@ S2_DATA = os.path.join(TOPDIR,'Sentinel-2_Data')
 TRANS_PATH = '/SATREPS/ipb/User/1_Spatial-information/Transplanting_date'
 S1_PATH = '/SATREPS/ipb/User/1_Spatial-information/Sentinel-1'
 S2_PATH = '/SATREPS/ipb/User/1_Spatial-information/Sentinel-2'
-END_DATE = datetime.now().strftime('%Y%m%d')
+LAST_DATE = datetime.now().strftime('%Y%m%d')
+BACK_DAY = 7 # day
 
 # Read options
 parser = ArgumentParser(formatter_class=lambda prog:RawTextHelpFormatter(prog,max_help_position=200,width=200))
@@ -45,11 +48,17 @@ parser.add_argument('--trans_path',default=TRANS_PATH,help='Transplanting data p
 parser.add_argument('--s1_path',default=S1_PATH,help='Sentinel-1 data path on NAS (%(default)s)')
 parser.add_argument('--s2_path',default=S2_PATH,help='Sentinel-2 data path on NAS (%(default)s)')
 parser.add_argument('--first_date',default=None,help='First date in the format YYYYMMDD (%(default)s)')
-parser.add_argument('--last_date',default=None,help='Last date in the format YYYYMMDD (%(default)s)')
+parser.add_argument('--last_date',default=LAST_DATE,help='Last date in the format YYYYMMDD (%(default)s)')
+parser.add_argument('--back_day',default=BACK_DAY,type=int,help='Number of days to go back (%(default)s)')
 parser.add_argument('--overwrite',default=False,action='store_true',help='Overwrite mode (%(default)s)')
 args = parser.parse_args()
 if args.sites is None:
     args.sites = SITES
+last_dtim = datetime.strptime(args.last_date,'%Y%m%d')
+if args.first_date is None:
+    first_dtim = last_dtim-timedelta(days=args.back_day)
+else:
+    first_dtim = datetime.strptime(args.first_date,'%Y%m%d')
 
 def mktemp(suffix='',prefix=''):
     dnam = tempfile.gettempdir()
@@ -90,8 +99,6 @@ def print_message(message,print_time=True):
     return
 
 # Check files/folders
-first_dtim = datetime.strptime(args.first_date,'%Y%m%d')
-last_dtim = datetime.strptime(args.last_date,'%Y%m%d')
 if not os.path.exists(args.s2_data):
     os.makedirs(args.s2_data)
 if not os.path.isdir(args.s2_data):
@@ -99,7 +106,7 @@ if not os.path.isdir(args.s2_data):
 if not os.path.isdir(args.rcdir):
     raise ValueError('{}: error, no such folder >>> {}'.format(args.proc_name,args.rcdir))
 
-for site in opts.sites:
+for site in args.sites:
     site_low = site.lower()
 
     # Download Sentinel-1 GRD
@@ -110,7 +117,7 @@ for site in opts.sites:
             # Make file list
             tmp_fnam = mktemp(suffix='.csv')
             command = args.python_path
-            command += ' {}'.format(os.path.join(args.scr_dir,'file_station_query.py'))
+            command += ' {}'.format(os.path.join(args.scrdir,'file_station_query.py'))
             command += ' --server "{}"'.format(args.server)
             command += ' --port "{}"'.format(args.port)
             command += ' --rcdir "{}"'.format(args.rcdir)
@@ -146,7 +153,7 @@ for site in opts.sites:
             df.loc[inds].to_csv(tmp_fnam,index=False)
             # Download Data
             command = args.python_path
-            command += ' {}'.format(os.path.join(args.scr_dir,'file_station_download_file.py'))
+            command += ' {}'.format(os.path.join(args.scrdir,'file_station_download_file.py'))
             command += ' --server "{}"'.format(args.server)
             command += ' --port "{}"'.format(args.port)
             command += ' --rcdir "{}"'.format(args.rcdir)
@@ -177,7 +184,7 @@ for site in opts.sites:
                 # Make file list
                 tmp_fnam = mktemp(suffix='.csv')
                 command = args.python_path
-                command += ' {}'.format(os.path.join(args.scr_dir,'file_station_query.py'))
+                command += ' {}'.format(os.path.join(args.scrdir,'file_station_query.py'))
                 command += ' --server "{}"'.format(args.server)
                 command += ' --port "{}"'.format(args.port)
                 command += ' --rcdir "{}"'.format(args.rcdir)
@@ -224,7 +231,7 @@ for site in opts.sites:
                 df.loc[inds].to_csv(tmp_fnam,index=False)
                 # Download Data
                 command = args.python_path
-                command += ' {}'.format(os.path.join(args.scr_dir,'file_station_download_file.py'))
+                command += ' {}'.format(os.path.join(args.scrdir,'file_station_download_file.py'))
                 command += ' --server "{}"'.format(args.server)
                 command += ' --port "{}"'.format(args.port)
                 command += ' --rcdir "{}"'.format(args.rcdir)
@@ -245,7 +252,7 @@ for site in opts.sites:
             # Make file list
             tmp_fnam = mktemp(suffix='.csv')
             command = args.python_path
-            command += ' {}'.format(os.path.join(args.scr_dir,'file_station_query.py'))
+            command += ' {}'.format(os.path.join(args.scrdir,'file_station_query.py'))
             command += ' --server "{}"'.format(args.server)
             command += ' --port "{}"'.format(args.port)
             command += ' --rcdir "{}"'.format(args.rcdir)
@@ -281,7 +288,7 @@ for site in opts.sites:
             df.loc[inds].to_csv(tmp_fnam,index=False)
             # Download Data
             command = args.python_path
-            command += ' {}'.format(os.path.join(args.scr_dir,'file_station_download_file.py'))
+            command += ' {}'.format(os.path.join(args.scrdir,'file_station_download_file.py'))
             command += ' --server "{}"'.format(args.server)
             command += ' --port "{}"'.format(args.port)
             command += ' --rcdir "{}"'.format(args.rcdir)
@@ -305,7 +312,7 @@ for site in opts.sites:
             # Make file list
             tmp_fnam = mktemp(suffix='.csv')
             command = args.python_path
-            command += ' {}'.format(os.path.join(args.scr_dir,'file_station_query.py'))
+            command += ' {}'.format(os.path.join(args.scrdir,'file_station_query.py'))
             command += ' --server "{}"'.format(args.server)
             command += ' --port "{}"'.format(args.port)
             command += ' --rcdir "{}"'.format(args.rcdir)
@@ -341,7 +348,7 @@ for site in opts.sites:
             df.loc[inds].to_csv(tmp_fnam,index=False)
             # Download Data
             command = args.python_path
-            command += ' {}'.format(os.path.join(args.scr_dir,'file_station_download_file.py'))
+            command += ' {}'.format(os.path.join(args.scrdir,'file_station_download_file.py'))
             command += ' --server "{}"'.format(args.server)
             command += ' --port "{}"'.format(args.port)
             command += ' --rcdir "{}"'.format(args.rcdir)
