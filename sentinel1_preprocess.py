@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import os
 import psutil
+import tempfile
 mem_size = int(psutil.virtual_memory().available*0.8e-6)
-topdir = os.getcwd()
+dnam = tempfile.gettempdir()
 options = '-Xmx{}m'.format(mem_size) # Save memory for JAVA
-options += ' -Djava.io.tmpdir='+topdir # Temporary directory
+options += ' -Djava.io.tmpdir={}'.format(dnam) # Temporary directory
 os.environ['_JAVA_OPTIONS'] = options
 if os.name == 'nt':
     os.system('set _JAVA_OPTIONS="{}"'.format(options))
