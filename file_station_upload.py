@@ -237,7 +237,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
     elif not parent in folders:
         raise IOError('Error, no such folder >>> '+parent)
     ds,fs = list_file(parent)
-    if target in fs:
+    if fs is not None and target in fs:
         if opts.overwrite:
             if opts.verbose:
                 sys.stderr.write('File exists, delete >>> '+target+'\n')
