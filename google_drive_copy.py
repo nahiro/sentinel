@@ -111,7 +111,7 @@ for root,ds,fs in os.walk(opts.srcdir):
     #print(srcdir,'-----',dstdir)
     if not dstdir in folders:
         if make_folder(dstdir) != 0:
-            raise IOError('Error, faild in making folder >>> '+dstdir)
+            raise IOError('Error, failed in making folder >>> '+dstdir)
     for f in fs:
         fnam = os.path.join(srcdir,f)
         gnam = os.path.join(dstdir,f)

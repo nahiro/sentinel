@@ -301,7 +301,7 @@ def upload_file(fnam,gnam,chunk_size=GB):
     # Check uploaded file
     result = query_file(gnam)
     if result is None:
-        sys.stderr.write('Warning, faild in uploading file >>> {}\n'.format(gnam))
+        sys.stderr.write('Warning, failed in uploading file >>> {}\n'.format(gnam))
         sys.stderr.flush()
         return '',-1,'',''
     else:
@@ -408,7 +408,7 @@ for subdir in opts.subdir:
         #print(srcdir,'-----',dstdir)
         if not dstdir in folders:
             if make_folder(dstdir) != 0:
-                raise IOError('Error, faild in making folder >>> '+dstdir)
+                raise IOError('Error, failed in making folder >>> '+dstdir)
         if not os.path.exists(locdir):
             os.makedirs(locdir)
         if not os.path.isdir(locdir):

@@ -197,7 +197,7 @@ for subdir in opts.subdir:
         #print(srcdir,'-----',dstdir)
         if not dstdir in folders:
             if make_folder(dstdir) != 0:
-                raise IOError('Error, faild in making folder >>> '+dstdir)
+                raise IOError('Error, failed in making folder >>> '+dstdir)
         if not os.path.exists(locdir):
             os.makedirs(locdir)
         if not os.path.isdir(locdir):

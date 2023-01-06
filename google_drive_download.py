@@ -139,7 +139,7 @@ while len(qs) != 0:
                         flag = True
                         break
             if not flag:
-                sys.stderr.write('Warning, faild in downloading >>> {}\n'.format(fnam))
+                sys.stderr.write('Warning, failed in downloading >>> {}\n'.format(fnam))
                 sys.stderr.flush()
 for dnam in ts.keys():
     os.utime(dnam,(ts[dnam],ts[dnam]))

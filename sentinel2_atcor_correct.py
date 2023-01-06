@@ -78,18 +78,18 @@ else:
         band = ds.GetRasterBand(i+1)
         band_name = band.GetDescription()
         if not band_name:
-            raise ValueError('Error, faild to read band name >>> {}'.format(input_fnam))
+            raise ValueError('Error, failed to read band name >>> {}'.format(input_fnam))
         band_list.append(band_name)
 ds = None
 if opts.band.upper() == 'NDVI':
     band_name = 'B4'
     if not band_name in band_list:
-        raise ValueError('Error, faild to search index for {}'.format(band_name))
+        raise ValueError('Error, failed to search index for {}'.format(band_name))
     band4_index = band_list.index(band_name)
     b4_img = data[band4_index].astype(np.float64).flatten()
     band_name = 'B8'
     if not band_name in band_list:
-        raise ValueError('Error, faild to search index for {}'.format(band_name))
+        raise ValueError('Error, failed to search index for {}'.format(band_name))
     band8_index = band_list.index(band_name)
     b8_img = data[band8_index].astype(np.float64).flatten()
     data_img = (b8_img-b4_img)/(b8_img+b4_img)
@@ -98,7 +98,7 @@ if opts.band.upper() == 'NDVI':
 else:
     band_name = 'B{}'.format(opts.band)
     if not band_name in band_list:
-        raise ValueError('Error, faild to search index for {}'.format(band_name))
+        raise ValueError('Error, failed to search index for {}'.format(band_name))
     band_index = band_list.index(band_name)
     data_img = data[band_index].astype(np.float64).flatten()*1.0e-4
     if not opts.ignore_band4:
@@ -107,7 +107,7 @@ else:
         else:
             band_name = 'B4'
             if not band_name in band_list:
-                raise ValueError('Error, faild to search index for {}'.format(band_name))
+                raise ValueError('Error, failed to search index for {}'.format(band_name))
             band4_index = band_list.index(band_name)
             b4_img = data[band4_index].astype(np.float64).flatten()*1.0e-4
 

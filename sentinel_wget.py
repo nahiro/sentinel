@@ -189,7 +189,7 @@ def query_data(uuid):
             child = value
             break
     if child is None:
-        raise ValueError('Error, faild in finding properies >>> {}'.format(uuid))
+        raise ValueError('Error, failed in finding properies >>> {}'.format(uuid))
     tags = OrderedDict()
     for value in child:
         prefix,has_namespace,postfix = value.tag.rpartition('}')
